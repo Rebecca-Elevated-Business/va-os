@@ -19,9 +19,10 @@ export default function OnboardVAPage() {
     setMessage(null);
 
     // 1. Create the Auth User
+    // We explicitly name the keys 'email' and 'password' to avoid 'Anonymous' errors
     const { data, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
+      email: email,
+      password: password,
     });
 
     if (authError) {
@@ -32,6 +33,7 @@ export default function OnboardVAPage() {
 
     if (data.user) {
       // 2. Create the Profile Entry
+      // We use the ID from the freshly created auth user
       const { error: profileError } = await supabase.from("profiles").insert([
         {
           id: data.user.id,
@@ -44,14 +46,15 @@ export default function OnboardVAPage() {
       if (profileError) {
         setMessage({
           type: "error",
-          text: "Account created, but profile failed: " + profileError.message,
+          text:
+            "Auth account created, but database profile failed: " +
+            profileError.message,
         });
       } else {
         setMessage({
           type: "success",
-          text: `Success! VA ${fullName} has been onboarded.`,
+          text: `Success! ${fullName} is now a registered VA.`,
         });
-        // Clear form
         setEmail("");
         setPassword("");
         setFullName("");
@@ -61,55 +64,38 @@ export default function OnboardVAPage() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-gray-50">
+    <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-gray-50 text-black">
       <div className="w-full max-w-md p-8 bg-white rounded-xl shadow-lg border border-gray-100">
-        <h1 className="text-2xl font-bold mb-2 text-gray-900">VA Onboarding</h1>
+        <h1 className="text-2xl font-bold mb-2">VA Onboarding</h1>
         <p className="text-gray-500 mb-6 text-sm">
-          Create a new VA account. They can log in immediately once created.
+          Create professional VA accounts manually.
         </p>
 
         <form onSubmit={handleOnboard} className="space-y-5">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              VA Full Name
-            </label>
-            <input
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="e.g. Jane Doe"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#9d4edd] focus:border-transparent outline-none text-black transition-all"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Email Address
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="va@example.com"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#9d4edd] focus:border-transparent outline-none text-black transition-all"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Temporary Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#9d4edd] focus:border-transparent outline-none text-black transition-all"
-              required
-            />
-          </div>
+          <input
+            type="text"
+            placeholder="Full Name"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#9d4edd] outline-none text-black"
+            required
+          />
+          <input
+            type="email"
+            placeholder="Email Address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#9d4edd] outline-none text-black"
+            required
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#9d4edd] outline-none text-black"
+            required
+          />
 
           {message && (
             <div
@@ -126,9 +112,9 @@ export default function OnboardVAPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 px-4 rounded-lg text-white font-bold bg-[#9d4edd] hover:bg-[#7b2cbf] transition-colors shadow-md disabled:opacity-50"
+            className="w-full py-3 rounded-lg text-white font-bold bg-[#9d4edd] hover:bg-[#7b2cbf] transition-colors disabled:opacity-50 shadow-md"
           >
-            {loading ? "Processing..." : "Create VA Account"}
+            {loading ? "Creating..." : "Create Account"}
           </button>
         </form>
       </div>
