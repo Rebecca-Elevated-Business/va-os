@@ -681,7 +681,7 @@ export default function ClientProfilePage({
       </section>
 
       {/* SERVICE AGREEMENTS SECTION */}
-      <div className="mt-12 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
           <h2 className="text-xl font-bold text-gray-800">
             Service Agreements
@@ -704,7 +704,10 @@ export default function ClientProfilePage({
                 </tr>
               ) : (
                 clientAgreements.map((ag) => (
-                  <tr key={ag.id} className="hover:bg-gray-50">
+                  <tr
+                    key={ag.id}
+                    className="hover:bg-gray-50 transition-colors"
+                  >
                     <td className="px-6 py-4">
                       <div className="font-bold text-black">{ag.title}</div>
                       <div className="text-xs text-gray-500">
@@ -747,7 +750,7 @@ export default function ClientProfilePage({
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
 
       {/* 4. NOTES (Sticky Bottom) */}
       <section className="bg-white p-6 rounded-xl shadow-lg border-t-4 border-[#9d4edd] flex flex-col h-96">
