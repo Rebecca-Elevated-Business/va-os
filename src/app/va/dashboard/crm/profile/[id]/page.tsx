@@ -29,6 +29,14 @@ type Task = {
   created_at: string;
 };
 
+type ClientDocument = {
+  id: string;
+  title: string;
+  type: string;
+  status: string;
+  created_at: string;
+};
+
 type Note = {
   id: string;
   content: string;
@@ -56,6 +64,7 @@ export default function ClientProfilePage({
   const [notes, setNotes] = useState<Note[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [clientAgreements, setClientAgreements] = useState<Agreement[]>([]);
+  const [clientDocuments, setClientDocuments] = useState<ClientDocument[]>([]);
 
   // Task Manager State
   const [newTaskName, setNewTaskName] = useState("");
@@ -130,6 +139,16 @@ export default function ClientProfilePage({
       }
     }
     fetchAgreements();
+    // New: Fetch Documents (Proposals, Booking Forms, Invoices)
+    async function fetchDocuments() {
+      const { data: docData } = await supabase
+        .from("client_documents")
+        .select("id, title, type, status, created_at")
+        .eq("client_id", id)
+        .order("created_at", { ascending: false });
+      if (docData) setClientDocuments(docData as ClientDocument[]);
+    }
+    fetchDocuments();
   }, [id]);
 
   // --- GLOBAL TICKER ---
@@ -714,26 +733,75 @@ export default function ClientProfilePage({
       <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
           <h2 className="text-xl font-bold text-gray-800">
-            Service Agreements
+            Documents & Service Agreements
           </h2>
-          <button
-            onClick={() => router.push("/va/dashboard/agreements")}
-            className="text-sm bg-[#9d4edd] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#7b2cbf] transition-all"
-          >
+          <div className="flex gap-3">
             <button
               onClick={() =>
                 router.push(`/va/dashboard/documents/create?clientId=${id}`)
               }
               className="text-sm border border-[#9d4edd] text-[#9d4edd] px-4 py-2 rounded-lg font-bold hover:bg-purple-50 transition-all"
             >
-              + Create Document (Proposal/Invoice/Contract)
+              + New Document
             </button>
-            + New Agreement
-          </button>
+            <button
+              onClick={() => router.push("/va/dashboard/agreements")}
+              className="text-sm bg-[#9d4edd] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#7b2cbf] transition-all shadow-sm"
+            >
+              + New Agreement
+            </button>
+          </div>
         </div>
         <div className="p-0">
           <table className="w-full text-left">
             <tbody className="divide-y divide-gray-100">
+              {/* --- NEW DOCUMENTS LIST --- */}
+              {clientDocuments.map((doc) => (
+                <tr
+                  key={doc.id}
+                  className="hover:bg-purple-50/30 transition-colors"
+                >
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">
+                        {doc.type === "invoice"
+                          ? "💰"
+                          : doc.type === "booking_form"
+                          ? "🖋️"
+                          : "📋"}
+                      </span>
+                      <div>
+                        <div className="font-bold text-black">{doc.title}</div>
+                        <div className="text-[10px] text-gray-400 uppercase tracking-widest">
+                          {doc.type.replace("_", " ")}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`w-3 h-3 rounded-full ${
+                          doc.status === "draft" ? "bg-red-500" : "bg-green-500"
+                        }`}
+                      />
+                      <span className="text-[10px] font-black uppercase text-gray-600">
+                        {doc.status}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <button
+                      onClick={() =>
+                        router.push(`/va/dashboard/documents/edit/${doc.id}`)
+                      }
+                      className="text-xs font-bold text-[#9d4edd] hover:underline"
+                    >
+                      Edit Document
+                    </button>
+                  </td>
+                </tr>
+              ))}
               {clientAgreements.length === 0 ? (
                 <tr>
                   <td className="p-8 text-center text-gray-400 italic">
