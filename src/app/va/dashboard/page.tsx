@@ -14,9 +14,7 @@ export default function VADashboard() {
   return (
     <main className="p-10">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-black text-gray-800">
-          VA Dashboard
-        </h1>
+        <h1 className="text-3xl font-bold text-black">VA Dashboard</h1>
         <button
           onClick={handleLogout}
           className="px-4 py-2 text-sm text-gray-600 hover:text-[#9d4edd] border border-gray-300 rounded-lg transition-colors"
@@ -25,7 +23,7 @@ export default function VADashboard() {
         </button>
       </div>
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <p className="text-gray-600 text-black">
+        <p className="text-gray-600">
           Welcome to your Operating System. Your professional tools will appear
           here.
         </p>
