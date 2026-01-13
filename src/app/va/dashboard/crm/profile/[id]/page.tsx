@@ -36,6 +36,7 @@ export default function ClientProfilePage({
   const [newNote, setNewNote] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
 
   // Reusable refresh function for manual actions (saving notes/edits)
   const refreshData = useCallback(async () => {
@@ -131,6 +132,14 @@ export default function ClientProfilePage({
       refreshData();
     }
   };
+  const generateInviteLink = () => {
+    const baseUrl = window.location.origin;
+    // This creates the special link for the client
+    const link = `${baseUrl}/client/setup?email=${encodeURIComponent(
+      client?.email || ""
+    )}&id=${id}`;
+    setInviteLink(link);
+  };
 
   if (loading) return <div className="p-10 text-black">Loading Profile...</div>;
   if (!client) return <div className="p-10 text-black">Client not found.</div>;
@@ -154,11 +163,35 @@ export default function ClientProfilePage({
           >
             {isEditing ? "Cancel" : "Edit Details"}
           </button>
-          <button className="bg-[#9d4edd] text-white px-4 py-2 rounded-lg font-bold shadow-sm">
-            Issue Portal Access
+          <button
+            onClick={generateInviteLink}
+            className="bg-[#9d4edd] text-white px-4 py-2 rounded-lg font-bold shadow-sm hover:bg-[#7b2cbf] transition-all"
+          >
+            {inviteLink ? "Link Generated!" : "Issue Portal Access"}
           </button>
         </div>
       </div>
+
+      {/* NEW: This is the purple box that appears after clicking */}
+      {inviteLink && (
+        <div className="p-4 bg-purple-50 border border-[#9d4edd] rounded-lg flex justify-between items-center animate-in fade-in slide-in-from-top-2">
+          <div className="text-sm">
+            <p className="font-bold text-purple-900">
+              Portal Invite Link Created:
+            </p>
+            <p className="text-gray-600 break-all">{inviteLink}</p>
+          </div>
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(inviteLink);
+              alert("Link copied to clipboard!");
+            }}
+            className="ml-4 bg-white text-[#9d4edd] border border-[#9d4edd] px-3 py-1 rounded font-bold text-xs hover:bg-purple-100 transition-colors shrink-0"
+          >
+            Copy Link
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Client Info */}
