@@ -17,13 +17,15 @@ type Client = {
   created_at: string;
 };
 
+const STATUS_OPTIONS = ["Enquiry", "Provisional", "Won", "Lost"];
+
 export default function CRMPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState("");
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // React 19 Best Practice: Define the async function inside the effect
     const loadData = async () => {
       setLoading(true);
       const { data, error } = await supabase
@@ -38,11 +40,26 @@ export default function CRMPage() {
     };
 
     loadData();
-  }, []); // Empty dependency array means this runs once on mount
+  }, []);
 
-  const filteredClients = clients.filter((c) =>
-    c.surname.toLowerCase().includes(search.toLowerCase())
-  );
+  // Filter Logic: Handles both Search and Multi-select Status
+  const filteredClients = clients.filter((c) => {
+    const matchesSearch = c.surname
+      .toLowerCase()
+      .includes(search.toLowerCase());
+    const matchesStatus =
+      selectedStatuses.length === 0 || selectedStatuses.includes(c.status);
+
+    return matchesSearch && matchesStatus;
+  });
+
+  const toggleStatus = (status: string) => {
+    setSelectedStatuses((prev) =>
+      prev.includes(status)
+        ? prev.filter((s) => s !== status)
+        : [...prev, status]
+    );
+  };
 
   return (
     <div className="text-black">
@@ -56,17 +73,63 @@ export default function CRMPage() {
         </Link>
       </div>
 
-      <div className="mb-6">
-        <input
-          type="text"
-          placeholder="Search by client surname..."
-          className="w-full max-w-md px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#9d4edd] outline-none"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+      {/* Filter Toolbar */}
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 space-y-4">
+        <div className="flex flex-wrap items-center gap-4">
+          {/* Search Box with Clear */}
+          <div className="relative flex items-center">
+            <input
+              type="text"
+              placeholder="Search by surname..."
+              className="w-64 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#9d4edd] outline-none"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                className="ml-2 text-xs font-bold text-[#9d4edd] hover:underline"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
+          {/* Vertical Divider */}
+          <div className="hidden md:block w-px h-8 bg-gray-200 mx-2"></div>
+
+          {/* Status Multi-select Chips */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-gray-500 mr-2">
+              Filter Status:
+            </span>
+            {STATUS_OPTIONS.map((status) => (
+              <button
+                key={status}
+                onClick={() => toggleStatus(status)}
+                className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${
+                  selectedStatuses.includes(status)
+                    ? "bg-[#9d4edd] border-[#9d4edd] text-white shadow-sm"
+                    : "bg-gray-50 border-gray-200 text-gray-600 hover:border-[#9d4edd]"
+                }`}
+              >
+                {status}
+              </button>
+            ))}
+
+            {selectedStatuses.length > 0 && (
+              <button
+                onClick={() => setSelectedStatuses([])}
+                className="ml-2 text-xs font-bold text-red-500 hover:underline"
+              >
+                Reset Filters
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden text-black">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-100">
@@ -88,7 +151,7 @@ export default function CRMPage() {
               <th className="px-6 py-4 text-sm font-semibold text-gray-700">
                 Access
               </th>
-              <th className="px-6 py-4 text-sm font-semibold text-gray-700">
+              <th className="px-6 py-4 text-sm font-semibold text-gray-700 text-right">
                 Action
               </th>
             </tr>
@@ -102,8 +165,11 @@ export default function CRMPage() {
               </tr>
             ) : filteredClients.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-6 py-4 text-center text-gray-400">
-                  No clients found.
+                <td
+                  colSpan={7}
+                  className="px-6 py-4 text-center text-gray-400 p-8"
+                >
+                  No clients match your filters.
                 </td>
               </tr>
             ) : (
@@ -124,7 +190,7 @@ export default function CRMPage() {
                   <td className="px-6 py-4 text-gray-600">{client.source}</td>
                   <td className="px-6 py-4">
                     <span
-                      className={`px-3 py-1 rounded-full text-xs font-bold ${
+                      className={`px-3 py-1 rounded-full text-[10px] uppercase tracking-wider font-black ${
                         client.status === "Won"
                           ? "bg-green-100 text-green-700"
                           : client.status === "Lost"
@@ -137,17 +203,19 @@ export default function CRMPage() {
                       {client.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 text-center">
                     <div
-                      className={`w-3 h-3 rounded-full ${
-                        client.has_access ? "bg-green-500" : "bg-red-500"
+                      className={`w-2.5 h-2.5 rounded-full mx-auto ${
+                        client.has_access
+                          ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"
+                          : "bg-gray-300"
                       }`}
                     />
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 text-right">
                     <Link
                       href={`/va/dashboard/crm/profile/${client.id}`}
-                      className="text-[#9d4edd] font-semibold text-sm hover:underline"
+                      className="text-[#9d4edd] font-bold text-sm hover:text-[#7b2cbf] bg-purple-50 px-3 py-1.5 rounded-md transition-colors"
                     >
                       Open Profile
                     </Link>
