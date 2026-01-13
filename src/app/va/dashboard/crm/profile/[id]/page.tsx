@@ -298,6 +298,35 @@ export default function ClientProfilePage({
     }
   };
 
+  const deleteDocument = async (docId: string) => {
+    if (!confirm("Delete this document permanently?")) return;
+    const { error } = await supabase
+      .from("client_documents")
+      .delete()
+      .eq("id", docId);
+    if (!error)
+      setClientDocuments(clientDocuments.filter((d) => d.id !== docId));
+  };
+  const revokeDocument = async (docId: string) => {
+    if (
+      !confirm(
+        "Revoke this document? It will disappear from the client portal and return to draft."
+      )
+    )
+      return;
+    const { error } = await supabase
+      .from("client_documents")
+      .update({ status: "draft" })
+      .eq("id", docId);
+    if (!error) {
+      setClientDocuments(
+        clientDocuments.map((d) =>
+          d.id === docId ? { ...d, status: "draft" } : d
+        )
+      );
+    }
+  };
+
   // 7. Start Editing
   const startEditing = (task: Task) => {
     setEditingTaskId(task.id);
@@ -790,14 +819,45 @@ export default function ClientProfilePage({
                       </span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-6 py-4 text-right flex justify-end gap-4 items-center">
+                    {/* REVOKE LINK: Only shows if NOT a draft */}
+                    {doc.status !== "draft" && (
+                      <button
+                        onClick={() => revokeDocument(doc.id)}
+                        className="text-[10px] font-bold text-orange-500 hover:underline uppercase"
+                      >
+                        Revoke
+                      </button>
+                    )}
+
                     <button
                       onClick={() =>
                         router.push(`/va/dashboard/documents/edit/${doc.id}`)
                       }
                       className="text-xs font-bold text-[#9d4edd] hover:underline"
                     >
-                      Edit Document
+                      {doc.status === "draft" ? "Edit & Issue" : "View"}
+                    </button>
+
+                    {/* RUBBISH BIN ICON */}
+                    <button
+                      onClick={() => deleteDocument(doc.id)}
+                      className="text-gray-300 hover:text-red-500 transition-colors"
+                      title="Delete Document"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                      </svg>
                     </button>
                   </td>
                 </tr>
