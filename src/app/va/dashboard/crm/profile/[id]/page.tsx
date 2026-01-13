@@ -114,12 +114,20 @@ export default function ClientProfilePage({
 
   useEffect(() => {
     async function fetchAgreements() {
-      const { data } = await supabase
+      console.log("Fetching agreements for Client ID:", id); // Debug Log 1
+
+      const { data, error } = await supabase // Capture 'error'
         .from("client_agreements")
         .select("*")
         .eq("client_id", id)
         .order("created_at", { ascending: false });
-      if (data) setClientAgreements(data);
+
+      if (error) {
+        console.error("Error fetching agreements:", error.message); // Debug Log 2
+      } else {
+        console.log("Agreements found:", data); // Debug Log 3
+        if (data) setClientAgreements(data);
+      }
     }
     fetchAgreements();
   }, [id]);
@@ -247,6 +255,28 @@ export default function ClientProfilePage({
 
     const { error } = await supabase.from("tasks").delete().eq("id", taskId);
     if (!error) refreshData();
+  };
+
+  // New: Function to delete a service agreement
+  const deleteAgreement = async (agreementId: string) => {
+    if (
+      !window.confirm(
+        "Are you sure you want to permanently delete this agreement? This cannot be undone."
+      )
+    )
+      return;
+
+    const { error } = await supabase
+      .from("client_agreements")
+      .delete()
+      .eq("id", agreementId);
+
+    if (error) {
+      alert("Error deleting agreement: " + error.message);
+    } else {
+      // Refresh the local state to remove the deleted item from the list
+      setClientAgreements((prev) => prev.filter((ag) => ag.id !== agreementId));
+    }
   };
 
   // 7. Start Editing
@@ -717,20 +747,7 @@ export default function ClientProfilePage({
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${
-                          ag.status === "draft"
-                            ? "bg-gray-100 text-gray-600"
-                            : ag.status === "pending_client"
-                            ? "bg-blue-100 text-blue-600"
-                            : "bg-green-100 text-green-700"
-                        }`}
-                      >
-                        {ag.status.replace("_", " ")}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 text-right flex justify-end gap-4 items-center">
                       <button
                         onClick={() =>
                           router.push(
@@ -742,6 +759,27 @@ export default function ClientProfilePage({
                         {ag.status === "draft"
                           ? "Review & Issue"
                           : "View Document"}
+                      </button>
+
+                      {/* THIS BUTTON USES THE FUNCTION AND CLEARS THE WARNING */}
+                      <button
+                        onClick={() => deleteAgreement(ag.id)}
+                        className="text-gray-300 hover:text-red-500 transition-colors"
+                        title="Delete Agreement"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                        </svg>
                       </button>
                     </td>
                   </tr>
