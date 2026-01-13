@@ -747,6 +747,27 @@ export default function ClientProfilePage({
                         )}
                       </div>
                     </td>
+                    <td className="px-6 py-4">
+                      {/* TRAFFIC LIGHT STATUS INDICATORS */}
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-3 h-3 rounded-full ${
+                            ag.status === "draft"
+                              ? "bg-red-500"
+                              : ag.status === "pending_client"
+                              ? "bg-yellow-400"
+                              : "bg-green-500"
+                          }`}
+                        />
+                        <span className="text-[10px] font-black uppercase tracking-tighter text-gray-600">
+                          {ag.status === "draft"
+                            ? "Draft"
+                            : ag.status === "pending_client"
+                            ? "Issued - Pending"
+                            : "Authorised"}
+                        </span>
+                      </div>
+                    </td>
                     <td className="px-6 py-4 text-right flex justify-end gap-4 items-center">
                       <button
                         onClick={() =>
@@ -760,8 +781,6 @@ export default function ClientProfilePage({
                           ? "Review & Issue"
                           : "View Document"}
                       </button>
-
-                      {/* THIS BUTTON USES THE FUNCTION AND CLEARS THE WARNING */}
                       <button
                         onClick={() => deleteAgreement(ag.id)}
                         className="text-gray-300 hover:text-red-500 transition-colors"
