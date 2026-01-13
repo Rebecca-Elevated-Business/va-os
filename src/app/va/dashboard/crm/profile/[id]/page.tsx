@@ -52,6 +52,10 @@ export default function ClientProfilePage({
   const [newTaskDate, setNewTaskDate] = useState("");
   const [showCompleted, setShowCompleted] = useState(false);
   const [now, setNow] = useState(0); // Initialize with 0 to satisfy React Purity
+  // NEW: State for Editing Tasks
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editTaskName, setEditTaskName] = useState("");
+  const [editTaskDate, setEditTaskDate] = useState("");
   // UI States
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -215,7 +219,38 @@ export default function ClientProfilePage({
     setNewNote("");
     refreshData();
   };
+  // 6. Delete Task
+  const deleteTask = async (taskId: string) => {
+    if (!window.confirm("Are you sure you want to delete this task?")) return;
 
+    const { error } = await supabase.from("tasks").delete().eq("id", taskId);
+    if (!error) refreshData();
+  };
+
+  // 7. Start Editing
+  const startEditing = (task: Task) => {
+    setEditingTaskId(task.id);
+    setEditTaskName(task.task_name);
+    setEditTaskDate(task.due_date ? task.due_date.split("T")[0] : "");
+  };
+
+  // 8. Save Edited Task
+  const saveTask = async () => {
+    if (!editingTaskId || !editTaskName.trim()) return;
+
+    const { error } = await supabase
+      .from("tasks")
+      .update({
+        task_name: editTaskName,
+        due_date: editTaskDate || null,
+      })
+      .eq("id", editingTaskId);
+
+    if (!error) {
+      setEditingTaskId(null);
+      refreshData();
+    }
+  };
   // 6. Generate Portal Link
   const generateInviteLink = () => {
     const baseUrl = window.location.origin;
@@ -498,57 +533,125 @@ export default function ClientProfilePage({
                   </td>
                 </tr>
               ) : (
-                visibleTasks.map((task) => (
-                  <tr
-                    key={task.id}
-                    className={`group hover:bg-gray-50 transition-colors ${
-                      task.is_completed ? "bg-gray-50 opacity-60" : ""
-                    }`}
-                  >
-                    <td className="px-4 py-3 text-center">
-                      <input
-                        type="checkbox"
-                        checked={task.is_completed}
-                        onChange={() => toggleComplete(task)}
-                        className="w-5 h-5 text-[#9d4edd] rounded focus:ring-[#9d4edd] cursor-pointer"
-                      />
-                    </td>
-                    <td
-                      className={`px-4 py-3 font-medium ${
-                        task.is_completed ? "line-through text-gray-400" : ""
+                visibleTasks.map((task) => {
+                  const isEditing = editingTaskId === task.id;
+
+                  return (
+                    <tr
+                      key={task.id}
+                      className={`group hover:bg-gray-50 transition-colors ${
+                        task.is_completed ? "bg-gray-50 opacity-60" : ""
                       }`}
                     >
-                      {task.task_name}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
-                      {task.due_date
-                        ? new Date(task.due_date).toLocaleDateString("en-GB")
-                        : "-"}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {!task.is_completed && (
-                        <button
-                          onClick={() => toggleTimer(task)}
-                          className={`w-8 h-8 rounded-full flex items-center justify-center transition-all mx-auto ${
-                            task.is_running
-                              ? "bg-red-100 text-red-600 hover:bg-red-200 animate-pulse"
-                              : "bg-green-100 text-green-600 hover:bg-green-200"
-                          }`}
-                        >
-                          {/* Simple Play/Stop Icons */}
-                          {task.is_running ? (
-                            <div className="w-3 h-3 bg-current rounded-sm" />
-                          ) : (
-                            <div className="w-0 h-0 border-t-[5px] border-t-transparent border-l-8 border-l-current border-b-[5px] border-b-transparent ml-1" />
-                          )}
-                        </button>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono font-bold text-[#9d4edd]">
-                      {formatTime(task)}
-                    </td>
-                  </tr>
-                ))
+                      {/* 1. CHECKBOX */}
+                      <td className="px-4 py-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={task.is_completed}
+                          onChange={() => toggleComplete(task)}
+                          disabled={isEditing}
+                          className="w-5 h-5 text-[#9d4edd] rounded focus:ring-[#9d4edd] cursor-pointer"
+                        />
+                      </td>
+
+                      {/* 2. TASK NAME (Editable) */}
+                      <td className="px-4 py-3">
+                        {isEditing ? (
+                          <div className="flex flex-col gap-2">
+                            <input
+                              className="border p-1 rounded w-full text-black focus:ring-2 focus:ring-[#9d4edd] outline-none"
+                              value={editTaskName}
+                              onChange={(e) => setEditTaskName(e.target.value)}
+                              autoFocus
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                onClick={saveTask}
+                                className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-bold hover:bg-green-200"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => setEditingTaskId(null)}
+                                className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded font-bold hover:bg-gray-200"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <div
+                              className={`font-medium ${
+                                task.is_completed
+                                  ? "line-through text-gray-400"
+                                  : ""
+                              }`}
+                            >
+                              {task.task_name}
+                            </div>
+                            {/* THE NEW EDIT/DELETE ACTIONS */}
+                            <div className="flex gap-3 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={() => startEditing(task)}
+                                className="text-[10px] font-bold text-gray-400 hover:text-[#9d4edd] uppercase tracking-wider"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => deleteTask(task.id)}
+                                className="text-[10px] font-bold text-gray-400 hover:text-red-500 uppercase tracking-wider"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </td>
+
+                      {/* 3. DUE DATE (Editable) */}
+                      <td className="px-4 py-3 text-sm text-gray-500 align-top pt-4">
+                        {isEditing ? (
+                          <input
+                            type="date"
+                            className="border p-1 rounded w-full focus:ring-2 focus:ring-[#9d4edd] outline-none text-black"
+                            value={editTaskDate}
+                            onChange={(e) => setEditTaskDate(e.target.value)}
+                          />
+                        ) : task.due_date ? (
+                          new Date(task.due_date).toLocaleDateString("en-GB")
+                        ) : (
+                          "-"
+                        )}
+                      </td>
+
+                      {/* 4. TIMER BUTTON */}
+                      <td className="px-4 py-3 text-center align-top pt-4">
+                        {!task.is_completed && !isEditing && (
+                          <button
+                            onClick={() => toggleTimer(task)}
+                            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all mx-auto ${
+                              task.is_running
+                                ? "bg-red-100 text-red-600 hover:bg-red-200 animate-pulse"
+                                : "bg-green-100 text-green-600 hover:bg-green-200"
+                            }`}
+                          >
+                            {task.is_running ? (
+                              <div className="w-3 h-3 bg-current rounded-sm" />
+                            ) : (
+                              <div className="w-0 h-0 border-t-[5px] border-t-transparent border-l-8 border-l-current border-b-[5px] border-b-transparent ml-1" />
+                            )}
+                          </button>
+                        )}
+                      </td>
+
+                      {/* 5. TIME DISPLAY */}
+                      <td className="px-4 py-3 text-right font-mono font-bold text-[#9d4edd] align-top pt-4">
+                        {formatTime(task)}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
