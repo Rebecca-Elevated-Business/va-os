@@ -146,10 +146,10 @@ export default function EditAgreementPage({
         </div>
         <div className="flex gap-3">
           <button
-            onClick={() => router.push("/va/dashboard/agreements/list")}
+            onClick={() => router.push("/va/dashboard/agreements/")}
             className="px-4 py-2 text-sm font-semibold text-gray-500 hover:text-black"
           >
-            Back to List
+            Back to Library
           </button>
           <button
             disabled={saving}

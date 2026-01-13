@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import router from "next/router";
 
 // --- TYPES ---
 type Client = {
@@ -34,6 +35,13 @@ type Note = {
   created_at: string;
 };
 
+type Agreement = {
+  id: string;
+  title: string;
+  status: string;
+  last_updated_at: string;
+};
+
 // --- COMPONENT ---
 export default function ClientProfilePage({
   params,
@@ -46,6 +54,7 @@ export default function ClientProfilePage({
   const [client, setClient] = useState<Client | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [clientAgreements, setClientAgreements] = useState<Agreement[]>([]);
 
   // Task Manager State
   const [newTaskName, setNewTaskName] = useState("");
@@ -101,6 +110,18 @@ export default function ClientProfilePage({
       active = false;
     };
   }, [id, refreshData]);
+
+  useEffect(() => {
+    async function fetchAgreements() {
+      const { data } = await supabase
+        .from("client_agreements")
+        .select("*")
+        .eq("client_id", id)
+        .order("created_at", { ascending: false });
+      if (data) setClientAgreements(data);
+    }
+    fetchAgreements();
+  }, [id]);
 
   // --- GLOBAL TICKER ---
   // Updates the UI every second so any running tasks show their time ticking up
@@ -657,6 +678,75 @@ export default function ClientProfilePage({
           </table>
         </div>
       </section>
+
+      {/* SERVICE AGREEMENTS SECTION */}
+      <div className="mt-12 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+          <h2 className="text-xl font-bold text-gray-800">
+            Service Agreements
+          </h2>
+          <button
+            onClick={() => router.push("/va/dashboard/agreements")}
+            className="text-sm bg-[#9d4edd] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#7b2cbf] transition-all"
+          >
+            + New Agreement
+          </button>
+        </div>
+        <div className="p-0">
+          <table className="w-full text-left">
+            <tbody className="divide-y divide-gray-100">
+              {clientAgreements.length === 0 ? (
+                <tr>
+                  <td className="p-8 text-center text-gray-400 italic">
+                    No agreements issued for this client yet.
+                  </td>
+                </tr>
+              ) : (
+                clientAgreements.map((ag) => (
+                  <tr key={ag.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div className="font-bold text-black">{ag.title}</div>
+                      <div className="text-xs text-gray-500">
+                        Updated:{" "}
+                        {new Date(ag.last_updated_at).toLocaleDateString(
+                          "en-GB"
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${
+                          ag.status === "draft"
+                            ? "bg-gray-100 text-gray-600"
+                            : ag.status === "pending_client"
+                            ? "bg-blue-100 text-blue-600"
+                            : "bg-green-100 text-green-700"
+                        }`}
+                      >
+                        {ag.status.replace("_", " ")}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() =>
+                          router.push(
+                            `/va/dashboard/agreements/portal-view/${ag.id}`
+                          )
+                        }
+                        className="text-xs font-bold text-[#9d4edd] hover:underline"
+                      >
+                        {ag.status === "draft"
+                          ? "Review & Issue"
+                          : "View Document"}
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {/* 4. NOTES (Sticky Bottom) */}
       <section className="bg-white p-6 rounded-xl shadow-lg border-t-4 border-[#9d4edd] flex flex-col h-96">
