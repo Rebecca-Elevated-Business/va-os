@@ -57,6 +57,7 @@ export default function EditAgreementPage({
 
   // --- EDITING LOGIC ---
 
+  // 1. Remove an entire item (e.g. "Delete Emails" checkbox)
   const removeItem = (sectionIndex: number, itemIndex: number) => {
     if (!agreement) return;
     const newStructure = { ...agreement.custom_structure };
@@ -64,6 +65,7 @@ export default function EditAgreementPage({
     setAgreement({ ...agreement, custom_structure: newStructure });
   };
 
+  // 2. Add a new option to a checkbox group
   const addOption = (sectionIndex: number, itemIndex: number) => {
     if (!agreement) return;
     const option = window.prompt("Enter new option:");
@@ -73,6 +75,22 @@ export default function EditAgreementPage({
     const item = newStructure.sections[sectionIndex].items[itemIndex];
     if (item.options) {
       item.options.push(option);
+      setAgreement({ ...agreement, custom_structure: newStructure });
+    }
+  };
+
+  // 3. Remove a specific option (The "X" button on a tag)
+  // THIS WAS THE MISSING PART - NOW PLACED CORRECTLY
+  const removeOption = (
+    sectionIndex: number,
+    itemIndex: number,
+    optionIndex: number
+  ) => {
+    if (!agreement) return;
+    const newStructure = { ...agreement.custom_structure };
+    const item = newStructure.sections[sectionIndex].items[itemIndex];
+    if (item.options) {
+      item.options.splice(optionIndex, 1);
       setAgreement({ ...agreement, custom_structure: newStructure });
     }
   };
@@ -101,7 +119,6 @@ export default function EditAgreementPage({
     }
 
     // 2. Create Version Control Log
-    // This tracks that the VA (user.id) made this specific update
     await supabase.from("agreement_logs").insert([
       {
         agreement_id: id,
@@ -129,17 +146,17 @@ export default function EditAgreementPage({
         </div>
         <div className="flex gap-3">
           <button
-            onClick={() => router.push("/va/dashboard/agreements")}
+            onClick={() => router.push("/va/dashboard/agreements/list")}
             className="px-4 py-2 text-sm font-semibold text-gray-500 hover:text-black"
           >
-            Back to Library
+            Back to List
           </button>
           <button
             disabled={saving}
             onClick={handleSave}
             className="bg-[#9d4edd] text-white px-8 py-2 rounded-lg font-bold shadow-md hover:bg-[#7b2cbf] transition-all disabled:opacity-50"
           >
-            {saving ? "Saving..." : "Save Changes"}
+            {saving ? "Saving..." : "Save as Draft"}
           </button>
         </div>
       </div>
@@ -176,9 +193,16 @@ export default function EditAgreementPage({
                       {item.options?.map((opt, oIndex) => (
                         <span
                           key={oIndex}
-                          className="bg-gray-50 border border-gray-200 px-3 py-1 rounded-full text-xs text-gray-600"
+                          className="bg-gray-50 border border-gray-200 px-3 py-1 rounded-full text-xs text-gray-600 flex items-center gap-2"
                         >
                           {opt}
+                          {/* THIS CALL NOW WORKS BECAUSE THE FUNCTION IS VISIBLE */}
+                          <button
+                            onClick={() => removeOption(sIndex, iIndex, oIndex)}
+                            className="text-gray-400 hover:text-red-500 font-bold"
+                          >
+                            ✕
+                          </button>
                         </span>
                       ))}
                       <button
