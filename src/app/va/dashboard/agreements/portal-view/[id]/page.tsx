@@ -83,7 +83,7 @@ export default function AgreementPortalView({
       ]);
 
       alert("Agreement Issued Successfully!");
-      router.push("/va/dashboard/agreements/list");
+      router.push(`/va/dashboard/crm/profile/${agreement.client_id}`);
     }
     setIsPublishing(false);
   };

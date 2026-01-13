@@ -131,6 +131,7 @@ export default function ClientDashboard() {
                       )
                     }
                   >
+                    {/* Update: Show 'Review & Sign' if it's pending, otherwise 'View' */}
                     {ag.status === "pending_client"
                       ? "Review & Sign"
                       : "View Agreement"}
