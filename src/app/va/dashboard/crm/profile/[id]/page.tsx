@@ -720,6 +720,14 @@ export default function ClientProfilePage({
             onClick={() => router.push("/va/dashboard/agreements")}
             className="text-sm bg-[#9d4edd] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#7b2cbf] transition-all"
           >
+            <button
+              onClick={() =>
+                router.push(`/va/dashboard/documents/create?clientId=${id}`)
+              }
+              className="text-sm border border-[#9d4edd] text-[#9d4edd] px-4 py-2 rounded-lg font-bold hover:bg-purple-50 transition-all"
+            >
+              + Create Document (Proposal/Invoice/Contract)
+            </button>
             + New Agreement
           </button>
         </div>
