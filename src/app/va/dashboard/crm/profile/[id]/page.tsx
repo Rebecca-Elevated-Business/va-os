@@ -227,14 +227,20 @@ export default function ClientProfilePage({
 
   // --- HELPER: Format Time Display ---
   const formatTime = (task: Task) => {
-    let total = task.total_minutes;
-    // If running, calculate live time added to historical total
+    // 1. Convert stored minutes to seconds so we can do precise math
+    let totalSeconds = task.total_minutes * 60;
+
+    // 2. If running, add the live elapsed seconds
     if (task.is_running && task.start_time) {
-      total += (now - new Date(task.start_time).getTime()) / 60000;
+      totalSeconds += (now - new Date(task.start_time).getTime()) / 1000;
     }
-    const hrs = Math.floor(total / 60);
-    const mins = Math.floor(total % 60);
-    return `${hrs}h ${mins}m`;
+
+    // 3. Calculate hours, minutes, AND seconds
+    const hrs = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = Math.floor(totalSeconds % 60);
+
+    return `${hrs}h ${mins}m ${secs}s`;
   };
 
   if (loading) return <div className="p-10 text-black">Loading Profile...</div>;
