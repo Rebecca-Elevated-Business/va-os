@@ -39,30 +39,32 @@ function SetupForm() {
     }
 
     if (data.user) {
-      // 2. Update the Profile table with the new Auth ID
-      // We overwrite the 'placeholder' CRM ID with the real Auth UUID
-
-      const { error: profileError } = await supabase.from("profiles").insert([
-        {
-          id: data.user.id,
-          role: "client",
-          status: "active",
-        },
-      ]);
-
-      if (profileError) {
-        console.error("Profile creation failed:", profileError.message);
-      }
-
-      // 3. Link the CRM record to this new User ID
+      // 2. Create Profile
       await supabase
+        .from("profiles")
+        .insert([{ id: data.user.id, role: "client", status: "active" }]);
+
+      // 3. Link CRM Record (THE CRITICAL STEP)
+      const { error: updateError } = await supabase
         .from("clients")
         .update({
           has_access: true,
-          auth_user_id: data.user.id, // <--- THIS CREATES THE BRIDGE
+          auth_user_id: data.user.id,
         })
         .eq("id", clientId);
 
+      // 4. CHECK FOR ERRORS
+      if (updateError) {
+        console.error("Bridge Failed:", updateError);
+        setError(
+          "Account created, but failed to link to CRM data. Error: " +
+            updateError.message
+        );
+        setLoading(false);
+        return; // Stop! Don't redirect.
+      }
+
+      // Only redirect if everything worked
       router.push("/client/dashboard");
     }
   };
