@@ -70,7 +70,7 @@ export default function ClientDashboard() {
           .neq("status", "draft")
           .order("created_at", { ascending: false });
 
-        if (docs) setDocuments(docs);
+        if (docs) setDocuments(docs as ClientDocument[]);
       }
       setLoading(false);
     }
