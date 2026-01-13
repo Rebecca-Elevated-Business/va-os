@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import router from "next/router";
+import { useRouter } from "next/navigation";
 
 // --- TYPES ---
 type Client = {
@@ -49,6 +49,7 @@ export default function ClientProfilePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const router = useRouter();
 
   // --- STATE ---
   const [client, setClient] = useState<Client | null>(null);

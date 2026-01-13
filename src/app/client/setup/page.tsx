@@ -57,7 +57,10 @@ function SetupForm() {
       // 3. Link the CRM record to this new User ID
       await supabase
         .from("clients")
-        .update({ has_access: true })
+        .update({
+          has_access: true,
+          auth_user_id: data.user.id, // <--- THIS CREATES THE BRIDGE
+        })
         .eq("id", clientId);
 
       router.push("/client/dashboard");
