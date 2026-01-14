@@ -128,34 +128,6 @@ export default function AgreementPortalView({
     setIsPublishing(false);
   };
 
-  // 2. VA REVOKE LOGIC
-  const handleRevoke = async () => {
-    if (!agreement) return;
-    if (
-      !window.confirm(
-        "Revoke this from the client? It will return to Draft mode and disappear from their portal."
-      )
-    )
-      return;
-
-    const { error } = await supabase
-      .from("client_agreements")
-      .update({ status: "draft" })
-      .eq("id", id);
-
-    if (!error) {
-      await supabase.from("agreement_logs").insert([
-        {
-          agreement_id: id,
-          change_summary: "VA REVOKED agreement from client portal",
-        },
-      ]);
-      alert("Agreement Revoked.");
-      // Redirect back to the CRM profile to see the status change to Red/Draft
-      router.push(`/va/dashboard/crm/profile/${agreement.client_id}`);
-    }
-  };
-
   // 3. CLIENT AUTHORISATION LOGIC
   const handleAuthorise = async () => {
     if (!agreement) return;
@@ -222,16 +194,6 @@ export default function AgreementPortalView({
               className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded font-bold text-sm"
             >
               {isSaving ? "Saving..." : "Save Progress"}
-            </button>
-          )}
-
-          {/* VA ACTIONS: Revoke (if pending) or Issue (if draft) */}
-          {isVA && agreement.status === "pending_client" && (
-            <button
-              onClick={handleRevoke}
-              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded font-bold text-sm shadow-md transition-all"
-            >
-              REVOKE FROM CLIENT
             </button>
           )}
 

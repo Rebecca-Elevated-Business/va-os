@@ -276,25 +276,35 @@ export default function ClientProfilePage({
     if (!error) refreshData();
   };
 
-  // New: Function to delete a service agreement
   const deleteAgreement = async (agreementId: string) => {
-    if (
-      !window.confirm(
-        "Are you sure you want to permanently delete this agreement? This cannot be undone."
-      )
-    )
-      return;
-
+    if (!confirm("Delete this agreement?")) return;
     const { error } = await supabase
       .from("client_agreements")
       .delete()
       .eq("id", agreementId);
+    if (!error) {
+      setClientAgreements((prev) => prev.filter((a) => a.id !== agreementId));
+    }
+  };
 
-    if (error) {
-      alert("Error deleting agreement: " + error.message);
-    } else {
-      // Refresh the local state to remove the deleted item from the list
-      setClientAgreements((prev) => prev.filter((ag) => ag.id !== agreementId));
+  // New: Function to delete a service agreement
+  const revokeAgreement = async (agreementId: string) => {
+    if (
+      !confirm(
+        "Revoke this agreement? It will return to draft mode and hide from the client."
+      )
+    )
+      return;
+    const { error } = await supabase
+      .from("client_agreements")
+      .update({ status: "draft" })
+      .eq("id", agreementId);
+    if (!error) {
+      setClientAgreements(
+        clientAgreements.map((ag) =>
+          ag.id === agreementId ? { ...ag, status: "draft" } : ag
+        )
+      );
     }
   };
 
@@ -905,6 +915,15 @@ export default function ClientProfilePage({
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right flex justify-end gap-4 items-center">
+                      {/* REVOKE LINK: Only shows if NOT a draft */}
+                      {ag.status !== "draft" && (
+                        <button
+                          onClick={() => revokeAgreement(ag.id)}
+                          className="text-[10px] font-bold text-orange-500 hover:underline uppercase"
+                        >
+                          Revoke
+                        </button>
+                      )}
                       <button
                         onClick={() =>
                           router.push(
