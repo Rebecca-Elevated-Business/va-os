@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function VADashboardLayout({
   children,
@@ -12,6 +12,39 @@ export default function VADashboardLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [authorized, setAuthorized] = useState(false); // Default to FALSE (Locked)
+
+  // 1. THE BOUNCER: Security Check
+  useEffect(() => {
+    async function checkUser() {
+      // Get current session
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        // If no user -> Kick to Login
+        router.push("/va/login");
+        return;
+      }
+
+      // Check role in Profile
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", session.user.id)
+        .single();
+
+      if (profile?.role !== "va") {
+        // If not a VA -> Kick to Client Dashboard
+        router.push("/client/dashboard");
+      } else {
+        // Only unlock if they pass checks
+        setAuthorized(true);
+      }
+    }
+    checkUser();
+  }, [router]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -25,9 +58,21 @@ export default function VADashboardLayout({
     { name: "Service Agreements", href: "/va/dashboard/agreements" },
   ];
 
+  // 2. BLOCKING STATE: Don't show ANYTHING until authorized
+  if (!authorized) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-center animate-pulse">
+          <p className="text-xl font-bold text-[#9d4edd]">VA-OS</p>
+          <p className="text-sm text-gray-400">Verifying Security...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. RENDER DASHBOARD (Only happens if authorized is true)
   return (
     <div className="flex min-h-screen bg-gray-50 text-black">
-      {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-gray-200 flex flex-col fixed h-full">
         <div className="p-6 border-b border-gray-100">
           <h2 className="text-xl font-bold text-[#9d4edd]">VA-OS</h2>
@@ -59,7 +104,6 @@ export default function VADashboardLayout({
         </div>
       </aside>
 
-      {/* Main Content Area */}
       <main className="flex-1 ml-64 p-8">{children}</main>
     </div>
   );
