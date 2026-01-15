@@ -4,23 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
 import CalendarView from "./CalendarView";
-
-// --- TYPES ---
-type Task = {
-  id: string;
-  task_name: string;
-  status: string;
-  category: string;
-  priority: string;
-  due_date: string | null;
-  scheduled_start?: string | null; // Added this
-  scheduled_end?: string | null; // Added this
-  total_minutes: number;
-  is_running: boolean;
-  start_time: string | null;
-  client_id: string | null;
-  clients?: { business_name: string; surname: string };
-};
+import KanbanView from "./KanbanView";
+import { Task } from "./types";
 
 type ClientOption = {
   id: string;
@@ -42,6 +27,7 @@ export default function TaskCentrePage() {
     "todo",
     "up_next",
     "in_progress",
+    "completed",
   ]);
 
   // New Task State
@@ -50,13 +36,19 @@ export default function TaskCentrePage() {
   const [newTaskClient, setNewTaskClient] = useState("");
   const [newTaskCategory, setNewTaskCategory] = useState("business");
   const [newTaskDate, setNewTaskDate] = useState("");
+  const [newTaskStatus, setNewTaskStatus] = useState("todo"); // Default status
 
   // --- GLOBAL TICKER ---
   useEffect(() => {
-    // FIX 1: Removed direct setNow(Date.now()) call.
-    // We let the interval handle the first update to avoid render cascades.
+    // FIX 1: Use setTimeout for the initial time update
+    const initialTick = setTimeout(() => setNow(Date.now()), 1);
+
     const interval = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(interval);
+
+    return () => {
+      clearTimeout(initialTick);
+      clearInterval(interval);
+    };
   }, []);
 
   // --- DATA FETCHING ---
@@ -86,7 +78,12 @@ export default function TaskCentrePage() {
   }, []);
 
   useEffect(() => {
-    // FIX 2: Trigger fetch ONLY after subscription is confirmed
+    // FIX 2: Wrap initial fetch in setTimeout to prevent synchronous state update warning
+    const timer = setTimeout(() => {
+      fetchData();
+    }, 0);
+
+    // Realtime Subscription
     const channel = supabase
       .channel("tasks-realtime")
       .on(
@@ -96,13 +93,10 @@ export default function TaskCentrePage() {
           fetchData();
         }
       )
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          fetchData();
-        }
-      });
+      .subscribe();
 
     return () => {
+      clearTimeout(timer);
       supabase.removeChannel(channel);
     };
   }, [fetchData]);
@@ -122,7 +116,7 @@ export default function TaskCentrePage() {
         va_id: user?.id,
         client_id: newTaskClient || null,
         task_name: newTaskName,
-        status: "todo",
+        status: newTaskStatus,
         category: finalCategory,
         due_date: newTaskDate || null,
         total_minutes: 0,
@@ -133,6 +127,7 @@ export default function TaskCentrePage() {
     setIsAdding(false);
     setNewTaskName("");
     setNewTaskDate("");
+    setNewTaskStatus("todo"); // Reset to default
   };
 
   const toggleTimer = async (task: Task) => {
@@ -165,13 +160,18 @@ export default function TaskCentrePage() {
   };
 
   const updateStatus = async (taskId: string, newStatus: string) => {
+    // Optimistic update for UI speed
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
+    );
+
     await supabase.from("tasks").update({ status: newStatus }).eq("id", taskId);
   };
 
   const formatTime = (task: Task) => {
     let totalSecs = task.total_minutes * 60;
 
-    // Only add live time if 'now' has been initialized
+    // Only calculate live time if 'now' is initialized (greater than 0)
     if (task.is_running && task.start_time && now > 0) {
       totalSecs += (now - new Date(task.start_time).getTime()) / 1000;
     }
@@ -220,41 +220,51 @@ export default function TaskCentrePage() {
         </div>
 
         <button
-          onClick={() => setIsAdding(true)}
+          onClick={() => {
+            setNewTaskStatus("todo");
+            setIsAdding(true);
+          }}
           className="bg-[#9d4edd] text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg hover:bg-[#7b2cbf] transition-all"
         >
           + New Task
         </button>
       </div>
 
-      {/* 2. FILTERS */}
-      <div className="flex flex-wrap gap-2 mb-8">
-        {["todo", "up_next", "in_progress", "completed"].map((status) => (
-          <button
-            key={status}
-            onClick={() =>
-              setFilterStatus((prev) =>
-                prev.includes(status)
-                  ? prev.filter((s) => s !== status)
-                  : [...prev, status]
-              )
-            }
-            className={`px-4 py-2 rounded-full border-2 text-xs font-black uppercase tracking-widest transition-all ${
-              filterStatus.includes(status)
-                ? "border-[#9d4edd] bg-purple-50 text-[#9d4edd]"
-                : "border-gray-100 text-gray-400 hover:border-gray-300"
-            }`}
-          >
-            {status.replace("_", " ")}
-          </button>
-        ))}
-      </div>
+      {/* 2. FILTERS (Hidden on Calendar to avoid confusion) */}
+      {view !== "calendar" && (
+        <div className="flex flex-wrap gap-2 mb-8">
+          {["todo", "up_next", "in_progress", "completed"].map((status) => (
+            <button
+              key={status}
+              onClick={() =>
+                setFilterStatus((prev) =>
+                  prev.includes(status)
+                    ? prev.filter((s) => s !== status)
+                    : [...prev, status]
+                )
+              }
+              className={`px-4 py-2 rounded-full border-2 text-xs font-black uppercase tracking-widest transition-all ${
+                filterStatus.includes(status)
+                  ? "border-[#9d4edd] bg-purple-50 text-[#9d4edd]"
+                  : "border-gray-100 text-gray-400 hover:border-gray-300"
+              }`}
+            >
+              {status.replace("_", " ")}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* 3. ADD TASK MODAL */}
       {isAdding && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-lg rounded-3xl p-8 shadow-2xl animate-in zoom-in duration-200">
-            <h2 className="text-xl font-black mb-6">Create New Task</h2>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-black">Create New Task</h2>
+              <span className="text-[10px] font-bold bg-gray-100 px-2 py-1 rounded uppercase text-gray-500">
+                Status: {newTaskStatus.replace("_", " ")}
+              </span>
+            </div>
 
             <div className="space-y-4">
               <div>
@@ -263,7 +273,7 @@ export default function TaskCentrePage() {
                 </label>
                 <input
                   autoFocus
-                  className="w-full border-2 border-gray-100 rounded-xl p-3 outline-none focus:border-[#9d4edd] font-bold"
+                  className="w-full border-2 border-gray-100 rounded-xl p-3 outline-none focus:border-[#9d4edd] font-bold text-black"
                   value={newTaskName}
                   onChange={(e) => setNewTaskName(e.target.value)}
                   placeholder="What needs doing?"
@@ -276,7 +286,7 @@ export default function TaskCentrePage() {
                     Client (Optional)
                   </label>
                   <select
-                    className="w-full border-2 border-gray-100 rounded-xl p-3 outline-none bg-white text-sm"
+                    className="w-full border-2 border-gray-100 rounded-xl p-3 outline-none bg-white text-sm text-black"
                     value={newTaskClient}
                     onChange={(e) => setNewTaskClient(e.target.value)}
                   >
@@ -296,7 +306,7 @@ export default function TaskCentrePage() {
                       Category
                     </label>
                     <select
-                      className="w-full border-2 border-gray-100 rounded-xl p-3 outline-none bg-white text-sm"
+                      className="w-full border-2 border-gray-100 rounded-xl p-3 outline-none bg-white text-sm text-black"
                       value={newTaskCategory}
                       onChange={(e) => setNewTaskCategory(e.target.value)}
                     >
@@ -312,7 +322,7 @@ export default function TaskCentrePage() {
                   </label>
                   <input
                     type="date"
-                    className="w-full border-2 border-gray-100 rounded-xl p-3 outline-none text-sm"
+                    className="w-full border-2 border-gray-100 rounded-xl p-3 outline-none text-sm text-black"
                     value={newTaskDate}
                     onChange={(e) => setNewTaskDate(e.target.value)}
                   />
@@ -397,7 +407,7 @@ export default function TaskCentrePage() {
                       <select
                         value={task.status}
                         onChange={(e) => updateStatus(task.id, e.target.value)}
-                        className="bg-gray-100 border-none text-[10px] font-bold uppercase rounded-lg py-1 px-2 cursor-pointer focus:ring-2 focus:ring-[#9d4edd] outline-none"
+                        className="bg-gray-100 border-none text-[10px] font-bold uppercase rounded-lg py-1 px-2 cursor-pointer focus:ring-2 focus:ring-[#9d4edd] outline-none text-black"
                       >
                         <option value="todo">To Do</option>
                         <option value="up_next">Up Next</option>
@@ -440,21 +450,31 @@ export default function TaskCentrePage() {
         </div>
       )}
 
+      {/* 5. CALENDAR VIEW */}
       {view === "calendar" && (
         <CalendarView
           tasks={tasks}
-          onAddTask={(date) => {
+          onAddTask={(date: string) => {
+            // Explicit type
             setNewTaskDate(date);
+            setNewTaskStatus("todo");
             setIsAdding(true);
           }}
         />
       )}
+
+      {/* 6. KANBAN VIEW */}
       {view === "kanban" && (
-        <div className="p-20 text-center border-4 border-dashed border-gray-200 rounded-4xl">
-          <p className="text-gray-400 font-bold uppercase tracking-widest">
-            Kanban Board Coming Soon
-          </p>
-        </div>
+        <KanbanView
+          tasks={visibleTasks}
+          onUpdateStatus={updateStatus}
+          onToggleTimer={toggleTimer}
+          onAddTask={(status: string) => {
+            // Explicit type
+            setNewTaskStatus(status);
+            setIsAdding(true);
+          }}
+        />
       )}
     </div>
   );
