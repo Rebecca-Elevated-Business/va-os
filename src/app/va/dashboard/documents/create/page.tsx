@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter, useSearchParams } from "next/navigation";
+import { DOCUMENT_TEMPLATES } from "@/lib/documentTemplates";
 
 function CreateDocumentForm() {
   const router = useRouter();
@@ -44,15 +45,28 @@ function CreateDocumentForm() {
     if (!selectedClient) return alert("Please select a client first.");
     setLoading(true);
 
+    // Pull the professional structure from our template library
+    const template = DOCUMENT_TEMPLATES[docType];
+
     const { data, error } = await supabase
       .from("client_documents")
       .insert([
         {
           client_id: selectedClient.id,
           type: docType,
-          title: `New ${docType.replace("_", " ")}`,
+          title: template.title,
           status: "draft",
-          content: { sections: [] },
+          content: {
+            header_image: template.header_image,
+            intro_text: template.sections.intro(selectedClient.first_name),
+            scope_of_work:
+              docType === "proposal" ? "Enter project details here..." : "",
+            quote_details:
+              docType === "proposal" ? "Enter pricing here..." : "",
+            legal_text: template.sections.legal_text || "",
+            closing_statement: template.sections.closing,
+            va_name: "VA Name",
+          },
         },
       ])
       .select()
@@ -75,7 +89,7 @@ function CreateDocumentForm() {
 
   return (
     <div className="bg-white p-8 rounded-2xl shadow-xl border border-gray-100 space-y-8">
-      {/* 1. SEARCHABLE CLIENT PICKER (Mirrors Service Agreements Appearance) */}
+      {/* 1. SEARCHABLE CLIENT PICKER */}
       <div className="space-y-4">
         <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">
           Search Client by Surname or Business
@@ -144,7 +158,7 @@ function CreateDocumentForm() {
         )}
       </div>
 
-      {/* 2. DOCUMENT TYPE SELECTION (Kept from previous version for flexibility) */}
+      {/* 2. DOCUMENT TYPE SELECTION */}
       <div className="pt-4 border-t border-gray-50">
         <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">
           Verify Document Type
