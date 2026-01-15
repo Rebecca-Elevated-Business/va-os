@@ -71,6 +71,29 @@ export default function VAInboxPage() {
     if (!error) fetchMessages();
   };
 
+  // Restored: Logic to turn a message into a CRM Task
+  const convertToTask = async (msg: InboxMessage) => {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) return;
+
+    const { error } = await supabase.from("tasks").insert([
+      {
+        client_id: msg.client_id,
+        va_id: userData.user.id,
+        task_name: `Inbox Req: ${msg.message.substring(0, 40)}...`,
+        is_completed: false,
+        total_minutes: 0,
+      },
+    ]);
+
+    if (!error) {
+      alert("Converted to client task!");
+      // Automatically complete the inbox message once it's a task
+      toggleStatus(msg.id, "is_completed", true);
+      setSelectedMsg(null);
+    }
+  };
+
   const filteredMessages = messages.filter((m) => {
     if (activeTab === "starred") return m.is_starred && !m.is_completed;
     if (activeTab === "completed") return m.is_completed;
@@ -84,7 +107,7 @@ export default function VAInboxPage() {
 
   return (
     <div className="flex h-[calc(100vh-160px)] bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden text-black font-sans">
-      {/* 1. INBOX TABS (The Inner Menu) */}
+      {/* SIDEBAR TABS */}
       <aside className="w-64 border-r border-gray-50 bg-gray-50/50 p-6 space-y-2">
         <button
           onClick={() => setActiveTab("inbox")}
@@ -125,12 +148,12 @@ export default function VAInboxPage() {
         </button>
       </aside>
 
-      {/* 2. MESSAGE LIST */}
+      {/* FEED TABLE */}
       <main className="flex-1 overflow-y-auto">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-widest bg-white sticky top-0">
-              <th className="px-6 py-4 w-10"></th>
+              <th className="px-6 py-4 w-10 text-center">Done</th>
               <th className="px-6 py-4 w-48">Client</th>
               <th className="px-6 py-4">Context</th>
               <th className="px-6 py-4 text-right w-32">Received</th>
@@ -159,21 +182,17 @@ export default function VAInboxPage() {
                   }`}
                 >
                   <td
-                    className="px-6 py-4"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleStatus(msg.id, "is_starred", !msg.is_starred);
-                    }}
+                    className="px-6 py-4 text-center"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <span
-                      className={
-                        msg.is_starred
-                          ? "text-yellow-400 text-lg"
-                          : "text-gray-200 group-hover:text-gray-300 text-lg"
+                    <input
+                      type="checkbox"
+                      checked={msg.is_completed}
+                      onChange={(e) =>
+                        toggleStatus(msg.id, "is_completed", e.target.checked)
                       }
-                    >
-                      {msg.is_starred ? "★" : "☆"}
-                    </span>
+                      className="w-5 h-5 rounded border-gray-300 text-[#9d4edd] focus:ring-[#9d4edd]"
+                    />
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm font-bold">
@@ -209,9 +228,9 @@ export default function VAInboxPage() {
         </table>
       </main>
 
-      {/* 3. MODAL POPUP */}
+      {/* POPUP OVERLAY */}
       {selectedMsg && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-100 flex items-center justify-center p-6">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-100 flex items-center justify-center p-6 text-black">
           <div className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in duration-200">
             <div className="p-10 space-y-6">
               <div className="flex justify-between items-start">
@@ -239,7 +258,14 @@ export default function VAInboxPage() {
                 &quot;{selectedMsg.message}&quot;
               </div>
 
-              <div className="flex gap-4 pt-4">
+              <div className="grid grid-cols-2 gap-4 pt-4">
+                {/* RESTORED: Create Task Button */}
+                <button
+                  onClick={() => convertToTask(selectedMsg)}
+                  className="bg-gray-900 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-black transition-all active:scale-95"
+                >
+                  ⚙️ Create Task
+                </button>
                 <button
                   onClick={() => {
                     toggleStatus(
@@ -249,7 +275,7 @@ export default function VAInboxPage() {
                     );
                     setSelectedMsg(null);
                   }}
-                  className={`flex-1 py-4 rounded-2xl font-black text-xs uppercase tracking-widest border-2 transition-all active:scale-95 ${
+                  className={`py-4 rounded-2xl font-black text-xs uppercase tracking-widest border-2 transition-all active:scale-95 ${
                     selectedMsg.is_completed
                       ? "border-orange-200 text-orange-600 hover:bg-orange-50"
                       : "border-green-200 text-green-600 hover:bg-green-50"
