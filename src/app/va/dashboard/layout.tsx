@@ -78,8 +78,9 @@ export default function VADashboardLayout({
   };
 
   const navItems = [
-    { name: "Inbox", href: "/va/dashboard/inbox" },
     { name: "Overview", href: "/va/dashboard" },
+    { name: "Task Centre", href: "/va/dashboard/tasks" },
+    { name: "Inbox", href: "/va/dashboard/inbox" },
     { name: "CRM", href: "/va/dashboard/crm" },
     { name: "Documents", href: "/va/dashboard/documents" },
     { name: "Service Agreements", href: "/va/dashboard/agreements" },
