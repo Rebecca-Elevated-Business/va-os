@@ -4,25 +4,26 @@ import { useState, useEffect, use } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
-// Define exactly what the document content can hold
-interface DocumentContent {
-  body_text?: string;
-  sections?: Array<{ title: string; text: string }>;
-  line_items?: Array<{ description: string; amount: number }>;
-}
-
-type Document = {
+// Define the structure to eliminate 'any'
+type ClientDoc = {
   id: string;
-  type: "proposal" | "booking_form" | "invoice";
-  title: string;
-  status: string;
-  content: DocumentContent | string; // Allow string for the initial "rough" drafts
   client_id: string;
-  amount_decimal?: number;
-  due_date?: string;
+  title: string;
+  type: string;
+  status: string;
+  issued_at: string | null;
+  content: {
+    header_image?: string;
+    intro_text?: string;
+    scope_of_work?: string;
+    legal_text?: string;
+    quote_details?: string;
+    closing_statement?: string;
+    va_name?: string;
+  };
 };
 
-export default function DocumentEditor({
+export default function EditDocumentPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -30,147 +31,244 @@ export default function DocumentEditor({
   const { id } = use(params);
   const router = useRouter();
 
-  const [doc, setDoc] = useState<Document | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [doc, setDoc] = useState<ClientDoc | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
-    async function loadDocument() {
+    async function loadDoc() {
       const { data } = await supabase
         .from("client_documents")
         .select("*")
         .eq("id", id)
         .single();
-      if (data) {
-        // Ensure content is at least an empty string if null
-        const formattedData = {
-          ...data,
-          content: data.content || "",
-        };
-        setDoc(formattedData as Document);
-      }
+      if (data) setDoc(data as ClientDoc);
       setLoading(false);
     }
-    loadDocument();
+    loadDoc();
   }, [id]);
 
-  const handleSave = async (status: string = "draft") => {
+  const handleSave = async (isIssuing = false) => {
     if (!doc) return;
     setSaving(true);
 
+    const updates = {
+      content: doc.content,
+      title: doc.title,
+      status: isIssuing ? "issued" : doc.status,
+      issued_at: isIssuing ? new Date().toISOString() : doc.issued_at,
+    };
+
     const { error } = await supabase
       .from("client_documents")
-      .update({
-        title: doc.title,
-        content: doc.content,
-        amount_decimal: doc.amount_decimal,
-        due_date: doc.due_date,
-        status: status,
-      })
+      .update(updates)
       .eq("id", id);
 
-    if (error) alert(error.message);
-    else {
-      alert(
-        status === "issued" ? "Document Issued to Client!" : "Draft Saved."
-      );
-      if (status === "issued")
-        router.push(`/va/dashboard/crm/profile/${doc.client_id}`);
-    }
     setSaving(false);
+    if (!error && isIssuing) {
+      alert("Document Issued to Client!");
+      router.push(`/va/dashboard/crm/profile/${doc.client_id}`);
+    } else if (!error) {
+      alert("Draft Saved.");
+    }
   };
 
-  if (loading) return <div className="p-10 text-black">Loading Editor...</div>;
-  if (!doc) return <div className="p-10 text-black">Document not found.</div>;
-
-  // Helper to get string value for the textarea safely
-  const getContentValue = (): string => {
-    if (typeof doc.content === "string") return doc.content;
-    return JSON.stringify(doc.content, null, 2);
+  // Fixed 'any' by using keyof and specific value types
+  const updateContent = (field: keyof ClientDoc["content"], value: string) => {
+    if (!doc) return;
+    setDoc({
+      ...doc,
+      content: { ...doc.content, [field]: value },
+    });
   };
+
+  if (loading)
+    return <div className="p-10 text-gray-400 italic">Loading editor...</div>;
+  if (!doc) return <div className="p-10 text-red-500">Document not found.</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 text-black">
-      {/* Editor Header */}
-      <div className="bg-white border-b p-4 sticky top-0 z-50 flex justify-between items-center px-8">
+    <div className="p-6 max-w-5xl mx-auto text-black pb-20">
+      {/* HEADER ACTIONS */}
+      <div className="flex justify-between items-end mb-8 border-b pb-6">
         <div>
-          <span className="text-[10px] font-black uppercase bg-purple-100 text-[#9d4edd] px-2 py-1 rounded">
-            {doc.type.replace("_", " ")} Editor
-          </span>
-          <input
-            className="block text-xl font-bold bg-transparent outline-none border-b border-transparent focus:border-gray-200"
-            value={doc.title}
-            onChange={(e) => setDoc({ ...doc, title: e.target.value })}
-          />
+          <h1 className="text-3xl font-black tracking-tighter uppercase">
+            Document Editor
+          </h1>
+          <p className="text-gray-400 text-sm font-bold">
+            Drafting: {doc.title}
+          </p>
         </div>
-        <div className="flex gap-4">
+        <div className="flex gap-3">
           <button
-            onClick={() => handleSave("draft")}
-            className="text-sm font-bold text-gray-400 hover:text-gray-600"
+            onClick={() => setShowPreview(true)}
+            className="px-6 py-2 border-2 border-gray-200 rounded-xl font-bold text-sm hover:bg-gray-50 transition-all"
           >
-            {saving ? "..." : "Save Draft"}
+            Preview as Client
           </button>
           <button
-            onClick={() => handleSave("issued")}
-            className="bg-[#9d4edd] text-white px-6 py-2 rounded-lg font-bold text-sm shadow-md"
+            onClick={() => handleSave(false)}
+            disabled={saving}
+            className="px-6 py-2 bg-gray-900 text-white rounded-xl font-bold text-sm hover:bg-black transition-all"
+          >
+            {saving ? "Saving..." : "Save Draft"}
+          </button>
+          <button
+            onClick={() => handleSave(true)}
+            className="px-6 py-2 bg-[#9d4edd] text-white rounded-xl font-bold text-sm hover:bg-[#7b2cbf] shadow-lg shadow-purple-100 transition-all"
           >
             Issue to Client
           </button>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto mt-10 space-y-8">
-        <div className="bg-white p-12 rounded-2xl shadow-sm border border-gray-200">
-          {doc.type === "invoice" && (
-            <div className="space-y-6 mb-10 pb-10 border-b">
-              <h3 className="font-bold text-lg">Invoice Details</h3>
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase mb-2">
-                    Total Amount (£)
-                  </label>
-                  <input
-                    type="number"
-                    className="w-full border p-3 rounded-lg bg-gray-50"
-                    value={doc.amount_decimal || ""}
-                    onChange={(e) =>
-                      setDoc({
-                        ...doc,
-                        amount_decimal: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase mb-2">
-                    Due Date
-                  </label>
-                  <input
-                    type="date"
-                    className="w-full border p-3 rounded-lg bg-gray-50"
-                    value={doc.due_date || ""}
-                    onChange={(e) =>
-                      setDoc({ ...doc, due_date: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
-            </div>
-          )}
+      <div className="grid grid-cols-1 gap-8">
+        {/* SECTION: BASICS */}
+        <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
+              1. Professional Branding
+            </h2>
+          </div>
 
-          <div className="space-y-6">
-            <h3 className="font-bold text-lg capitalize">
-              {doc.type} Body Content
-            </h3>
+          <div>
+            <label className="block text-[10px] font-black uppercase text-gray-400 mb-2">
+              Header Image URL
+            </label>
+            <input
+              type="text"
+              className="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-purple-100"
+              value={doc.content.header_image || ""}
+              onChange={(e) => updateContent("header_image", e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* SECTION: INTRO */}
+        <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-4">
+          <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
+            2. Welcome Message
+          </h2>
+          <textarea
+            className="w-full p-4 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-purple-100 min-h-37.5 leading-relaxed"
+            value={doc.content.intro_text || ""}
+            onChange={(e) => updateContent("intro_text", e.target.value)}
+            placeholder="Write your warm welcome here..."
+          />
+        </div>
+
+        {/* SECTION: SCOPE & PRICING */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-4">
+            <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
+              3. Scope of Work
+            </h2>
             <textarea
-              className="w-full border p-4 rounded-xl bg-gray-50 min-h-100 outline-none focus:bg-white transition-all font-mono text-sm"
-              placeholder={`Paste or type your ${doc.type} content here...`}
-              value={getContentValue()}
-              onChange={(e) => setDoc({ ...doc, content: e.target.value })}
+              className="w-full p-4 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-purple-100 min-h-50"
+              value={doc.content.scope_of_work || ""}
+              onChange={(e) => updateContent("scope_of_work", e.target.value)}
+              placeholder="List the specific tasks and deliverables..."
+            />
+          </div>
+          <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-4">
+            <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
+              4. Investment / Pricing
+            </h2>
+            <textarea
+              className="w-full p-4 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-purple-100 min-h-50"
+              value={doc.content.quote_details || ""}
+              onChange={(e) => updateContent("quote_details", e.target.value)}
+              placeholder="e.g. £500 per month or £35 per hour"
+            />
+          </div>
+        </div>
+
+        {/* SECTION: LEGAL & CLOSING */}
+        <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-6">
+          <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
+            5. Final Details
+          </h2>
+          <div>
+            <label className="block text-[10px] font-black uppercase text-gray-400 mb-2">
+              Legal Terms / Booking Conditions
+            </label>
+            <textarea
+              className="w-full p-4 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-purple-100 min-h-25"
+              value={doc.content.legal_text || ""}
+              onChange={(e) => updateContent("legal_text", e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase text-gray-400 mb-2">
+              Closing Statement
+            </label>
+            <textarea
+              className="w-full p-4 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-purple-100"
+              value={doc.content.closing_statement || ""}
+              onChange={(e) =>
+                updateContent("closing_statement", e.target.value)
+              }
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-black uppercase text-gray-400 mb-2">
+              Signature / VA Name
+            </label>
+            <input
+              type="text"
+              className="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-purple-100"
+              value={doc.content.va_name || ""}
+              onChange={(e) => updateContent("va_name", e.target.value)}
             />
           </div>
         </div>
       </div>
+
+      {/* PREVIEW MODAL */}
+      {showPreview && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:p-10">
+          <div className="bg-white w-full max-w-5xl h-full rounded-4xl overflow-hidden flex flex-col relative">
+            <button
+              onClick={() => setShowPreview(false)}
+              className="absolute top-6 right-6 z-10 bg-gray-900 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold"
+            >
+              ✕
+            </button>
+            <div className="flex-1 overflow-y-auto p-10 bg-gray-50">
+              <div className="max-w-3xl mx-auto bg-white shadow-xl rounded-2xl overflow-hidden min-h-screen p-12">
+                <h1 className="text-4xl font-black mb-6">{doc.title}</h1>
+                <p className="whitespace-pre-wrap text-gray-600 mb-10">
+                  {doc.content.intro_text}
+                </p>
+
+                {doc.content.scope_of_work && (
+                  <div className="bg-purple-50 p-6 rounded-xl mb-10">
+                    <h3 className="text-xs font-bold text-[#9d4edd] uppercase mb-2">
+                      Scope
+                    </h3>
+                    <p className="whitespace-pre-wrap">
+                      {doc.content.scope_of_work}
+                    </p>
+                  </div>
+                )}
+
+                {doc.content.quote_details && (
+                  <div className="text-2xl font-bold mb-10">
+                    Investment: {doc.content.quote_details}
+                  </div>
+                )}
+
+                <p className="italic text-gray-400">
+                  {doc.content.closing_statement}
+                </p>
+                <p className="font-black mt-4 text-[#9d4edd]">
+                  {doc.content.va_name}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
