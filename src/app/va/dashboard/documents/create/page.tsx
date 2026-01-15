@@ -2,26 +2,14 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { supabase } from "@/lib/supabase";
-import { useRouter, useSearchParams } from "next/navigation";
-import { DOCUMENT_TEMPLATES } from "@/lib/documentTemplates";
+import { useRouter } from "next/navigation";
 
 function CreateDocumentForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-
-  // Get doc type from URL (e.g., ?type=proposal)
-  const initialDocType =
-    (searchParams.get("type") as "proposal" | "booking_form" | "invoice") ||
-    "proposal";
-
-  // Data State
   const [clients, setClients] = useState<
     { id: string; first_name: string; surname: string; business_name: string }[]
   >([]);
-  const [docType, setDocType] = useState(initialDocType);
   const [loading, setLoading] = useState(false);
-
-  // Search/Selection State (Mirrors Service Agreements)
   const [search, setSearch] = useState("");
   const [selectedClient, setSelectedClient] = useState<{
     id: string;
@@ -41,46 +29,34 @@ function CreateDocumentForm() {
     loadClients();
   }, []);
 
-  const handleInitialiseDocument = async () => {
-    if (!selectedClient) return alert("Please select a client first.");
-    setLoading(true);
-
-    // Pull the professional structure from our template library
-    const template = DOCUMENT_TEMPLATES[docType];
+  const handleCreate = async (
+    type: "proposal" | "booking_form" | "invoice" | "upload"
+  ) => {
+    if (!selectedClient) return;
+    setLoading(true); // Now using the state
 
     const { data, error } = await supabase
       .from("client_documents")
       .insert([
         {
           client_id: selectedClient.id,
-          type: docType,
-          title: template.title,
+          type: type,
+          title: `Draft ${type.replace("_", " ")}`,
           status: "draft",
-          content: {
-            header_image: template.header_image,
-            intro_text: template.sections.intro(selectedClient.first_name),
-            scope_of_work:
-              docType === "proposal" ? "Enter project details here..." : "",
-            quote_details:
-              docType === "proposal" ? "Enter pricing here..." : "",
-            legal_text: template.sections.legal_text || "",
-            closing_statement: template.sections.closing,
-            va_name: "VA Name",
-          },
+          content: { sections: [] },
         },
       ])
       .select()
       .single();
 
-    if (error) {
-      alert("Error: " + error.message);
-      setLoading(false);
+    if (!error) {
+      router.push(`/va/dashboard/documents/edit-${type}/${data.id}`);
     } else {
-      router.push(`/va/dashboard/documents/edit/${data.id}`);
+      alert("Error: " + error.message);
+      setLoading(false); // Reset on error
     }
   };
 
-  // Filter Logic (Mirrors DeployAgreementPage)
   const filteredClients = clients.filter(
     (c) =>
       c.surname.toLowerCase().includes(search.toLowerCase()) ||
@@ -88,122 +64,124 @@ function CreateDocumentForm() {
   );
 
   return (
-    <div className="bg-white p-8 rounded-2xl shadow-xl border border-gray-100 space-y-8">
-      {/* 1. SEARCHABLE CLIENT PICKER */}
-      <div className="space-y-4">
-        <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-          Search Client by Surname or Business
-        </label>
-        <input
-          type="text"
-          placeholder="Start typing to search..."
-          className="w-full p-4 border rounded-xl outline-none focus:ring-2 focus:ring-[#9d4edd] bg-gray-50 text-black transition-all"
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setSelectedClient(null);
-          }}
-        />
+    <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl border border-gray-100 max-w-xl mx-auto">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-black text-gray-900 tracking-tight">
+          Generate Document
+        </h2>
+        <p className="text-sm text-gray-400 font-medium">
+          Select a client and choose document type
+        </p>
+      </div>
 
-        {search && !selectedClient && (
-          <div className="border border-gray-100 rounded-xl max-h-60 overflow-y-auto divide-y shadow-lg bg-white animate-in fade-in zoom-in duration-200">
-            {filteredClients.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => {
-                  setSelectedClient(c);
-                  setSearch(`${c.first_name} ${c.surname}`);
-                }}
-                className="w-full text-left p-4 hover:bg-purple-50 flex justify-between items-center transition-colors"
-              >
-                <span className="font-bold text-gray-900">
-                  {c.first_name} {c.surname}
-                </span>
-                <span className="text-xs font-medium text-[#9d4edd] bg-purple-50 px-2 py-1 rounded">
-                  {c.business_name || "Personal"}
-                </span>
-              </button>
-            ))}
-            {filteredClients.length === 0 && (
-              <p className="p-4 text-center text-gray-400 text-sm italic">
-                No matching clients found.
-              </p>
-            )}
-          </div>
-        )}
+      <div className="space-y-6">
+        <div>
+          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block ml-1">
+            Search Client
+          </label>
+          <input
+            type="text"
+            placeholder="Search by surname or business..."
+            className="w-full p-4 border-2 border-gray-50 rounded-2xl outline-none focus:ring-4 focus:ring-purple-50 focus:border-[#9d4edd] bg-gray-50 text-black transition-all"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setSelectedClient(null);
+            }}
+          />
+
+          {search && !selectedClient && (
+            <div className="mt-2 border border-gray-100 rounded-2xl max-h-48 overflow-y-auto divide-y shadow-xl bg-white animate-in fade-in slide-in-from-top-2">
+              {filteredClients.map((c) => (
+                <button
+                  key={c.id}
+                  disabled={loading}
+                  onClick={() => {
+                    setSelectedClient(c);
+                    setSearch(`${c.first_name} ${c.surname}`);
+                  }}
+                  className="w-full text-left p-4 hover:bg-purple-50 flex justify-between items-center transition-colors disabled:opacity-50"
+                >
+                  <span className="font-bold text-gray-900">
+                    {c.first_name} {c.surname}
+                  </span>
+                  <span className="text-[10px] font-black text-[#9d4edd] bg-purple-50 px-2 py-1 rounded-lg uppercase">
+                    {c.business_name || "Personal"}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {selectedClient && (
-          <div className="p-4 bg-green-50 border border-green-200 rounded-xl flex justify-between items-center animate-in slide-in-from-top-2">
-            <div>
-              <p className="text-[10px] text-green-600 font-black uppercase tracking-tighter">
-                Document will be issued to:
+          <div className="space-y-4 animate-in fade-in zoom-in duration-300">
+            <div className="p-4 bg-green-50 border border-green-100 rounded-2xl text-center">
+              <p className="text-[10px] text-green-600 font-black uppercase tracking-widest mb-1">
+                Target Client
               </p>
               <p className="font-bold text-green-900">
                 {selectedClient.first_name} {selectedClient.surname}
-                <span className="ml-2 font-normal opacity-60">
-                  ({selectedClient.business_name})
-                </span>
               </p>
             </div>
-            <button
-              onClick={() => {
-                setSelectedClient(null);
-                setSearch("");
-              }}
-              className="text-xs font-bold text-green-700 underline hover:text-green-800"
-            >
-              Change
-            </button>
+
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                disabled={loading}
+                onClick={() => handleCreate("proposal")}
+                className="bg-[#9d4edd] text-white p-4 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-[#7b2cbf] transition-all shadow-lg shadow-purple-100 disabled:bg-gray-300"
+              >
+                {loading ? "..." : "Proposal"}
+              </button>
+              <button
+                disabled={loading}
+                onClick={() => handleCreate("booking_form")}
+                className="bg-gray-900 text-white p-4 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-black transition-all disabled:bg-gray-300"
+              >
+                {loading ? "..." : "Booking Form"}
+              </button>
+              <button
+                disabled={loading}
+                onClick={() => handleCreate("invoice")}
+                className="bg-gray-100 text-gray-600 p-4 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-all disabled:bg-gray-300"
+              >
+                {loading ? "..." : "Invoice"}
+              </button>
+              <button
+                disabled={loading}
+                onClick={() => handleCreate("upload")}
+                className="border-2 border-dashed border-gray-200 text-gray-400 p-4 rounded-2xl font-bold text-xs uppercase tracking-widest hover:border-[#9d4edd] hover:text-[#9d4edd] transition-all disabled:bg-gray-300"
+              >
+                {loading ? "..." : "Upload Own"}
+              </button>
+            </div>
+
+            <div className="text-center pt-2">
+              <button
+                disabled={loading}
+                onClick={() => {
+                  setSelectedClient(null);
+                  setSearch("");
+                }}
+                className="text-xs font-bold text-gray-300 hover:text-red-400 transition-colors uppercase tracking-widest disabled:hidden"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         )}
       </div>
-
-      {/* 2. DOCUMENT TYPE SELECTION */}
-      <div className="pt-4 border-t border-gray-50">
-        <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">
-          Verify Document Type
-        </label>
-        <div className="grid grid-cols-3 gap-4">
-          {(["proposal", "booking_form", "invoice"] as const).map((type) => (
-            <button
-              key={type}
-              onClick={() => setDocType(type)}
-              className={`p-4 rounded-xl border-2 transition-all text-center capitalize font-bold text-sm ${
-                docType === type
-                  ? "border-[#9d4edd] bg-purple-50 text-[#9d4edd]"
-                  : "border-gray-100 text-gray-400 hover:border-gray-200"
-              }`}
-            >
-              {type.replace("_", " ")}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <button
-        onClick={handleInitialiseDocument}
-        disabled={loading || !selectedClient}
-        className="w-full bg-[#9d4edd] text-white py-5 rounded-xl font-black uppercase tracking-widest hover:bg-[#7b2cbf] transition-all shadow-xl disabled:bg-gray-200 disabled:shadow-none mt-4"
-      >
-        {loading
-          ? "Generating..."
-          : `Create Draft ${docType.replace("_", " ")}`}
-      </button>
     </div>
   );
 }
 
 export default function CreateDocumentPage() {
   return (
-    <div className="p-10 max-w-2xl mx-auto text-black">
-      <h1 className="text-3xl font-black mb-8 uppercase tracking-tight">
-        Generate Document
-      </h1>
-
+    <div className="p-10 min-h-screen bg-gray-50 flex flex-col justify-center">
       <Suspense
         fallback={
-          <div className="p-8 text-center text-gray-400 italic">
-            Initialising editor...
+          <div className="text-center italic text-gray-400">
+            Loading selector...
           </div>
         }
       >
