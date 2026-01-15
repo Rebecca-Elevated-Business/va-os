@@ -9,6 +9,7 @@ type UserProfile = {
   email?: string;
   first_name?: string;
   surname?: string;
+  full_name?: string; // <--- ADD THIS
 };
 
 export default function DashboardHeader() {
@@ -52,22 +53,34 @@ export default function DashboardHeader() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    router.push("/auth/login");
+    router.push("/va/login");
   };
 
   // Helper to get initials
   const getInitials = () => {
     if (!user) return "VA";
+
+    // Check for VA "full_name" first
+    if (user.full_name) {
+      const names = user.full_name.split(" ");
+      if (names.length >= 2)
+        return `${names[0][0]}${names[1][0]}`.toUpperCase();
+      return names[0].substring(0, 2).toUpperCase();
+    }
+
+    // Fallback to Client "first_name" / "surname"
     if (user.first_name && user.surname) {
       return `${user.first_name[0]}${user.surname[0]}`.toUpperCase();
     }
+
     return user.email?.substring(0, 2).toUpperCase() || "VA";
   };
 
   const getFullName = () => {
+    if (user?.full_name) return user.full_name; // <--- The Fix
     if (user?.first_name && user?.surname)
       return `${user.first_name} ${user.surname}`;
-    return "Valued Admin";
+    return "Admin Account";
   };
 
   return (
