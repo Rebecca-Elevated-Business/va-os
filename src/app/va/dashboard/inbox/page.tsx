@@ -1,60 +1,46 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import { useEffect, useState, useCallback } from "react";
+import { format } from "date-fns";
 
-export default function VADashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const [authorized, setAuthorized] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+type InboxMessage = {
+  id: string;
+  created_at: string;
+  client_id: string;
+  type: string;
+  message: string;
+  is_starred: boolean;
+  is_completed: boolean;
+  is_read: boolean;
+  clients: {
+    first_name: string;
+    surname: string;
+    business_name: string;
+  };
+};
 
-  // 1. Unified security and badge logic wrapped in useCallback
-  const checkAccessAndUnread = useCallback(async () => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+export default function VAInboxPage() {
+  const [messages, setMessages] = useState<InboxMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"inbox" | "starred" | "completed">(
+    "inbox"
+  );
+  const [selectedMsg, setSelectedMsg] = useState<InboxMessage | null>(null);
 
-    if (!session) {
-      router.push("/va/login");
-      return;
-    }
-
-    // Security Check: Verify user role in database
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", session.user.id)
-      .single();
-
-    if (profile?.role !== "va") {
-      router.push("/client/dashboard");
-      return;
-    }
-
-    // Unlock the dashboard UI
-    setAuthorized(true);
-
-    // Fetch initial badge count for unread, non-completed requests
-    const { count } = await supabase
+  const fetchMessages = useCallback(async () => {
+    const { data } = await supabase
       .from("client_requests")
-      .select("*", { count: "exact", head: true })
-      .eq("is_read", false)
-      .eq("is_completed", false);
+      .select("*, clients(first_name, surname, business_name)")
+      .order("created_at", { ascending: false });
 
-    setUnreadCount(count || 0);
-  }, [router]);
+    if (data) setMessages(data as InboxMessage[]);
+    setLoading(false);
+  }, []);
 
-  // 2. Setup Realtime subscription with the Long Game fix
   useEffect(() => {
-    const sub = supabase
-      .channel("inbox-badge")
+    const channel = supabase
+      .channel("schema-db-changes")
       .on(
         "postgres_changes",
         {
@@ -63,99 +49,221 @@ export default function VADashboardLayout({
           table: "client_requests",
         },
         () => {
-          // Refresh check when database changes occur
-          checkAccessAndUnread();
+          fetchMessages();
         }
       )
       .subscribe((status) => {
-        // FIX: Only trigger initial check once successfully subscribed
-        // This prevents synchronous setState calls during the initial render
         if (status === "SUBSCRIBED") {
-          checkAccessAndUnread();
+          fetchMessages();
         }
       });
 
     return () => {
-      supabase.removeChannel(sub);
+      supabase.removeChannel(channel);
     };
-  }, [checkAccessAndUnread]);
+  }, [fetchMessages]);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/va/login");
+  const toggleStatus = async (id: string, field: string, value: boolean) => {
+    const { error } = await supabase
+      .from("client_requests")
+      .update({ [field]: value })
+      .eq("id", id);
+    if (!error) fetchMessages();
   };
 
-  const navItems = [
-    { name: "Inbox", href: "/va/dashboard/inbox" },
-    { name: "Overview", href: "/va/dashboard" },
-    { name: "CRM", href: "/va/dashboard/crm" },
-    { name: "Documents", href: "/va/dashboard/documents" },
-    { name: "Service Agreements", href: "/va/dashboard/agreements" },
-  ];
+  const filteredMessages = messages.filter((m) => {
+    if (activeTab === "starred") return m.is_starred && !m.is_completed;
+    if (activeTab === "completed") return m.is_completed;
+    return !m.is_completed;
+  });
 
-  // 3. BLOCKING RENDER: Prevents flashing of dashboard data for unauthorized users
-  if (!authorized) {
+  if (loading)
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 italic text-gray-400 font-sans">
-        <div className="text-center animate-pulse">
-          <p className="text-xl font-black text-[#9d4edd] uppercase tracking-tighter">
-            VA-OS
-          </p>
-          <p className="text-xs font-bold mt-2 uppercase tracking-widest">
-            Verifying access...
-          </p>
-        </div>
-      </div>
+      <div className="p-10 text-gray-400 italic">Syncing command centre...</div>
     );
-  }
 
   return (
-    <div className="flex min-h-screen bg-gray-50 text-black font-sans">
-      {/* Sidebar Navigation */}
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col fixed h-full">
-        <div className="p-6 border-b border-gray-100">
-          <h2 className="text-xl font-black text-[#9d4edd] tracking-tighter uppercase">
-            VA-OS
-          </h2>
-        </div>
-
-        <nav className="flex-1 p-4 space-y-2 text-black">
-          {navItems.map((item) => (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`flex items-center justify-between px-4 py-2 rounded-xl font-bold transition-all ${
-                pathname === item.href
-                  ? "bg-purple-50 text-[#9d4edd] shadow-sm"
-                  : "text-gray-500 hover:bg-gray-50 hover:text-[#9d4edd]"
-              }`}
-            >
-              <span className="text-sm uppercase tracking-tight">
-                {item.name}
-              </span>
-
-              {/* Inbox specific notification badge */}
-              {item.name === "Inbox" && unreadCount > 0 && (
-                <span className="bg-red-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center animate-bounce shadow-sm">
-                  {unreadCount}
-                </span>
-              )}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="p-4 border-t border-gray-100">
-          <button
-            onClick={handleLogout}
-            className="w-full text-left px-4 py-2 text-xs font-black text-gray-400 hover:text-red-600 transition-colors uppercase tracking-widest"
-          >
-            Logout
-          </button>
-        </div>
+    <div className="flex h-[calc(100vh-160px)] bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden text-black font-sans">
+      {/* 1. INBOX TABS (The Inner Menu) */}
+      <aside className="w-64 border-r border-gray-50 bg-gray-50/50 p-6 space-y-2">
+        <button
+          onClick={() => setActiveTab("inbox")}
+          className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-all ${
+            activeTab === "inbox"
+              ? "bg-white text-[#9d4edd] shadow-sm"
+              : "text-gray-500 hover:bg-gray-100"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <span>📥</span> Inbox
+          </div>
+          {messages.filter((m) => !m.is_read && !m.is_completed).length > 0 && (
+            <span className="bg-red-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center">
+              {messages.filter((m) => !m.is_read && !m.is_completed).length}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab("starred")}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
+            activeTab === "starred"
+              ? "bg-white text-[#9d4edd] shadow-sm"
+              : "text-gray-500 hover:bg-gray-100"
+          }`}
+        >
+          <span>⭐</span> Starred
+        </button>
+        <button
+          onClick={() => setActiveTab("completed")}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
+            activeTab === "completed"
+              ? "bg-white text-[#9d4edd] shadow-sm"
+              : "text-gray-500 hover:bg-gray-100"
+          }`}
+        >
+          <span>✅</span> Completed
+        </button>
       </aside>
 
-      {/* Main Dashboard Content Area */}
-      <main className="flex-1 ml-64 p-8">{children}</main>
+      {/* 2. MESSAGE LIST */}
+      <main className="flex-1 overflow-y-auto">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="border-b border-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-widest bg-white sticky top-0">
+              <th className="px-6 py-4 w-10"></th>
+              <th className="px-6 py-4 w-48">Client</th>
+              <th className="px-6 py-4">Context</th>
+              <th className="px-6 py-4 text-right w-32">Received</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {filteredMessages.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={4}
+                  className="p-20 text-center text-gray-400 italic"
+                >
+                  No messages here.
+                </td>
+              </tr>
+            ) : (
+              filteredMessages.map((msg) => (
+                <tr
+                  key={msg.id}
+                  onClick={() => {
+                    setSelectedMsg(msg);
+                    if (!msg.is_read) toggleStatus(msg.id, "is_read", true);
+                  }}
+                  className={`group cursor-pointer hover:bg-purple-50/50 transition-colors ${
+                    !msg.is_read ? "bg-purple-50/20 font-bold" : ""
+                  }`}
+                >
+                  <td
+                    className="px-6 py-4"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleStatus(msg.id, "is_starred", !msg.is_starred);
+                    }}
+                  >
+                    <span
+                      className={
+                        msg.is_starred
+                          ? "text-yellow-400 text-lg"
+                          : "text-gray-200 group-hover:text-gray-300 text-lg"
+                      }
+                    >
+                      {msg.is_starred ? "★" : "☆"}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm font-bold">
+                      {msg.clients.first_name} {msg.clients.surname}
+                    </div>
+                    <div className="text-[10px] text-gray-400 font-medium uppercase tracking-tighter">
+                      {msg.clients.business_name}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`px-2 py-0.5 rounded text-[9px] uppercase font-black ${
+                          msg.type === "work"
+                            ? "bg-blue-100 text-blue-600"
+                            : "bg-green-100 text-green-600"
+                        }`}
+                      >
+                        {msg.type}
+                      </span>
+                      <span className="text-sm truncate max-w-md text-gray-600 font-medium">
+                        {msg.message}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-right text-[11px] font-bold text-gray-400 uppercase">
+                    {format(new Date(msg.created_at), "dd MMM")}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </main>
+
+      {/* 3. MODAL POPUP */}
+      {selectedMsg && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-100 flex items-center justify-center p-6">
+          <div className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in duration-200">
+            <div className="p-10 space-y-6">
+              <div className="flex justify-between items-start">
+                <div>
+                  <span className="text-[10px] font-black text-[#9d4edd] uppercase tracking-widest">
+                    {selectedMsg.type} Request
+                  </span>
+                  <h2 className="text-2xl font-black">
+                    {selectedMsg.clients.first_name}{" "}
+                    {selectedMsg.clients.surname}
+                  </h2>
+                  <p className="text-sm font-bold text-gray-400 uppercase">
+                    {selectedMsg.clients.business_name}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedMsg(null)}
+                  className="text-gray-300 hover:text-black text-xl font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="bg-gray-50 p-8 rounded-3xl border border-gray-100 italic text-gray-700 leading-relaxed shadow-inner">
+                &quot;{selectedMsg.message}&quot;
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <button
+                  onClick={() => {
+                    toggleStatus(
+                      selectedMsg.id,
+                      "is_completed",
+                      !selectedMsg.is_completed
+                    );
+                    setSelectedMsg(null);
+                  }}
+                  className={`flex-1 py-4 rounded-2xl font-black text-xs uppercase tracking-widest border-2 transition-all active:scale-95 ${
+                    selectedMsg.is_completed
+                      ? "border-orange-200 text-orange-600 hover:bg-orange-50"
+                      : "border-green-200 text-green-600 hover:bg-green-50"
+                  }`}
+                >
+                  {selectedMsg.is_completed
+                    ? "⏪ Undo Complete"
+                    : "✅ Mark Completed"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
