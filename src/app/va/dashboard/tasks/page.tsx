@@ -3,15 +3,18 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
+import CalendarView from "./CalendarView";
 
 // --- TYPES ---
 type Task = {
   id: string;
   task_name: string;
-  status: string; // 'todo', 'up_next', 'in_progress', 'completed'
-  category: string; // 'client', 'business', 'personal'
+  status: string;
+  category: string;
   priority: string;
   due_date: string | null;
+  scheduled_start?: string | null; // Added this
+  scheduled_end?: string | null; // Added this
   total_minutes: number;
   is_running: boolean;
   start_time: string | null;
@@ -437,13 +440,14 @@ export default function TaskCentrePage() {
         </div>
       )}
 
-      {/* PLACEHOLDERS FOR CALENDAR/KANBAN */}
       {view === "calendar" && (
-        <div className="p-20 text-center border-4 border-dashed border-gray-200 rounded-4xl">
-          <p className="text-gray-400 font-bold uppercase tracking-widest">
-            Calendar View Coming Next
-          </p>
-        </div>
+        <CalendarView
+          tasks={tasks}
+          onAddTask={(date) => {
+            setNewTaskDate(date);
+            setIsAdding(true);
+          }}
+        />
       )}
       {view === "kanban" && (
         <div className="p-20 text-center border-4 border-dashed border-gray-200 rounded-4xl">
