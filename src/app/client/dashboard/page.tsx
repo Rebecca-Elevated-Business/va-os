@@ -22,15 +22,22 @@ type ClientDocument = {
 export default function ClientDashboard() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+
+  // Data State
   const [agreements, setAgreements] = useState<Agreement[]>([]);
-  const [clientName, setClientName] = useState("");
-  const [clientId, setClientId] = useState(""); // STORE CLIENT ID
   const [documents, setDocuments] = useState<ClientDocument[]>([]);
+
+  // Dashboard Logic State
+  const [clientName, setClientName] = useState("");
+  const [clientId, setClientId] = useState<string | null>(null);
+
+  // DEBUG STATE
+  const [debugInfo, setDebugInfo] = useState<string>("Initializing...");
 
   // Request Form State
   const [requestType, setRequestType] = useState<"work" | "meeting">("work");
   const [requestMessage, setRequestMessage] = useState("");
-  const [sending, setSending] = useState(false); // Loading state for button
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     async function loadClientData() {
@@ -43,18 +50,28 @@ export default function ClientDashboard() {
         return;
       }
 
-      // 2. Find the CRM Client record linked to this Login ID via the bridge
-      const { data: client } = await supabase
+      setDebugInfo(`Logged in as Auth User: ${user.id}`);
+
+      // 2. Find the CRM Client record linked to this Login ID
+      const { data: client, error: clientError } = await supabase
         .from("clients")
         .select("id, first_name")
         .eq("auth_user_id", user.id)
         .single();
 
-      if (client) {
+      if (clientError) {
+        console.error("Client Fetch Error:", clientError);
+        setDebugInfo(
+          `ERROR: Could not find Client Record linked to Auth ID ${user.id}. DB says: ${clientError.message}`
+        );
+      } else if (client) {
         setClientName(client.first_name);
-        setClientId(client.id); // Save ID for sending requests
+        setClientId(client.id);
+        setDebugInfo(
+          `SUCCESS: Linked to Client ID: ${client.id} (${client.first_name})`
+        );
 
-        // 3. Fetch Agreements specifically for this client
+        // 3. Fetch Agreements
         const { data: ags } = await supabase
           .from("client_agreements")
           .select("id, title, status, last_updated_at")
@@ -64,7 +81,7 @@ export default function ClientDashboard() {
 
         if (ags) setAgreements(ags as Agreement[]);
 
-        // 4. Fetch Documents (Proposals, Booking Forms, Invoices)
+        // 4. Fetch Documents
         const { data: docs } = await supabase
           .from("client_documents")
           .select("*")
@@ -73,6 +90,8 @@ export default function ClientDashboard() {
           .order("created_at", { ascending: false });
 
         if (docs) setDocuments(docs as ClientDocument[]);
+      } else {
+        setDebugInfo(`WARNING: No client record found for Auth ID ${user.id}`);
       }
       setLoading(false);
     }
@@ -84,13 +103,22 @@ export default function ClientDashboard() {
     router.push("/client/login");
   };
 
-  // REAL DATABASE SEND LOGIC
   const handleSendRequest = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!requestMessage.trim() || !clientId) return;
+
+    // DEBUG: Alert if ID is missing
+    if (!clientId) {
+      alert(
+        `STOP: Cannot send. System does not know your Client ID.\nDebug Info: ${debugInfo}`
+      );
+      return;
+    }
+
+    if (!requestMessage.trim()) return;
 
     setSending(true);
 
+    // FIX: Removed 'data' variable since we don't use it
     const { error } = await supabase.from("client_requests").insert([
       {
         client_id: clientId,
@@ -106,10 +134,11 @@ export default function ClientDashboard() {
     setSending(false);
 
     if (error) {
-      alert("Error sending request: " + error.message);
+      alert("DATABASE ERROR: " + error.message + "\nCode: " + error.code);
+      console.error("Insert Error:", error);
     } else {
-      alert("Request sent successfully! Your VA has been notified.");
-      setRequestMessage(""); // Clear the box
+      alert("SUCCESS: Request sent to database! Row created.");
+      setRequestMessage("");
     }
   };
 
@@ -121,11 +150,22 @@ export default function ClientDashboard() {
   return (
     <main className="min-h-screen bg-gray-50 p-6 md:p-10 text-black font-sans">
       <div className="max-w-5xl mx-auto space-y-8">
+        {/* DIAGNOSTIC BAR */}
+        <div
+          className={`p-4 rounded-xl border-2 font-mono text-xs break-all ${
+            clientId
+              ? "bg-green-100 border-green-300 text-green-800"
+              : "bg-red-100 border-red-300 text-red-800"
+          }`}
+        >
+          <strong>DIAGNOSTIC STATUS:</strong> {debugInfo}
+        </div>
+
         {/* Header Section */}
         <div className="flex justify-between items-center mb-2">
           <div>
             <h1 className="text-3xl font-black text-gray-900 tracking-tight">
-              Welcome, {clientName}
+              Welcome, {clientName || "Client"}
             </h1>
           </div>
           <button
