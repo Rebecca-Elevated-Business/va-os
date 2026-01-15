@@ -64,14 +64,19 @@ export default function VAInboxPage() {
   }, [fetchMessages]);
 
   const toggleStatus = async (id: string, field: string, value: boolean) => {
+    // Optimistic update for UI speed
+    setMessages((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, [field]: value } : m))
+    );
+
     const { error } = await supabase
       .from("client_requests")
       .update({ [field]: value })
       .eq("id", id);
-    if (!error) fetchMessages();
+
+    if (error) fetchMessages(); // Revert on error
   };
 
-  // Restored: Logic to turn a message into a CRM Task
   const convertToTask = async (msg: InboxMessage) => {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) return;
@@ -87,9 +92,8 @@ export default function VAInboxPage() {
     ]);
 
     if (!error) {
-      alert("Converted to client task!");
-      // Automatically complete the inbox message once it's a task
-      toggleStatus(msg.id, "is_completed", true);
+      alert("Converted to client task! Message remains in Inbox.");
+      // UPDATED: Removed the auto-complete line here so it stays in Inbox
       setSelectedMsg(null);
     }
   };
@@ -153,17 +157,20 @@ export default function VAInboxPage() {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-gray-50 text-[10px] font-black text-gray-400 uppercase tracking-widest bg-white sticky top-0">
-              <th className="px-6 py-4 w-10 text-center">Done</th>
+              <th className="px-6 py-4 w-12 text-center"></th>{" "}
+              {/* Star Column */}
               <th className="px-6 py-4 w-48">Client</th>
               <th className="px-6 py-4">Context</th>
               <th className="px-6 py-4 text-right w-32">Received</th>
+              <th className="px-6 py-4 w-24 text-center">Completed</th>{" "}
+              {/* Moved to right */}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {filteredMessages.length === 0 ? (
               <tr>
                 <td
-                  colSpan={4}
+                  colSpan={5}
                   className="p-20 text-center text-gray-400 italic"
                 >
                   No messages here.
@@ -181,19 +188,26 @@ export default function VAInboxPage() {
                     !msg.is_read ? "bg-purple-50/20 font-bold" : ""
                   }`}
                 >
+                  {/* STAR COLUMN (Far Left) */}
                   <td
                     className="px-6 py-4 text-center"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <input
-                      type="checkbox"
-                      checked={msg.is_completed}
-                      onChange={(e) =>
-                        toggleStatus(msg.id, "is_completed", e.target.checked)
+                    <button
+                      onClick={() =>
+                        toggleStatus(msg.id, "is_starred", !msg.is_starred)
                       }
-                      className="w-5 h-5 rounded border-gray-300 text-[#9d4edd] focus:ring-[#9d4edd]"
-                    />
+                      className={`text-xl transition-all hover:scale-110 ${
+                        msg.is_starred
+                          ? "text-yellow-400"
+                          : "text-gray-200 group-hover:text-gray-300"
+                      }`}
+                    >
+                      {msg.is_starred ? "★" : "☆"}
+                    </button>
                   </td>
+
+                  {/* CLIENT INFO */}
                   <td className="px-6 py-4">
                     <div className="text-sm font-bold">
                       {msg.clients.first_name} {msg.clients.surname}
@@ -202,6 +216,8 @@ export default function VAInboxPage() {
                       {msg.clients.business_name}
                     </div>
                   </td>
+
+                  {/* MESSAGE CONTEXT */}
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <span
@@ -218,8 +234,25 @@ export default function VAInboxPage() {
                       </span>
                     </div>
                   </td>
+
+                  {/* RECEIVED DATE */}
                   <td className="px-6 py-4 text-right text-[11px] font-bold text-gray-400 uppercase">
                     {format(new Date(msg.created_at), "dd MMM")}
+                  </td>
+
+                  {/* COMPLETED CHECKBOX (Far Right) */}
+                  <td
+                    className="px-6 py-4 text-center"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={msg.is_completed}
+                      onChange={(e) =>
+                        toggleStatus(msg.id, "is_completed", e.target.checked)
+                      }
+                      className="w-5 h-5 rounded border-gray-300 text-[#9d4edd] focus:ring-[#9d4edd]"
+                    />
                   </td>
                 </tr>
               ))
@@ -246,9 +279,10 @@ export default function VAInboxPage() {
                     {selectedMsg.clients.business_name}
                   </p>
                 </div>
+                {/* UPDATED: Solid black close button */}
                 <button
                   onClick={() => setSelectedMsg(null)}
-                  className="text-gray-300 hover:text-black text-xl font-bold"
+                  className="text-black hover:bg-gray-100 w-10 h-10 rounded-full flex items-center justify-center text-xl font-bold transition-colors"
                 >
                   ✕
                 </button>
@@ -259,7 +293,6 @@ export default function VAInboxPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-4 pt-4">
-                {/* RESTORED: Create Task Button */}
                 <button
                   onClick={() => convertToTask(selectedMsg)}
                   className="bg-gray-900 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-black transition-all active:scale-95"

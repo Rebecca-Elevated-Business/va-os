@@ -15,7 +15,6 @@ export default function VADashboardLayout({
   const [authorized, setAuthorized] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // 1. Unified security and badge logic wrapped in useCallback
   const checkAccessAndUnread = useCallback(async () => {
     const {
       data: { session },
@@ -26,7 +25,6 @@ export default function VADashboardLayout({
       return;
     }
 
-    // Security Check: Verify user role in database
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
@@ -38,10 +36,8 @@ export default function VADashboardLayout({
       return;
     }
 
-    // Unlock the dashboard UI
     setAuthorized(true);
 
-    // Fetch initial badge count for unread, non-completed requests
     const { count } = await supabase
       .from("client_requests")
       .select("*", { count: "exact", head: true })
@@ -51,7 +47,6 @@ export default function VADashboardLayout({
     setUnreadCount(count || 0);
   }, [router]);
 
-  // 2. Setup Realtime subscription with the Long Game fix
   useEffect(() => {
     const sub = supabase
       .channel("inbox-badge")
@@ -63,13 +58,10 @@ export default function VADashboardLayout({
           table: "client_requests",
         },
         () => {
-          // Refresh check when database changes occur
           checkAccessAndUnread();
         }
       )
       .subscribe((status) => {
-        // FIX: Only trigger initial check once successfully subscribed
-        // This prevents synchronous setState calls during the initial render
         if (status === "SUBSCRIBED") {
           checkAccessAndUnread();
         }
@@ -93,7 +85,6 @@ export default function VADashboardLayout({
     { name: "Service Agreements", href: "/va/dashboard/agreements" },
   ];
 
-  // 3. BLOCKING RENDER: Prevents flashing of dashboard data for unauthorized users
   if (!authorized) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 italic text-gray-400 font-sans">
@@ -111,7 +102,6 @@ export default function VADashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-gray-50 text-black font-sans">
-      {/* Sidebar Navigation */}
       <aside className="w-64 bg-white border-r border-gray-200 flex flex-col fixed h-full">
         <div className="p-6 border-b border-gray-100">
           <h2 className="text-xl font-black text-[#9d4edd] tracking-tighter uppercase">
@@ -134,9 +124,9 @@ export default function VADashboardLayout({
                 {item.name}
               </span>
 
-              {/* Inbox specific notification badge */}
+              {/* UPDATED: Removed animate-bounce */}
               {item.name === "Inbox" && unreadCount > 0 && (
-                <span className="bg-red-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center animate-bounce shadow-sm">
+                <span className="bg-red-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-sm">
                   {unreadCount}
                 </span>
               )}
@@ -154,7 +144,6 @@ export default function VADashboardLayout({
         </div>
       </aside>
 
-      {/* Main Dashboard Content Area */}
       <main className="flex-1 ml-64 p-8">{children}</main>
     </div>
   );
