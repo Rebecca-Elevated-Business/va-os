@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-// Define the three document types based on your workflow
+// Define the document types based on your workflow
 const DOCUMENT_TYPES = [
   {
     id: "proposal",
@@ -29,6 +29,14 @@ const DOCUMENT_TYPES = [
     icon: "💰",
     category: "Financial",
   },
+  {
+    id: "upload",
+    title: "Upload & send own document",
+    description:
+      "Upload an existing PDF or document from your device to send directly to the client portal.",
+    icon: "📤",
+    category: "Custom",
+  },
 ];
 
 export default function DocumentLibraryPage() {
@@ -51,7 +59,7 @@ export default function DocumentLibraryPage() {
 
       {/* 2. DOCUMENT SELECTOR GRID (Mirrors Service Agreements Icons) */}
       {!selectedType ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl">
           {DOCUMENT_TYPES.map((doc) => (
             <div
               key={doc.id}
@@ -89,9 +97,7 @@ export default function DocumentLibraryPage() {
               <span className="text-xs font-bold text-[#9d4edd] uppercase tracking-widest">
                 {selectedType.category}
               </span>
-              <h1 className="text-2xl font-bold">
-                {selectedType.title} Template
-              </h1>
+              <h1 className="text-2xl font-bold">{selectedType.title}</h1>
             </div>
             <div className="flex gap-3">
               <button
@@ -108,40 +114,48 @@ export default function DocumentLibraryPage() {
                 }
                 className="bg-[#9d4edd] text-white px-6 py-2 rounded-lg font-bold shadow-md hover:bg-[#7b2cbf] transition-all"
               >
-                Generate Document
+                {selectedType.id === "upload"
+                  ? "Go to Upload"
+                  : "Generate Document"}
               </button>
             </div>
           </div>
 
           <div className="bg-white p-10 rounded-xl shadow-sm border border-gray-100 min-h-75">
             <h2 className="text-xl font-bold mb-4 uppercase text-[#9d4edd] tracking-tight">
-              Document Overview
+              {selectedType.id === "upload"
+                ? "Upload Instructions"
+                : "Document Overview"}
             </h2>
             <p className="text-gray-700 leading-relaxed mb-6">
-              This {selectedType.title} will be pre-populated with your standard
-              VA-OS branding. After clicking generate, you will select your
-              client and enter the specific operational or financial details
-              required for this document.
+              {selectedType.id === "upload"
+                ? "Upload your custom files (PDF, Docx) to share them directly with your client via their secure portal. You can add a personal note before sending."
+                : `This ${selectedType.title} will be pre-populated with your standard VA-OS branding. After clicking generate, you will select your client and enter the specific operational or financial details required.`}
             </p>
             <ul className="space-y-3 text-sm text-gray-600">
-              <li className="flex items-center gap-2">
-                ✅ Professional UK Format
-              </li>
               <li className="flex items-center gap-2">
                 ✅ Automatically stored in Client Vault
               </li>
               <li className="flex items-center gap-2">
-                ✅ Instant PDF export functionality enabled
+                ✅ Instant notification to client
+              </li>
+              <li className="flex items-center gap-2">
+                ✅ Secure SSL protected delivery
               </li>
             </ul>
           </div>
 
           <div className="mt-8 p-6 bg-purple-50 rounded-xl border border-purple-100 text-center">
             <p className="text-purple-900 font-medium">
-              Ready to issue this to a client?
+              Ready to{" "}
+              {selectedType.id === "upload"
+                ? "upload this file?"
+                : "issue this to a client?"}
             </p>
             <p className="text-sm text-purple-700 mb-4 italic">
-              Generate the draft to begin adding project-specific details.
+              {selectedType.id === "upload"
+                ? "Ensure your file is finalized before uploading."
+                : "Generate the draft to begin adding project-specific details."}
             </p>
             <button
               onClick={() =>
@@ -151,7 +165,10 @@ export default function DocumentLibraryPage() {
               }
               className="text-[#9d4edd] font-bold hover:underline"
             >
-              Issue {selectedType.title} →
+              {selectedType.id === "upload"
+                ? "Start Upload"
+                : `Issue ${selectedType.title}`}{" "}
+              →
             </button>
           </div>
         </div>
