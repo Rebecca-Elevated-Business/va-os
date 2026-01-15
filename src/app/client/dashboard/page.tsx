@@ -24,11 +24,13 @@ export default function ClientDashboard() {
   const [loading, setLoading] = useState(true);
   const [agreements, setAgreements] = useState<Agreement[]>([]);
   const [clientName, setClientName] = useState("");
+  const [clientId, setClientId] = useState(""); // STORE CLIENT ID
   const [documents, setDocuments] = useState<ClientDocument[]>([]);
 
   // Request Form State
   const [requestType, setRequestType] = useState<"work" | "meeting">("work");
   const [requestMessage, setRequestMessage] = useState("");
+  const [sending, setSending] = useState(false); // Loading state for button
 
   useEffect(() => {
     async function loadClientData() {
@@ -50,6 +52,7 @@ export default function ClientDashboard() {
 
       if (client) {
         setClientName(client.first_name);
+        setClientId(client.id); // Save ID for sending requests
 
         // 3. Fetch Agreements specifically for this client
         const { data: ags } = await supabase
@@ -62,7 +65,6 @@ export default function ClientDashboard() {
         if (ags) setAgreements(ags as Agreement[]);
 
         // 4. Fetch Documents (Proposals, Booking Forms, Invoices)
-        // Safety Filter: .neq("status", "draft") ensures they only see issued items
         const { data: docs } = await supabase
           .from("client_documents")
           .select("*")
@@ -82,55 +84,80 @@ export default function ClientDashboard() {
     router.push("/client/login");
   };
 
-  const handleSendRequest = (e: React.FormEvent) => {
+  // REAL DATABASE SEND LOGIC
+  const handleSendRequest = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert(`Request Sent! \nType: ${requestType} \nMessage: ${requestMessage}`);
-    setRequestMessage("");
+    if (!requestMessage.trim() || !clientId) return;
+
+    setSending(true);
+
+    const { error } = await supabase.from("client_requests").insert([
+      {
+        client_id: clientId,
+        type: requestType,
+        message: requestMessage,
+        status: "new",
+        is_read: false,
+        is_completed: false,
+        is_starred: false,
+      },
+    ]);
+
+    setSending(false);
+
+    if (error) {
+      alert("Error sending request: " + error.message);
+    } else {
+      alert("Request sent successfully! Your VA has been notified.");
+      setRequestMessage(""); // Clear the box
+    }
   };
 
   if (loading)
-    return <div className="p-10 text-gray-500">Loading your portal...</div>;
+    return (
+      <div className="p-10 text-gray-500 italic">Loading your portal...</div>
+    );
 
   return (
-    <main className="min-h-screen bg-gray-50 p-6 md:p-10 text-black">
+    <main className="min-h-screen bg-gray-50 p-6 md:p-10 text-black font-sans">
       <div className="max-w-5xl mx-auto space-y-8">
         {/* Header Section */}
         <div className="flex justify-between items-center mb-2">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-3xl font-black text-gray-900 tracking-tight">
               Welcome, {clientName}
             </h1>
           </div>
           <button
             onClick={handleLogout}
-            className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-[#9d4edd] border border-gray-300 rounded-lg bg-white transition-all shadow-sm"
+            className="px-4 py-2 text-sm font-bold text-gray-600 hover:text-[#9d4edd] border border-gray-300 rounded-lg bg-white transition-all shadow-sm"
           >
             Sign Out
           </button>
         </div>
 
-        {/* SECTION 1: DOCUMENT VAULT (Proposals, Booking Forms, Invoices) */}
-        <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-6 border-b border-gray-100 bg-purple-50 flex justify-between items-center">
+        {/* SECTION 1: DOCUMENT VAULT */}
+        <section className="bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-8 border-b border-gray-100 bg-purple-50 flex justify-between items-center">
             <div>
-              <h2 className="text-lg font-bold text-[#9d4edd]">
+              <h2 className="text-lg font-black text-[#9d4edd] uppercase tracking-wide">
                 Document Vault
               </h2>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 font-medium mt-1">
                 Access your issued proposals, contracts, and invoices.
               </p>
             </div>
-            <div className="text-xl">📂</div>
+            <div className="text-2xl">📂</div>
           </div>
 
           <div className="p-0">
             <table className="w-full text-left">
               <thead>
                 <tr className="text-[10px] uppercase tracking-widest text-gray-400 border-b border-gray-50 bg-gray-50/30">
-                  <th className="px-6 py-3 font-bold">Document Name</th>
-                  <th className="px-6 py-3 font-bold">Type</th>
-                  <th className="px-6 py-3 font-bold">Status</th>
-                  <th className="px-6 py-3 font-bold text-right">Action</th>
+                  <th className="px-8 py-4 font-black">Document Name</th>
+                  <th className="px-8 py-4 font-black">Type</th>
+                  <th className="px-8 py-4 font-black">Status</th>
+                  <th className="px-8 py-4 font-black text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -138,7 +165,7 @@ export default function ClientDashboard() {
                   <tr>
                     <td
                       colSpan={4}
-                      className="p-8 text-center text-gray-400 italic"
+                      className="p-10 text-center text-gray-400 italic text-sm"
                     >
                       No documents available yet.
                     </td>
@@ -149,15 +176,15 @@ export default function ClientDashboard() {
                       key={doc.id}
                       className="hover:bg-gray-50 transition-colors"
                     >
-                      <td className="px-6 py-4 font-bold text-sm">
+                      <td className="px-8 py-5 font-bold text-sm">
                         {doc.title}
                       </td>
-                      <td className="px-6 py-4 capitalize text-xs text-gray-500">
+                      <td className="px-8 py-5 capitalize text-xs text-gray-500 font-medium">
                         {doc.type.replace("_", " ")}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-8 py-5">
                         <span
-                          className={`px-2 py-1 rounded text-[10px] font-black uppercase ${
+                          className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
                             doc.status === "paid" || doc.status === "signed"
                               ? "bg-green-100 text-green-700"
                               : "bg-yellow-100 text-yellow-700"
@@ -166,12 +193,12 @@ export default function ClientDashboard() {
                           {doc.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-8 py-5 text-right">
                         <button
                           onClick={() =>
                             router.push(`/client/documents/view/${doc.id}`)
                           }
-                          className="bg-gray-900 text-white px-4 py-1.5 rounded-lg font-bold text-xs hover:bg-[#9d4edd]"
+                          className="bg-gray-900 text-white px-5 py-2 rounded-lg font-bold text-xs hover:bg-[#9d4edd] transition-colors uppercase tracking-wider"
                         >
                           View
                         </button>
@@ -184,19 +211,19 @@ export default function ClientDashboard() {
           </div>
         </section>
 
-        {/* SECTION 2: SERVICE AGREEMENTS (Operational Workflows) */}
-        <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-6 border-b border-gray-100 bg-gray-50/50">
-            <h2 className="text-lg font-bold text-gray-800">
+        {/* SECTION 2: SERVICE AGREEMENTS */}
+        <section className="bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-8 border-b border-gray-100 bg-gray-50/50">
+            <h2 className="text-lg font-black text-gray-800 uppercase tracking-wide">
               Operational Agreements
             </h2>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 font-medium mt-1">
               Authorised rules of engagement and service parameters.
             </p>
           </div>
 
           {agreements.length === 0 ? (
-            <div className="p-10 text-center text-gray-400 italic">
+            <div className="p-10 text-center text-gray-400 italic text-sm">
               You have no active service agreements at this time.
             </div>
           ) : (
@@ -204,7 +231,7 @@ export default function ClientDashboard() {
               {agreements.map((ag) => (
                 <div
                   key={ag.id}
-                  className="p-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                  className="p-8 flex items-center justify-between hover:bg-gray-50 transition-colors"
                 >
                   <div className="flex items-center gap-4">
                     <div className="bg-purple-100 text-[#9d4edd] w-10 h-10 rounded-full flex items-center justify-center text-xl shadow-inner">
@@ -212,10 +239,10 @@ export default function ClientDashboard() {
                     </div>
                     <div>
                       <h3 className="font-bold text-gray-900">{ag.title}</h3>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-500 font-medium mt-1">
                         Status:{" "}
                         <span
-                          className={`uppercase font-bold ${
+                          className={`uppercase font-black tracking-wider ${
                             ag.status === "active"
                               ? "text-green-600"
                               : "text-[#9d4edd]"
@@ -227,7 +254,7 @@ export default function ClientDashboard() {
                     </div>
                   </div>
                   <button
-                    className="bg-[#9d4edd] text-white px-5 py-2 rounded-lg font-bold text-sm shadow-md hover:bg-[#7b2cbf] transition-all"
+                    className="bg-[#9d4edd] text-white px-6 py-3 rounded-xl font-bold text-xs shadow-md hover:bg-[#7b2cbf] transition-all uppercase tracking-wider"
                     onClick={() =>
                       router.push(
                         `/va/dashboard/agreements/portal-view/${ag.id}`
@@ -244,19 +271,21 @@ export default function ClientDashboard() {
           )}
         </section>
 
-        {/* SECTION 3: REQUEST CENTRE */}
-        <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-6 border-b border-gray-100 bg-blue-50/30">
-            <h2 className="text-lg font-bold text-gray-800">Request Centre</h2>
-            <p className="text-xs text-gray-500">
+        {/* SECTION 3: REQUEST CENTRE (Updated with Real Logic) */}
+        <section className="bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-8 border-b border-gray-100 bg-blue-50/30">
+            <h2 className="text-lg font-black text-gray-800 uppercase tracking-wide">
+              Request Centre
+            </h2>
+            <p className="text-xs text-gray-500 font-medium mt-1">
               Send a direct work or meeting request to your VA.
             </p>
           </div>
 
-          <div className="p-6">
+          <div className="p-8">
             <div className="flex gap-6 mb-6">
               <label
-                className={`flex-1 cursor-pointer border-2 rounded-lg p-4 text-center transition-all ${
+                className={`flex-1 cursor-pointer border-2 rounded-2xl p-4 text-center transition-all ${
                   requestType === "work"
                     ? "border-[#9d4edd] bg-purple-50 text-[#9d4edd]"
                     : "border-gray-100 text-gray-400 hover:border-gray-200"
@@ -268,12 +297,12 @@ export default function ClientDashboard() {
                   checked={requestType === "work"}
                   onChange={() => setRequestType("work")}
                 />
-                <span className="font-bold text-sm">
-                  Request Additional Work
+                <span className="font-black text-xs uppercase tracking-widest">
+                  Request Work
                 </span>
               </label>
               <label
-                className={`flex-1 cursor-pointer border-2 rounded-lg p-4 text-center transition-all ${
+                className={`flex-1 cursor-pointer border-2 rounded-2xl p-4 text-center transition-all ${
                   requestType === "meeting"
                     ? "border-[#9d4edd] bg-purple-50 text-[#9d4edd]"
                     : "border-gray-100 text-gray-400 hover:border-gray-200"
@@ -285,7 +314,9 @@ export default function ClientDashboard() {
                   checked={requestType === "meeting"}
                   onChange={() => setRequestType("meeting")}
                 />
-                <span className="font-bold text-sm">Request a Meeting</span>
+                <span className="font-black text-xs uppercase tracking-widest">
+                  Request Meeting
+                </span>
               </label>
             </div>
 
@@ -294,32 +325,25 @@ export default function ClientDashboard() {
               className="flex gap-4 items-start"
             >
               <textarea
-                className="flex-1 border border-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-100 bg-gray-50 min-h-20"
+                className="flex-1 border-2 border-gray-100 rounded-2xl p-4 text-sm focus:outline-none focus:ring-4 focus:ring-purple-50 focus:border-[#9d4edd] bg-gray-50 min-h-24 transition-all"
                 placeholder={
                   requestType === "work"
-                    ? "Describe the task..."
-                    : "Propose a date/time..."
+                    ? "Describe the task you need help with..."
+                    : "Propose a date and time for a quick sync..."
                 }
                 value={requestMessage}
                 onChange={(e) => setRequestMessage(e.target.value)}
               />
               <button
                 type="submit"
-                disabled={!requestMessage}
-                className="bg-[#9d4edd] text-white px-6 py-3 rounded-lg font-bold text-sm shadow-md hover:bg-[#7b2cbf] h-20 disabled:opacity-50"
+                disabled={!requestMessage || sending}
+                className="bg-[#9d4edd] text-white px-8 py-3 rounded-2xl font-black text-xs shadow-xl shadow-purple-100 hover:bg-[#7b2cbf] h-24 disabled:opacity-50 uppercase tracking-widest transition-all"
               >
-                Send Request
+                {sending ? "Sending..." : "Send Request"}
               </button>
             </form>
           </div>
         </section>
-
-        {/* Informational Note */}
-        <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-700 leading-relaxed">
-          <strong>Portal Note:</strong> These documents outline the specific
-          boundaries and permissions you have granted to your VA. You can review
-          them at any time to see the current rules of engagement.
-        </div>
       </div>
     </main>
   );
