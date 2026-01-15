@@ -2,20 +2,7 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
-
-// Re-using the Task type
-type Task = {
-  id: string;
-  task_name: string;
-  status: string;
-  category: string;
-  due_date: string | null;
-  total_minutes: number;
-  is_running: boolean;
-  start_time: string | null;
-  client_id: string | null;
-  clients?: { surname: string; business_name: string };
-};
+import { Task } from "./types";
 
 type KanbanViewProps = {
   tasks: Task[];
@@ -47,7 +34,7 @@ export default function KanbanView({
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     setDraggedTaskId(taskId);
     e.dataTransfer.effectAllowed = "move";
-    // Make the ghost element slightly transparent
+    // Make the ghost element slightly transparent visually
     e.currentTarget.classList.add("opacity-50");
   };
 

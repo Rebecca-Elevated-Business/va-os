@@ -18,41 +18,38 @@ import {
   differenceInMinutes,
   startOfDay,
 } from "date-fns";
-
-// Re-using the Task type (simplified for display)
-type Task = {
-  id: string;
-  task_name: string;
-  status: string;
-  category: string;
-  due_date: string | null;
-  scheduled_start?: string | null;
-  scheduled_end?: string | null;
-  client_id: string | null;
-  clients?: { surname: string; business_name: string };
-};
+import { Task } from "./types"; // Ensure you created types.ts
 
 type CalendarViewProps = {
   tasks: Task[];
-  onAddTask: (date: string, time?: string) => void;
+  onAddTask: (date: string) => void;
 };
 
 export default function CalendarView({ tasks, onAddTask }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<"month" | "week">("week");
   // Initialize with 0 to avoid hydration mismatches
-  const [now, setNow] = useState(new Date());
+  const [now, setNow] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to 08:00 on initial load
+  // Scroll to 08:00 on initial load & Start Timer
   useEffect(() => {
     if (scrollRef.current) {
       // 8 AM * 60px height per hour = 480px
       scrollRef.current.scrollTop = 480;
     }
+
+    // FIX: Wrap initial update in setTimeout to satisfy React Compiler
+    // This moves the update to the next 'tick', avoiding the sync error
+    const initialTick = setTimeout(() => setNow(Date.now()), 1);
+
     // Update "Red Line" every minute
-    const interval = setInterval(() => setNow(new Date()), 60000);
-    return () => clearInterval(interval);
+    const interval = setInterval(() => setNow(Date.now()), 60000);
+
+    return () => {
+      clearTimeout(initialTick);
+      clearInterval(interval);
+    };
   }, []);
 
   // --- NAVIGATION ---
@@ -265,7 +262,8 @@ export default function CalendarView({ tasks, onAddTask }: CalendarViewProps) {
                 ))}
 
                 {/* THE RED LINE (Current Time) */}
-                {daysInView.some((d) => isToday(d)) && (
+                {/* Only render if we have a valid time (now > 0) */}
+                {daysInView.some((d) => isToday(d)) && now > 0 && (
                   <div
                     className="absolute w-full border-t-2 border-red-500 z-50 pointer-events-none flex items-center"
                     style={{
@@ -288,7 +286,6 @@ export default function CalendarView({ tasks, onAddTask }: CalendarViewProps) {
                       key={dIndex}
                       className="border-r border-gray-50 relative h-full hover:bg-gray-50/20 transition-colors"
                       onClick={() => {
-                        // FIX: Removed unused 'clickY' calculation
                         onAddTask(format(day, "yyyy-MM-dd"));
                       }}
                     >
