@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useEffect, useState, useCallback } from "react";
+import DashboardHeader from "./DashboardHeader"; // Import the new header
 
 export default function VADashboardLayout({
   children,
@@ -103,7 +104,7 @@ export default function VADashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-gray-50 text-black font-sans">
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col fixed h-full">
+      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col fixed h-full z-10">
         <div className="p-6 border-b border-gray-100">
           <h2 className="text-xl font-black text-[#9d4edd] tracking-tighter uppercase">
             VA-OS
@@ -145,7 +146,11 @@ export default function VADashboardLayout({
         </div>
       </aside>
 
-      <main className="flex-1 ml-64 p-8">{children}</main>
+      {/* Main Content Area: Flex-col to stack Header on top of Children */}
+      <main className="flex-1 ml-64 flex flex-col min-w-0">
+        <DashboardHeader />
+        <div className="p-8">{children}</div>
+      </main>
     </div>
   );
 }
