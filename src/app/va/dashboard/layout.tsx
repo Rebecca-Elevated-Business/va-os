@@ -4,7 +4,17 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useEffect, useState, useCallback } from "react";
-import DashboardHeader from "./DashboardHeader"; // Import the new header
+import DashboardHeader from "./DashboardHeader";
+// Import the clean line icons
+import {
+  LayoutDashboard,
+  ClipboardList,
+  Mail,
+  Users,
+  FileText,
+  ShieldCheck,
+  LogOut,
+} from "lucide-react";
 
 export default function VADashboardLayout({
   children,
@@ -20,7 +30,6 @@ export default function VADashboardLayout({
     const {
       data: { session },
     } = await supabase.auth.getSession();
-
     if (!session) {
       router.push("/va/login");
       return;
@@ -53,20 +62,10 @@ export default function VADashboardLayout({
       .channel("inbox-badge")
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "client_requests",
-        },
-        () => {
-          checkAccessAndUnread();
-        }
+        { event: "*", schema: "public", table: "client_requests" },
+        checkAccessAndUnread
       )
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          checkAccessAndUnread();
-        }
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(sub);
@@ -78,13 +77,18 @@ export default function VADashboardLayout({
     router.push("/va/login");
   };
 
+  // Updated navigation with Title Case and professional icons
   const navItems = [
-    { name: "Overview", href: "/va/dashboard" },
-    { name: "Task Centre", href: "/va/dashboard/tasks" },
-    { name: "Inbox", href: "/va/dashboard/inbox" },
-    { name: "CRM", href: "/va/dashboard/crm" },
-    { name: "Documents", href: "/va/dashboard/documents" },
-    { name: "Service Agreements", href: "/va/dashboard/agreements" },
+    { name: "Dashboard", href: "/va/dashboard", icon: LayoutDashboard },
+    { name: "Task Centre", href: "/va/dashboard/tasks", icon: ClipboardList },
+    { name: "Inbox", href: "/va/dashboard/inbox", icon: Mail },
+    { name: "CRM", href: "/va/dashboard/crm", icon: Users },
+    { name: "Documents", href: "/va/dashboard/documents", icon: FileText },
+    {
+      name: "Service Agreements",
+      href: "/va/dashboard/agreements",
+      icon: ShieldCheck,
+    },
   ];
 
   if (!authorized) {
@@ -103,50 +107,66 @@ export default function VADashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50 text-black font-sans">
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col fixed h-full z-10">
-        <div className="p-6 border-b border-gray-100">
+    <div className="flex min-h-screen bg-[#fcfcfc] text-[#333333] font-sans">
+      {/* SIDEBAR */}
+      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col fixed h-full z-10 shadow-sm">
+        {/* Darker divider line under logo */}
+        <div className="p-6 border-b border-gray-200 mb-4">
           <h2 className="text-xl font-black text-[#9d4edd] tracking-tighter uppercase">
             VA-OS
           </h2>
         </div>
 
-        <nav className="flex-1 p-4 space-y-2 text-black">
-          {navItems.map((item) => (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`flex items-center justify-between px-4 py-2 rounded-xl font-bold transition-all ${
-                pathname === item.href
-                  ? "bg-purple-50 text-[#9d4edd] shadow-sm"
-                  : "text-gray-500 hover:bg-gray-50 hover:text-[#9d4edd]"
-              }`}
-            >
-              <span className="text-sm uppercase tracking-tight">
-                {item.name}
-              </span>
+        <nav className="flex-1 px-4 space-y-1">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = pathname === item.href;
 
-              {/* UPDATED: Removed animate-bounce */}
-              {item.name === "Inbox" && unreadCount > 0 && (
-                <span className="bg-red-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-sm">
-                  {unreadCount}
-                </span>
-              )}
-            </Link>
-          ))}
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-semibold transition-all duration-200 ${
+                  isActive
+                    ? "bg-[#9d4edd] text-white shadow-md shadow-purple-100"
+                    : "text-[#555555] hover:bg-gray-50 hover:text-black"
+                }`}
+              >
+                {/* Icon logic with subtle grey for inactive items */}
+                <Icon
+                  size={18}
+                  className={isActive ? "text-white" : "text-gray-400"}
+                />
+
+                <span className="text-[13.5px] flex-1">{item.name}</span>
+
+                {item.name === "Inbox" && unreadCount > 0 && (
+                  <span
+                    className={`text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-sm ${
+                      isActive
+                        ? "bg-white text-[#9d4edd]"
+                        : "bg-red-500 text-white"
+                    }`}
+                  >
+                    {unreadCount}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="p-4 border-t border-gray-100">
           <button
             onClick={handleLogout}
-            className="w-full text-left px-4 py-2 text-xs font-black text-gray-400 hover:text-red-600 transition-colors uppercase tracking-widest"
+            className="w-full flex items-center gap-3 px-4 py-2 text-xs font-bold text-gray-400 hover:text-red-600 transition-colors uppercase tracking-widest"
           >
+            <LogOut size={16} />
             Logout
           </button>
         </div>
       </aside>
 
-      {/* Main Content Area: Flex-col to stack Header on top of Children */}
       <main className="flex-1 ml-64 flex flex-col min-w-0">
         <DashboardHeader />
         <div className="p-8">{children}</div>
