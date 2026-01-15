@@ -177,7 +177,7 @@ export default function ClientDashboard() {
         </div>
 
         {/* SECTION 1: DOCUMENT VAULT */}
-        <section className="bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden">
+        <section className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-8 border-b border-gray-100 bg-purple-50 flex justify-between items-center">
             <div>
               <h2 className="text-lg font-black text-[#9d4edd] uppercase tracking-wide">
@@ -252,7 +252,7 @@ export default function ClientDashboard() {
         </section>
 
         {/* SECTION 2: SERVICE AGREEMENTS */}
-        <section className="bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden">
+        <section className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-8 border-b border-gray-100 bg-gray-50/50">
             <h2 className="text-lg font-black text-gray-800 uppercase tracking-wide">
               Operational Agreements
@@ -312,7 +312,7 @@ export default function ClientDashboard() {
         </section>
 
         {/* SECTION 3: REQUEST CENTRE (Updated with Real Logic) */}
-        <section className="bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden">
+        <section className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-8 border-b border-gray-100 bg-blue-50/30">
             <h2 className="text-lg font-black text-gray-800 uppercase tracking-wide">
               Request Centre
