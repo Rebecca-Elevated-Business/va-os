@@ -5,7 +5,7 @@ export default function VADashboard() {
     <main className="animate-in fade-in duration-500">
       {/* 1. Header (Now using global h1 rule) */}
       <div className="mb-8">
-        <h1>Va Dashboard</h1>
+        <h1>Dashboard</h1>
       </div>
 
       {/* 2. First Row: 3 Cards */}
