@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
-import { useRouter, usePathname } from "next/navigation"; // Added usePathname
+import { useRouter } from "next/navigation";
+import { Search } from "lucide-react"; // Professional magnifying glass icon
 
 type UserProfile = {
   id?: string;
@@ -15,22 +16,11 @@ type UserProfile = {
 export default function DashboardHeader() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
-  const pathname = usePathname(); // Get current URL
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Logic to determine the Page Title based on the URL
-  const getPageTitle = () => {
-    if (pathname === "/va/dashboard") return "Dashboard";
-    if (pathname.includes("/tasks")) return "Task Centre";
-    if (pathname.includes("/inbox")) return "Inbox";
-    if (pathname.includes("/crm")) return "CRM";
-    if (pathname.includes("/documents")) return "Documents";
-    if (pathname.includes("/agreements")) return "Service Agreements";
-    if (pathname.includes("/settings")) return "Settings";
-    return "Overview";
-  };
-
+  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -44,6 +34,7 @@ export default function DashboardHeader() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Fetch User Data for the Profile Circle
   useEffect(() => {
     const getUser = async () => {
       const {
@@ -78,15 +69,27 @@ export default function DashboardHeader() {
   };
 
   return (
-    // Changed justify-end to justify-between
     <header className="h-20 bg-white border-b border-gray-100 flex items-center justify-between px-8 sticky top-0 z-20">
-      {/* 1. PAGE TITLE (Top Left) */}
-      <h2 className="text-sm font-bold text-[#333333] uppercase tracking-widest">
-        {getPageTitle()}
-      </h2>
+      {/* 1. GLOBAL SEARCH BAR (Top Left) */}
+      <div className="relative w-full max-w-md group">
+        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+          <Search
+            size={18}
+            className="text-gray-400 group-focus-within:text-[#9d4edd] transition-colors"
+          />
+        </div>
+        <input
+          type="text"
+          className="block w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-transparent rounded-2xl text-sm placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-100 focus:border-[#9d4edd] transition-all text-black"
+          placeholder="Search for clients, tasks, or documents..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
 
       {/* 2. ICONS CONTAINER (Top Right) */}
       <div className="flex items-center gap-4">
+        {/* Support Link (Darker Purple) */}
         <a
           href="https://google.com"
           target="_blank"
@@ -97,6 +100,7 @@ export default function DashboardHeader() {
           ?
         </a>
 
+        {/* Profile Circle Dropdown (Standard Purple) */}
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setShowDropdown(!showDropdown)}
@@ -117,7 +121,7 @@ export default function DashboardHeader() {
               </div>
               <button
                 onClick={handleSignOut}
-                className="w-full text-left px-2 py-2 text-sm text-red-500 font-bold hover:bg-red-50 rounded-lg transition-colors"
+                className="w-full text-left px-2 py-2 text-sm text-red-500 font-bold hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2"
               >
                 Sign Out
               </button>
