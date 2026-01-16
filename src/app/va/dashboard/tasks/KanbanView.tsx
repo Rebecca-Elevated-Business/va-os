@@ -2,24 +2,30 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
+import {
+  MoreHorizontal,
+  Plus,
+  Clock,
+  CheckCircle2,
+  Circle,
+  ArrowRightCircle,
+  PlayCircle,
+} from "lucide-react";
 import { Task } from "./types";
 
-type KanbanViewProps = {
+interface KanbanViewProps {
   tasks: Task[];
   onUpdateStatus: (taskId: string, newStatus: string) => void;
-  onToggleTimer: (task: Task) => void;
+  onToggleTimer: (task: Task) => Promise<void>;
   onAddTask: (status: string) => void;
-};
+}
 
+// Define the columns and their display titles
 const COLUMNS = [
-  { id: "todo", label: "To Do", color: "bg-gray-100 text-gray-500" },
-  { id: "up_next", label: "Up Next", color: "bg-blue-50 text-blue-600" },
-  {
-    id: "in_progress",
-    label: "In Progress",
-    color: "bg-purple-50 text-[#9d4edd]",
-  },
-  { id: "completed", label: "Completed", color: "bg-green-50 text-green-600" },
+  { id: "todo", title: "To Do", icon: Circle },
+  { id: "up_next", title: "Up Next", icon: ArrowRightCircle },
+  { id: "in_progress", title: "In Progress", icon: PlayCircle },
+  { id: "completed", title: "Completed", icon: CheckCircle2 },
 ];
 
 export default function KanbanView({
@@ -30,24 +36,7 @@ export default function KanbanView({
 }: KanbanViewProps) {
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
 
-  // --- DRAG HANDLERS ---
-  const handleDragStart = (e: React.DragEvent, taskId: string) => {
-    setDraggedTaskId(taskId);
-    e.dataTransfer.effectAllowed = "move";
-    // Make the ghost element slightly transparent visually
-    e.currentTarget.classList.add("opacity-50");
-  };
-
-  const handleDragEnd = (e: React.DragEvent) => {
-    setDraggedTaskId(null);
-    e.currentTarget.classList.remove("opacity-50");
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault(); // Necessary to allow dropping
-    e.dataTransfer.dropEffect = "move";
-  };
-
+  // Handle Drop Logic
   const handleDrop = (e: React.DragEvent, status: string) => {
     e.preventDefault();
     if (draggedTaskId) {
@@ -57,95 +46,119 @@ export default function KanbanView({
   };
 
   return (
-    <div className="flex h-[calc(100vh-240px)] gap-6 overflow-x-auto pb-4">
-      {COLUMNS.map((col) => {
-        // Filter tasks for this column
-        const colTasks = tasks.filter((t) => t.status === col.id);
+    <div className="h-full overflow-x-auto pb-4">
+      <div className="flex gap-6 min-w-250 h-full">
+        {COLUMNS.map((col) => {
+          const ColIcon = col.icon;
+          const colTasks = tasks.filter((t) => t.status === col.id);
 
-        return (
-          <div
-            key={col.id}
-            className="flex-1 min-w-75 flex flex-col bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden"
-            onDragOver={handleDragOver}
-            onDrop={(e) => handleDrop(e, col.id)}
-          >
-            {/* COLUMN HEADER */}
+          return (
             <div
-              className={`p-4 border-b border-gray-50 flex justify-between items-center ${col.color}`}
+              key={col.id}
+              className="flex-1 min-w-70 flex flex-col bg-gray-50/50 rounded-2xl border border-gray-100 h-full"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => handleDrop(e, col.id)}
             >
-              <span className="font-black uppercase tracking-widest text-xs">
-                {col.label}
-              </span>
-              <span className="bg-white/50 px-2 py-1 rounded text-[10px] font-bold">
-                {colTasks.length}
-              </span>
-            </div>
-
-            {/* DROP ZONE / TASK LIST */}
-            <div className="flex-1 p-4 space-y-3 overflow-y-auto bg-gray-50/30">
-              {colTasks.map((task) => (
-                <div
-                  key={task.id}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, task.id)}
-                  onDragEnd={handleDragEnd}
-                  className={`bg-white p-4 rounded-2xl shadow-sm border-2 cursor-grab active:cursor-grabbing hover:shadow-md transition-all group relative ${
-                    task.category === "client"
-                      ? "border-l-4 border-l-[#9d4edd] border-gray-100"
-                      : "border-l-4 border-l-blue-400 border-gray-100"
-                  }`}
+              {/* COLUMN HEADER */}
+              <div className="p-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-gray-50/50 backdrop-blur-sm rounded-t-2xl z-10">
+                <div className="flex items-center gap-2">
+                  <ColIcon
+                    size={16}
+                    className={
+                      col.id === "completed"
+                        ? "text-green-500"
+                        : col.id === "in_progress"
+                        ? "text-[#9d4edd]"
+                        : "text-gray-400"
+                    }
+                  />
+                  <h3 className="text-xs font-black uppercase tracking-widest text-gray-500">
+                    {col.title}
+                  </h3>
+                  <span className="bg-white px-2 py-0.5 rounded-full text-[10px] font-bold text-gray-400 border border-gray-100">
+                    {colTasks.length}
+                  </span>
+                </div>
+                <button
+                  onClick={() => onAddTask(col.id)}
+                  className="text-gray-400 hover:text-[#9d4edd] transition-colors"
                 >
-                  {/* Category / Client Label */}
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">
-                      {task.client_id ? task.clients?.surname : task.category}
-                    </span>
-                    {task.is_running && (
-                      <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-                    )}
-                  </div>
+                  <Plus size={16} />
+                </button>
+              </div>
 
-                  {/* Task Name */}
-                  <p className="text-sm font-bold text-gray-800 mb-3 leading-tight">
-                    {task.task_name}
-                  </p>
+              {/* TASKS LIST */}
+              <div className="p-3 space-y-3 overflow-y-auto flex-1 custom-scrollbar">
+                {colTasks.map((task) => (
+                  <div
+                    key={task.id}
+                    draggable
+                    onDragStart={() => setDraggedTaskId(task.id)}
+                    className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-grab active:cursor-grabbing hover:shadow-md transition-all group"
+                  >
+                    {/* Task Header & Options */}
+                    <div className="flex justify-between items-start mb-2">
+                      <span
+                        className={`text-[9px] px-2 py-1 rounded-md font-bold uppercase tracking-wider border ${
+                          task.client_id
+                            ? "bg-purple-50 text-[#9d4edd] border-purple-100"
+                            : "bg-gray-100 text-gray-500 border-gray-200"
+                        }`}
+                      >
+                        {/* FIX 1: Removed 'category' check */}
+                        {task.client_id ? "Client" : "Personal"}
+                      </span>
+                      <button className="text-gray-300 hover:text-[#333333]">
+                        <MoreHorizontal size={14} />
+                      </button>
+                    </div>
 
-                  {/* Footer Actions */}
-                  <div className="flex justify-between items-center pt-2 border-t border-gray-50">
-                    <span className="text-[10px] font-mono font-bold text-gray-400">
-                      {task.due_date
-                        ? format(new Date(task.due_date), "dd MMM")
-                        : ""}
-                    </span>
-
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onToggleTimer(task);
-                      }}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                        task.is_running
-                          ? "bg-red-50 text-red-500 hover:bg-red-100"
-                          : "bg-gray-50 text-gray-300 hover:bg-[#9d4edd] hover:text-white"
+                    {/* Task Content */}
+                    <h4
+                      className={`font-bold text-sm text-[#333333] mb-1 leading-snug ${
+                        task.status === "completed"
+                          ? "line-through text-gray-400"
+                          : ""
                       }`}
                     >
-                      {task.is_running ? "wm" : "▶"}
-                    </button>
-                  </div>
-                </div>
-              ))}
+                      {task.task_name}
+                    </h4>
 
-              {/* Add Button per Column */}
-              <button
-                onClick={() => onAddTask(col.id)}
-                className="w-full py-3 rounded-xl border-2 border-dashed border-gray-200 text-gray-400 text-xs font-bold hover:border-[#9d4edd] hover:text-[#9d4edd] transition-all"
-              >
-                + Add Card
-              </button>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-3 truncate">
+                      {/* FIX 2: Removed 'category', defaulted to 'Personal' */}
+                      {task.client_id
+                        ? task.clients?.business_name || task.clients?.surname
+                        : "Personal"}
+                    </p>
+
+                    {/* Footer: Date & Timer */}
+                    <div className="flex items-center justify-between border-t border-gray-50 pt-3 mt-2">
+                      <div className="text-[10px] font-bold text-gray-400">
+                        {task.due_date
+                          ? format(new Date(task.due_date), "dd MMM")
+                          : "No Date"}
+                      </div>
+
+                      <button
+                        onClick={() => onToggleTimer(task)}
+                        className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                          task.is_running
+                            ? "bg-red-50 text-red-500 border border-red-100 animate-pulse"
+                            : "bg-gray-50 text-gray-400 hover:text-[#9d4edd] hover:bg-purple-50"
+                        }`}
+                      >
+                        <Clock size={12} />
+                        {Math.floor(task.total_minutes / 60)}h{" "}
+                        {task.total_minutes % 60}m
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }

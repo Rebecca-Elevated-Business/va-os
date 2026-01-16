@@ -1,319 +1,503 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   format,
   startOfWeek,
-  endOfWeek,
-  eachDayOfInterval,
-  startOfMonth,
-  endOfMonth,
-  isSameMonth,
+  addDays,
   isSameDay,
-  addMonths,
-  subMonths,
-  addWeeks,
-  subWeeks,
-  isToday,
-  differenceInMinutes,
+  setHours,
   startOfDay,
+  addMinutes,
 } from "date-fns";
-import { Task } from "./types"; // Ensure you created types.ts
+import {
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  X,
+  Building2,
+  User,
+} from "lucide-react";
+import { Task } from "./types";
+import { supabase } from "@/lib/supabase";
 
-type CalendarViewProps = {
+interface CalendarViewProps {
   tasks: Task[];
   onAddTask: (date: string) => void;
-};
+}
 
-export default function CalendarView({ tasks, onAddTask }: CalendarViewProps) {
+// Helper to generate time options for dropdowns
+const timeOptions = Array.from({ length: 48 }, (_, i) => {
+  const h = Math.floor(i / 2);
+  const m = i % 2 === 0 ? "00" : "30";
+  return `${h.toString().padStart(2, "0")}:${m}`;
+});
+
+export default function CalendarView({ tasks }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<"month" | "week">("week");
-  // Initialize with 0 to avoid hydration mismatches
-  const [now, setNow] = useState(0);
+  const [now, setNow] = useState(new Date());
+
+  // --- MODAL STATES ---
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Partial<Task> | null>(null);
+  const [clients, setClients] = useState<
+    { id: string; business_name: string; surname: string }[]
+  >([]);
+
+  // Modal Form State
+  const [formTaskName, setFormTaskName] = useState("");
+  const [formCategory, setFormCategory] = useState<
+    "client" | "business" | "personal"
+  >("client");
+  const [formClientId, setFormClientId] = useState("");
+  const [formStatus, setFormStatus] = useState("todo");
+  const [formDate, setFormDate] = useState("");
+  const [formStartTime, setFormStartTime] = useState("09:00");
+  const [formEndTime, setFormEndTime] = useState("10:00");
+  const [formDetails, setFormDetails] = useState("");
+
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to 08:00 on initial load & Start Timer
+  // 1. Fetch Clients for Dropdown
   useEffect(() => {
-    if (scrollRef.current) {
-      // 8 AM * 60px height per hour = 480px
-      scrollRef.current.scrollTop = 480;
+    async function fetchClients() {
+      const { data } = await supabase
+        .from("clients")
+        .select("id, business_name, surname");
+      if (data) setClients(data);
     }
-
-    // FIX: Wrap initial update in setTimeout to satisfy React Compiler
-    // This moves the update to the next 'tick', avoiding the sync error
-    const initialTick = setTimeout(() => setNow(Date.now()), 1);
-
-    // Update "Red Line" every minute
-    const interval = setInterval(() => setNow(Date.now()), 60000);
-
-    return () => {
-      clearTimeout(initialTick);
-      clearInterval(interval);
-    };
+    fetchClients();
   }, []);
 
-  // --- NAVIGATION ---
-  const next = () =>
-    viewMode === "month"
-      ? setCurrentDate(addMonths(currentDate, 1))
-      : setCurrentDate(addWeeks(currentDate, 1));
-  const prev = () =>
-    viewMode === "month"
-      ? setCurrentDate(subMonths(currentDate, 1))
-      : setCurrentDate(subWeeks(currentDate, 1));
-  const goToday = () => setCurrentDate(new Date());
+  // 2. Ticker
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
 
-  // --- RENDERING HELPERS ---
-  const headerFormat =
-    viewMode === "month" ? "MMMM yyyy" : "'Week of' d MMM yyyy";
-  const daysInView = eachDayOfInterval({
-    start: startOfWeek(
-      viewMode === "month" ? startOfMonth(currentDate) : currentDate,
-      { weekStartsOn: 1 }
-    ),
-    end: endOfWeek(
-      viewMode === "month" ? endOfMonth(currentDate) : currentDate,
-      { weekStartsOn: 1 }
-    ),
-  });
+  // 3. Open Modal Logic
+  const openModal = (
+    dateStr: string,
+    timeStr?: string,
+    existingTask?: Task
+  ) => {
+    if (existingTask) {
+      setEditingTask(existingTask);
+      setFormTaskName(existingTask.task_name);
+      setFormCategory(existingTask.client_id ? "client" : "personal"); // Simplified logic
+      setFormClientId(existingTask.client_id || "");
+      setFormStatus(existingTask.status);
+      setFormDate(
+        existingTask.due_date
+          ? format(new Date(existingTask.due_date), "yyyy-MM-dd")
+          : dateStr
+      );
+      setFormDetails(existingTask.details || "");
+
+      if (existingTask.scheduled_start) {
+        setFormStartTime(
+          format(new Date(existingTask.scheduled_start), "HH:mm")
+        );
+      }
+      if (existingTask.scheduled_end) {
+        setFormEndTime(format(new Date(existingTask.scheduled_end), "HH:mm"));
+      }
+    } else {
+      setEditingTask(null);
+      setFormTaskName("");
+      setFormCategory("client");
+      setFormClientId("");
+      setFormStatus("todo");
+      setFormDate(dateStr);
+      setFormStartTime(timeStr || "09:00");
+      setFormEndTime(
+        timeStr ? timeStr.replace(/:00/, ":30").replace(/:30/, ":00") : "10:00"
+      ); // Crude +30m logic
+      setFormDetails("");
+    }
+    setIsModalOpen(true);
+  };
+
+  // 4. Save Logic
+  const handleSave = async () => {
+    if (!formTaskName.trim()) return;
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    // Construct Timestamps
+    const startDateTime = `${formDate}T${formStartTime}:00`;
+    const endDateTime = `${formDate}T${formEndTime}:00`;
+
+    const payload = {
+      va_id: user?.id,
+      task_name: formTaskName,
+      status: formStatus,
+      client_id: formCategory === "client" ? formClientId : null,
+      due_date: formDate,
+      scheduled_start: startDateTime,
+      scheduled_end: endDateTime,
+      details: formDetails,
+      // Default fields
+      total_minutes: editingTask?.total_minutes || 0,
+      is_running: editingTask?.is_running || false,
+    };
+
+    if (editingTask?.id) {
+      await supabase.from("tasks").update(payload).eq("id", editingTask.id);
+    } else {
+      await supabase.from("tasks").insert([payload]);
+    }
+
+    setIsModalOpen(false);
+    // Note: The parent 'tasks' prop needs to refresh.
+    // In a real app, you'd trigger a callback here like onRefresh().
+    // For now, Supabase realtime in parent handles it.
+  };
+
+  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+  const hours = Array.from({ length: 24 }, (_, i) => i);
+  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+
+  // Helper for red line
+  const getTimeLineTop = () => {
+    const mins = now.getHours() * 60 + now.getMinutes();
+    return (mins / 60) * 80;
+  };
 
   return (
-    <div className="bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-200">
-      {/* 1. CALENDAR HEADER */}
-      <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-white z-10">
-        <div className="flex items-center gap-4">
-          <h2 className="text-xl font-black uppercase tracking-tight w-48">
-            {format(currentDate, headerFormat)}
-          </h2>
-          <div className="flex bg-gray-100 p-1 rounded-lg">
-            <button
-              onClick={prev}
-              className="px-3 py-1 hover:bg-white rounded-md transition-all"
-            >
-              ←
-            </button>
-            <button
-              onClick={goToday}
-              className="px-3 py-1 text-xs font-bold uppercase hover:bg-white rounded-md transition-all"
-            >
-              Today
-            </button>
-            <button
-              onClick={next}
-              className="px-3 py-1 hover:bg-white rounded-md transition-all"
-            >
-              →
-            </button>
-          </div>
-        </div>
-        <div className="flex bg-gray-100 p-1 rounded-xl">
+    <div className="bg-white border-t border-gray-200 h-[calc(100vh-280px)] flex flex-col font-sans text-[#333333]">
+      {/* --- HEADER --- */}
+      <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-[#fcfcfc]">
+        <h1 className="text-xl font-semibold tracking-tight text-[#333333]">
+          {format(currentDate, "MMMM yyyy")}
+        </h1>
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => setViewMode("month")}
-            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest ${
-              viewMode === "month"
-                ? "bg-white shadow-sm text-[#9d4edd]"
-                : "text-gray-400"
-            }`}
+            onClick={() => setCurrentDate(addDays(currentDate, -7))}
+            className="p-2 hover:bg-gray-100 rounded-xl transition-colors text-gray-400"
           >
-            Month
+            <ChevronLeft size={20} />
           </button>
           <button
-            onClick={() => setViewMode("week")}
-            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest ${
-              viewMode === "week"
-                ? "bg-white shadow-sm text-[#9d4edd]"
-                : "text-gray-400"
-            }`}
+            onClick={() => setCurrentDate(new Date())}
+            className="px-5 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 rounded-xl transition-all border border-gray-100"
           >
-            Week
+            Today
+          </button>
+          <button
+            onClick={() => setCurrentDate(addDays(currentDate, 7))}
+            className="p-2 hover:bg-gray-100 rounded-xl transition-colors text-gray-400"
+          >
+            <ChevronRight size={20} />
           </button>
         </div>
       </div>
 
-      {/* 2. MONTH VIEW */}
-      {viewMode === "month" && (
-        <div className="flex-1 grid grid-cols-7 grid-rows-[auto_1fr] bg-gray-50">
-          {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
-            <div
-              key={d}
-              className="p-3 text-center text-[10px] font-black uppercase text-gray-400 border-b border-r border-gray-100 last:border-r-0"
-            >
-              {d}
+      {/* --- STICKY DAYS --- */}
+      <div className="grid grid-cols-[100px_1fr] border-b border-gray-200 sticky top-0 z-30 bg-white shadow-sm">
+        <div className="border-r border-gray-100 bg-gray-50/50" />
+        <div className="grid grid-cols-7 divide-x divide-gray-100">
+          {days.map((day) => (
+            <div key={day.toString()} className="py-4 text-center">
+              <p className="text-[10px] font-black uppercase tracking-widest text-[#333333] mb-1">
+                {format(day, "EEEE")}
+              </p>
+              <p
+                className={`text-sm font-bold ${
+                  isSameDay(day, new Date())
+                    ? "text-[#9d4edd]"
+                    : "text-gray-400"
+                }`}
+              >
+                {format(day, "d MMM")}
+              </p>
+
+              {/* ALL DAY AREA */}
+              <div className="mt-3 px-1 space-y-1 min-h-6">
+                {tasks
+                  .filter(
+                    (t) =>
+                      isSameDay(new Date(t.due_date || ""), day) &&
+                      !t.scheduled_start
+                  )
+                  .map((task) => (
+                    <div
+                      key={task.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openModal(format(day, "yyyy-MM-dd"), undefined, task);
+                      }}
+                      className="text-[10px] bg-purple-50 text-[#9d4edd] font-bold py-1 px-2 rounded-lg border border-purple-100 truncate cursor-pointer hover:bg-purple-100"
+                    >
+                      {task.task_name}
+                    </div>
+                  ))}
+              </div>
             </div>
           ))}
-          <div className="col-span-7 grid grid-cols-7 auto-rows-fr bg-white">
-            {daysInView.map((day) => {
-              const dayTasks = tasks.filter(
-                (t) => t.due_date && isSameDay(new Date(t.due_date), day)
-              );
-              const isCurrentMonth = isSameMonth(day, currentDate);
-
-              return (
-                <div
-                  key={day.toString()}
-                  className={`border-b border-r border-gray-100 p-2 min-h-32 relative group transition-colors ${
-                    !isCurrentMonth ? "bg-gray-50/50" : "hover:bg-purple-50/10"
-                  }`}
-                >
-                  <span
-                    className={`text-sm font-bold ${
-                      isSameDay(day, new Date())
-                        ? "bg-[#9d4edd] text-white w-7 h-7 flex items-center justify-center rounded-full"
-                        : "text-gray-700"
-                    }`}
-                  >
-                    {format(day, "d")}
-                  </span>
-
-                  {/* Hover Add Button */}
-                  <button
-                    onClick={() => onAddTask(format(day, "yyyy-MM-dd"))}
-                    className="absolute top-2 right-2 text-[#9d4edd] opacity-0 group-hover:opacity-100 transition-opacity font-bold text-lg hover:scale-110"
-                  >
-                    +
-                  </button>
-
-                  <div className="mt-2 space-y-1">
-                    {dayTasks.map((task) => (
-                      <div
-                        key={task.id}
-                        className={`text-[9px] px-2 py-1 rounded truncate font-medium ${
-                          task.category === "personal"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-purple-100 text-[#9d4edd]"
-                        }`}
-                      >
-                        {task.task_name}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
         </div>
-      )}
+      </div>
 
-      {/* 3. WEEK VIEW (24h Scroll) */}
-      {viewMode === "week" && (
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Week Header */}
-          <div className="grid grid-cols-[60px_1fr] border-b border-gray-200 bg-white">
-            <div className="p-4 border-r border-gray-100"></div>
-            <div className="grid grid-cols-7">
-              {daysInView.slice(0, 7).map((day) => (
-                <div
-                  key={day.toString()}
-                  className={`text-center p-3 border-r border-gray-100 ${
-                    isToday(day) ? "text-[#9d4edd]" : ""
-                  }`}
-                >
-                  <div className="text-xs font-bold uppercase">
-                    {format(day, "EEE")}
-                  </div>
-                  <div
-                    className={`text-lg font-black ${
-                      isToday(day)
-                        ? "bg-[#9d4edd] text-white w-8 h-8 rounded-full flex items-center justify-center mx-auto mt-1"
-                        : ""
-                    }`}
-                  >
-                    {format(day, "d")}
-                  </div>
-                </div>
-              ))}
-            </div>
+      {/* --- SCROLLABLE GRID --- */}
+      <div className="flex-1 overflow-y-auto relative bg-white" ref={scrollRef}>
+        <div className="grid grid-cols-[100px_1fr] min-h-full">
+          {/* Time Labels */}
+          <div className="border-r border-gray-100 bg-gray-50/30">
+            {hours.map((hour) => (
+              <div
+                key={hour}
+                className="h-20 pr-4 text-right border-b border-transparent"
+              >
+                <span className="text-[11px] font-bold text-gray-400 relative -top-2">
+                  {format(setHours(startOfDay(new Date()), hour), "HH:mm")}
+                </span>
+              </div>
+            ))}
           </div>
 
-          {/* Scrollable Timeline */}
-          <div
-            ref={scrollRef}
-            className="flex-1 overflow-y-auto relative custom-scrollbar"
-          >
-            <div className="grid grid-cols-[60px_1fr] min-h-360">
-              {" "}
-              {/* 60px * 24 hours */}
-              {/* Time Column */}
-              <div className="border-r border-gray-100 bg-gray-50/30">
-                {Array.from({ length: 24 }).map((_, i) => (
+          {/* Columns */}
+          <div className="grid grid-cols-7 divide-x divide-gray-200 relative">
+            {days.map((day) => (
+              <div key={day.toString()} className="relative h-full group">
+                {hours.map((hour) => (
                   <div
-                    key={i}
-                    className="h-15 text-[10px] text-gray-400 font-bold text-right pr-2 pt-1 -mt-2.5"
-                  >
-                    {i === 0
-                      ? "12 AM"
-                      : i < 12
-                      ? `${i} AM`
-                      : i === 12
-                      ? "12 PM"
-                      : `${i - 12} PM`}
-                  </div>
-                ))}
-              </div>
-              {/* Grid Columns */}
-              <div className="grid grid-cols-7 relative">
-                {/* Horizontal Hour Lines */}
-                {Array.from({ length: 24 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="absolute w-full border-b border-gray-50"
-                    style={{ top: `${i * 60}px` }}
+                    key={hour}
+                    className="h-20 border-b border-gray-100 hover:bg-gray-50/30 transition-colors cursor-pointer"
+                    onClick={() =>
+                      openModal(
+                        format(day, "yyyy-MM-dd"),
+                        `${hour.toString().padStart(2, "0")}:00`
+                      )
+                    }
                   />
                 ))}
 
-                {/* THE RED LINE (Current Time) */}
-                {/* Only render if we have a valid time (now > 0) */}
-                {daysInView.some((d) => isToday(d)) && now > 0 && (
+                {/* Red Line (Only Today) */}
+                {isSameDay(day, now) && (
                   <div
-                    className="absolute w-full border-t-2 border-red-500 z-50 pointer-events-none flex items-center"
-                    style={{
-                      top: `${differenceInMinutes(now, startOfDay(now))}px`,
-                      left: 0,
-                    }}
+                    className="absolute left-0 right-0 z-20 flex items-center pointer-events-none"
+                    style={{ top: `${getTimeLineTop()}px` }}
                   >
-                    <div className="w-2 h-2 bg-red-500 rounded-full -ml-1"></div>
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-400/80 -ml-1.5 shadow-sm" />
+                    <div className="flex-1 h-px bg-red-300/60" />
                   </div>
                 )}
 
-                {/* Day Columns */}
-                {daysInView.slice(0, 7).map((day, dIndex) => {
-                  const dayTasks = tasks.filter(
-                    (t) => t.due_date && isSameDay(new Date(t.due_date), day)
-                  );
+                {/* Timed Tasks */}
+                {tasks
+                  .filter(
+                    (t) =>
+                      isSameDay(new Date(t.due_date || ""), day) &&
+                      t.scheduled_start
+                  )
+                  .map((task) => {
+                    const start = new Date(task.scheduled_start!);
+                    const end = task.scheduled_end
+                      ? new Date(task.scheduled_end)
+                      : addMinutes(start, 30);
 
-                  return (
-                    <div
-                      key={dIndex}
-                      className="border-r border-gray-50 relative h-full hover:bg-gray-50/20 transition-colors"
-                      onClick={() => {
-                        onAddTask(format(day, "yyyy-MM-dd"));
-                      }}
-                    >
-                      {/* Render Tasks as Blocks */}
-                      {dayTasks.map((task, tIndex) => (
-                        <div
-                          key={task.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            alert(`Opening task: ${task.task_name}`);
-                          }}
-                          className={`mx-1 p-2 rounded-lg text-[10px] font-bold shadow-sm mb-1 cursor-pointer border-l-4 overflow-hidden ${
-                            task.category === "client"
-                              ? "bg-purple-50 border-[#9d4edd] text-purple-900"
-                              : "bg-blue-50 border-blue-400 text-blue-900"
-                          }`}
-                          style={{ marginTop: `${tIndex * 2}px` }}
-                        >
-                          {task.scheduled_start
-                            ? format(new Date(task.scheduled_start), "h:mm a")
-                            : "All Day"}{" "}
-                          - {task.task_name}
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })}
+                    const top =
+                      ((start.getHours() * 60 + start.getMinutes()) / 60) * 80;
+                    const durationMin =
+                      (end.getTime() - start.getTime()) / 60000;
+                    const height = (durationMin / 60) * 80;
+
+                    return (
+                      <div
+                        key={task.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openModal(format(day, "yyyy-MM-dd"), undefined, task);
+                        }}
+                        className="absolute left-1 right-1 p-3 bg-white border-l-4 border-[#9d4edd] shadow-md rounded-r-xl z-10 cursor-pointer hover:shadow-lg transition-all"
+                        style={{
+                          top: `${top}px`,
+                          height: `${Math.max(height, 35)}px`,
+                        }}
+                      >
+                        <p className="text-[11px] font-bold text-[#333333] truncate leading-none mb-1">
+                          {task.task_name}
+                        </p>
+                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-tight flex items-center gap-1">
+                          <Clock size={8} />
+                          {format(start, "HH:mm")} - {format(end, "HH:mm")}
+                        </p>
+                      </div>
+                    );
+                  })}
               </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* --- TASK MODAL --- */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-100 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-lg rounded-4xl shadow-2xl animate-in zoom-in duration-200 overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center p-6 border-b border-gray-100">
+              <h2 className="text-xl font-black text-[#333333]">
+                {editingTask ? "Edit Task" : "New Task"}
+              </h2>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="text-gray-400 hover:text-black transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-8 space-y-6">
+              {/* Task Name */}
+              <div>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                  Task Name
+                </label>
+                <input
+                  autoFocus
+                  className="w-full bg-gray-50 border-none rounded-xl p-4 font-bold text-[#333333] outline-none focus:ring-2 focus:ring-purple-100"
+                  value={formTaskName}
+                  onChange={(e) => setFormTaskName(e.target.value)}
+                  placeholder="Enter task name..."
+                />
+              </div>
+
+              {/* Category & Client Row */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                    Category
+                  </label>
+                  <div className="flex bg-gray-50 rounded-xl p-1">
+                    {(["client", "business", "personal"] as const).map(
+                      (cat) => (
+                        <button
+                          key={cat}
+                          onClick={() => setFormCategory(cat)}
+                          className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase transition-all ${
+                            formCategory === cat
+                              ? "bg-white text-[#9d4edd] shadow-sm"
+                              : "text-gray-400"
+                          }`}
+                        >
+                          {cat === "client" ? (
+                            <User size={12} className="mx-auto" />
+                          ) : cat === "business" ? (
+                            <Building2 size={12} className="mx-auto" />
+                          ) : (
+                            "ME"
+                          )}
+                        </button>
+                      )
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                    Client
+                  </label>
+                  <select
+                    className="w-full bg-gray-50 border-none rounded-xl p-2.5 text-xs font-bold text-[#333333] outline-none focus:ring-2 focus:ring-purple-100"
+                    value={formClientId}
+                    onChange={(e) => setFormClientId(e.target.value)}
+                    disabled={formCategory !== "client"}
+                  >
+                    <option value="">N/A</option>
+                    {clients.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.surname} ({c.business_name})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Time & Status Row */}
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                    Start
+                  </label>
+                  <select
+                    className="w-full bg-gray-50 rounded-xl text-xs font-bold p-2.5 outline-none"
+                    value={formStartTime}
+                    onChange={(e) => setFormStartTime(e.target.value)}
+                  >
+                    {timeOptions.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                    End
+                  </label>
+                  <select
+                    className="w-full bg-gray-50 rounded-xl text-xs font-bold p-2.5 outline-none"
+                    value={formEndTime}
+                    onChange={(e) => setFormEndTime(e.target.value)}
+                  >
+                    {timeOptions.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                    Status
+                  </label>
+                  <select
+                    className="w-full bg-gray-50 rounded-xl text-xs font-bold p-2.5 outline-none capitalize"
+                    value={formStatus}
+                    onChange={(e) => setFormStatus(e.target.value)}
+                  >
+                    {["todo", "up_next", "in_progress", "completed"].map(
+                      (s) => (
+                        <option key={s} value={s}>
+                          {s.replace("_", " ")}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </div>
+              </div>
+
+              {/* Details */}
+              <div>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">
+                  Details
+                </label>
+                <textarea
+                  className="w-full bg-gray-50 border-none rounded-2xl p-4 text-sm font-medium text-[#333333] outline-none focus:ring-2 focus:ring-purple-100 min-h-25"
+                  placeholder="Add details..."
+                  value={formDetails}
+                  onChange={(e) => setFormDetails(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Footer Actions */}
+            <div className="p-6 border-t border-gray-50 flex gap-4 bg-gray-50/50">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="px-6 py-3 rounded-xl border-2 border-[#333333] text-[#333333] font-bold text-xs uppercase tracking-widest hover:bg-gray-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                className="flex-1 bg-[#9d4edd] text-white py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-[#7b2cbf] shadow-lg shadow-purple-100 transition-all"
+              >
+                Save Task
+              </button>
             </div>
           </div>
         </div>
