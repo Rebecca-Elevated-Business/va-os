@@ -3,7 +3,16 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
-import { Filter, MoreHorizontal, X, Clock, CheckCircle2 } from "lucide-react";
+import {
+  Filter,
+  MoreHorizontal,
+  X,
+  Clock,
+  CheckCircle2,
+  List,
+  Calendar,
+  Trello,
+} from "lucide-react";
 import CalendarView from "./CalendarView";
 import KanbanView from "./KanbanView";
 import { Task } from "./types";
@@ -191,65 +200,110 @@ export default function TaskCentrePage() {
 
       {/* CONTROL BAR */}
       <div className="flex items-center justify-between gap-4 mb-6 border-b border-gray-100 pb-6">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
+          {/* 1. View Switcher (Ghost Style with Icons) */}
           <div className="flex bg-gray-100 p-1 rounded-xl">
-            {(["list", "calendar", "kanban"] as const).map((v) => (
-              <button
-                key={v}
-                onClick={() => setView(v)}
-                className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${
-                  view === v
-                    ? "bg-white text-[#9d4edd] shadow-sm"
-                    : "text-gray-500 hover:text-black"
-                }`}
-              >
-                {v}
-              </button>
-            ))}
+            {[
+              { id: "list", label: "List", icon: List },
+              { id: "calendar", label: "Calendar", icon: Calendar },
+              { id: "kanban", label: "Kanban", icon: Trello },
+            ].map((v) => {
+              const Icon = v.icon;
+              return (
+                <button
+                  key={v.id}
+                  onClick={() =>
+                    setView(v.id as "list" | "calendar" | "kanban")
+                  }
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                    view === v.id
+                      ? "bg-white text-[#9d4edd] shadow-sm"
+                      : "text-gray-500 hover:text-black"
+                  }`}
+                >
+                  <Icon size={14} />
+                  {v.label}
+                </button>
+              );
+            })}
           </div>
 
+          {/* 2. Status Filter Dropdown with Pastel Pills */}
           <div className="relative" ref={filterRef}>
             <button
               onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold hover:bg-gray-50 transition-all shadow-sm"
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold hover:bg-gray-50 transition-all shadow-sm text-[#333333]"
             >
               <Filter size={14} className="text-gray-400" />
               Filter by Status
             </button>
 
             {isFilterOpen && (
-              <div className="absolute left-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl z-50 p-2">
-                {["todo", "up_next", "in_progress", "completed"].map((s) => (
-                  <label
-                    key={s}
-                    className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 rounded-lg cursor-pointer text-xs font-semibold capitalize"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={filterStatus.includes(s)}
-                      onChange={() =>
-                        setFilterStatus((prev) =>
-                          prev.includes(s)
-                            ? prev.filter((x) => x !== s)
-                            : [...prev, s]
-                        )
-                      }
-                      className="rounded text-[#9d4edd]"
-                    />
-                    {s.replace("_", " ")}
-                  </label>
-                ))}
+              <div className="absolute left-0 mt-2 w-56 bg-white border border-gray-100 rounded-xl shadow-xl z-50 p-3 animate-in fade-in slide-in-from-top-2">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 ml-1">
+                  Find an option
+                </p>
+                <div className="space-y-1">
+                  {[
+                    {
+                      id: "todo",
+                      label: "Todo",
+                      color: "bg-purple-100 text-purple-700",
+                    },
+                    {
+                      id: "up_next",
+                      label: "Up next",
+                      color: "bg-blue-100 text-blue-700",
+                    },
+                    {
+                      id: "in_progress",
+                      label: "In progress",
+                      color: "bg-yellow-100 text-yellow-700",
+                    },
+                    {
+                      id: "completed",
+                      label: "Done",
+                      color: "bg-green-100 text-green-700",
+                    },
+                  ].map((s) => (
+                    <label
+                      key={s.id}
+                      className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={filterStatus.includes(s.id)}
+                          onChange={() =>
+                            setFilterStatus((prev) =>
+                              prev.includes(s.id)
+                                ? prev.filter((x) => x !== s.id)
+                                : [...prev, s.id]
+                            )
+                          }
+                          className="w-4 h-4 rounded border-gray-300 text-[#9d4edd] focus:ring-[#9d4edd]"
+                        />
+                        <span
+                          className={`px-3 py-1 rounded-full text-[11px] font-bold ${s.color}`}
+                        >
+                          {s.label}
+                        </span>
+                      </div>
+                    </label>
+                  ))}
+                </div>
               </div>
             )}
           </div>
-        </div>
 
-        <button
-          onClick={() => setIsAdding(true)}
-          className="bg-[#9d4edd] text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg hover:bg-[#7b2cbf] transition-all"
-        >
-          + New Task
-        </button>
+          {/* 3. New Task Button (Moved Next to Filter) */}
+          <button
+            onClick={() => setIsAdding(true)}
+            className="bg-[#9d4edd] text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-purple-100 hover:bg-[#7b2cbf] transition-all flex items-center gap-2"
+          >
+            <span className="text-lg leading-none">+</span> New Task
+          </button>
+        </div>
       </div>
 
       {/* LIST VIEW */}
