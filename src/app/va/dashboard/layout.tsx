@@ -125,19 +125,6 @@ export default function VADashboardLayout({
           isCollapsed ? "w-20" : "w-64"
         }`}
       >
-        <div className="absolute -right-3 top-24 z-50">
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="w-6 h-6 bg-[#9d4edd] text-white rounded-full flex items-center justify-center shadow-lg hover:bg-[#7b2cbf] transition-colors"
-          >
-            {isCollapsed ? (
-              <ChevronRight size={14} />
-            ) : (
-              <ChevronLeft size={14} />
-            )}
-          </button>
-        </div>
-
         <div
           className={`p-6 border-b border-gray-200 mb-4 h-20 flex items-center ${
             isCollapsed ? "justify-center" : "justify-start"
@@ -194,7 +181,22 @@ export default function VADashboardLayout({
           })}
         </nav>
 
-        <div className="p-4 border-t border-gray-100">
+        {/* Settings at bottom */}
+        <div className="p-4 border-t border-gray-100 relative">
+          {/* Moved Toggle Button */}
+          <div className="absolute -right-3 -top-3 z-50">
+            <button
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="w-6 h-6 bg-[#9d4edd] text-white rounded-full flex items-center justify-center shadow-lg hover:bg-[#7b2cbf] transition-colors"
+            >
+              {isCollapsed ? (
+                <ChevronRight size={14} />
+              ) : (
+                <ChevronLeft size={14} />
+              )}
+            </button>
+          </div>
+
           <Link
             href="/va/dashboard/settings"
             title={isCollapsed ? "Settings" : ""}
