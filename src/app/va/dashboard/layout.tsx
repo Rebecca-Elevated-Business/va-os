@@ -24,40 +24,57 @@ export default function VADashboardLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+
+  // States
   const [authorized, setAuthorized] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [isCollapsed, setIsCollapsed] = useState(false); // New state for collapsing
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
+  // Security Check and Real-time Inbox logic
   const checkAccessAndUnread = useCallback(async () => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session) {
-      router.push("/va/login");
-      return;
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        router.push("/va/login");
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", session.user.id)
+        .single();
+
+      if (profile?.role !== "va") {
+        router.push("/client/dashboard");
+        return;
+      }
+
+      // Success: User is a VA
+      setAuthorized(true);
+
+      // Fetch Inbox Badge Count
+      const { count } = await supabase
+        .from("client_requests")
+        .select("*", { count: "exact", head: true })
+        .eq("is_read", false)
+        .eq("is_completed", false);
+
+      setUnreadCount(count || 0);
+    } catch (error) {
+      console.error("Dashboard Access Error:", error);
     }
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", session.user.id)
-      .single();
-
-    if (profile?.role !== "va") {
-      router.push("/client/dashboard");
-      return;
-    }
-    setAuthorized(true);
-
-    const { count } = await supabase
-      .from("client_requests")
-      .select("*", { count: "exact", head: true })
-      .eq("is_read", false)
-      .eq("is_completed", false);
-
-    setUnreadCount(count || 0);
   }, [router]);
 
   useEffect(() => {
+    // FIX: Use a timeout to avoid synchronous state updates during render
+    const timer = setTimeout(() => {
+      checkAccessAndUnread();
+    }, 0);
+
     const sub = supabase
       .channel("inbox-badge")
       .on(
@@ -66,7 +83,9 @@ export default function VADashboardLayout({
         checkAccessAndUnread
       )
       .subscribe();
+
     return () => {
+      clearTimeout(timer);
       supabase.removeChannel(sub);
     };
   }, [checkAccessAndUnread]);
@@ -84,17 +103,28 @@ export default function VADashboardLayout({
     },
   ];
 
-  if (!authorized) return null;
+  if (!authorized) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#fcfcfc] font-sans">
+        <div className="text-center animate-pulse">
+          <p className="text-xl font-black text-[#9d4edd] uppercase tracking-tighter">
+            VA-OS
+          </p>
+          <p className="text-xs font-bold text-gray-400 mt-2 uppercase tracking-widest">
+            Verifying access...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-[#fcfcfc] text-[#333333] font-sans">
-      {/* SIDEBAR - Width changes based on state */}
       <aside
         className={`bg-white border-r border-gray-200 flex flex-col fixed h-full z-30 transition-all duration-300 ease-in-out shadow-sm ${
           isCollapsed ? "w-20" : "w-64"
         }`}
       >
-        {/* Toggle Button Container */}
         <div className="absolute -right-3 top-24 z-50">
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
@@ -108,7 +138,6 @@ export default function VADashboardLayout({
           </button>
         </div>
 
-        {/* Logo Section */}
         <div
           className={`p-6 border-b border-gray-200 mb-4 h-20 flex items-center ${
             isCollapsed ? "justify-center" : "justify-start"
@@ -123,7 +152,6 @@ export default function VADashboardLayout({
           </h2>
         </div>
 
-        {/* Main Nav */}
         <nav className="flex-1 px-4 space-y-1 overflow-hidden">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -166,7 +194,6 @@ export default function VADashboardLayout({
           })}
         </nav>
 
-        {/* Bottom Section - Settings replaced Logout */}
         <div className="p-4 border-t border-gray-100">
           <Link
             href="/va/dashboard/settings"
@@ -190,7 +217,6 @@ export default function VADashboardLayout({
         </div>
       </aside>
 
-      {/* Main Area - Margin changes based on sidebar width */}
       <main
         className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${
           isCollapsed ? "ml-20" : "ml-64"
