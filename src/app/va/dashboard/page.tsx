@@ -1,33 +1,49 @@
 "use client";
 
-import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
-
 export default function VADashboard() {
-  const router = useRouter();
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/va/login");
-  };
-
   return (
-    <main className="p-10 text-black">
+    <main className="space-y-8 animate-in fade-in duration-500 text-[#333333]">
+      {/* 1. Welcome Header */}
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">VA Dashboard</h1>
-        <button
-          onClick={handleLogout}
-          className="px-4 py-2 text-sm text-gray-600 hover:text-[#9d4edd] border border-gray-300 rounded-lg transition-colors"
-        >
-          Logout
-        </button>
+        <h1 className="text-3xl font-black tracking-tight">Va Dashboard</h1>
       </div>
-      <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100">
-        <h2 className="text-xl font-bold mb-4">Welcome to VA-OS</h2>
-        <p className="text-gray-600">
-          Select <strong>Task Centre</strong> from the sidebar to manage your
-          workload.
-        </p>
+
+      {/* 2. First Row: 3 Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {[1, 2, 3].map((num) => (
+          <div
+            key={num}
+            className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+          >
+            <div className="px-6 py-4 border-b border-gray-50">
+              <h3 className="font-bold text-sm text-gray-400 uppercase tracking-widest">
+                Dash Card {num}
+              </h3>
+            </div>
+            <div className="p-6 min-h-32 flex items-center justify-center text-gray-300 italic text-sm">
+              Content placeholder
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* 3. Second Row: 2 Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {[4, 5].map((num) => (
+          <div
+            key={num}
+            className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+          >
+            <div className="px-6 py-4 border-b border-gray-50">
+              <h3 className="font-bold text-sm text-gray-400 uppercase tracking-widest">
+                Dash Card {num}
+              </h3>
+            </div>
+            <div className="p-6 min-h-48 flex items-center justify-center text-gray-300 italic text-sm">
+              Extended content placeholder
+            </div>
+          </div>
+        ))}
       </div>
     </main>
   );
