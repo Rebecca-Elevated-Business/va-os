@@ -6,10 +6,10 @@ import {
   MoreHorizontal,
   Plus,
   Clock,
-  CheckCircle2,
   Circle,
   ArrowRightCircle,
   PlayCircle,
+  CheckCircle2,
 } from "lucide-react";
 import { Task } from "./types";
 
@@ -18,14 +18,30 @@ interface KanbanViewProps {
   onUpdateStatus: (taskId: string, newStatus: string) => void;
   onToggleTimer: (task: Task) => Promise<void>;
   onAddTask: (status: string) => void;
+  filterStatus: string[]; // Added to handle dynamic column hiding
 }
 
-// Define the columns and their display titles
+// 1. Unified Config to match List & Calendar
 const COLUMNS = [
-  { id: "todo", title: "To Do", icon: Circle },
-  { id: "up_next", title: "Up Next", icon: ArrowRightCircle },
-  { id: "in_progress", title: "In Progress", icon: PlayCircle },
-  { id: "completed", title: "Completed", icon: CheckCircle2 },
+  { id: "todo", title: "To do", icon: Circle, color: "border-purple-200" },
+  {
+    id: "up_next",
+    title: "Up next",
+    icon: ArrowRightCircle,
+    color: "border-blue-200",
+  },
+  {
+    id: "in_progress",
+    title: "In progress",
+    icon: PlayCircle,
+    color: "border-yellow-200",
+  },
+  {
+    id: "completed",
+    title: "Completed",
+    icon: CheckCircle2,
+    color: "border-green-200",
+  },
 ];
 
 export default function KanbanView({
@@ -33,10 +49,10 @@ export default function KanbanView({
   onUpdateStatus,
   onToggleTimer,
   onAddTask,
+  filterStatus,
 }: KanbanViewProps) {
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
 
-  // Handle Drop Logic
   const handleDrop = (e: React.DragEvent, status: string) => {
     e.preventDefault();
     if (draggedTaskId) {
@@ -45,34 +61,28 @@ export default function KanbanView({
     }
   };
 
+  // 2. Filter columns: Only show columns that are active in the filter
+  const visibleColumns = COLUMNS.filter((col) => filterStatus.includes(col.id));
+
   return (
-    <div className="h-full overflow-x-auto pb-4">
-      <div className="flex gap-6 min-w-250 h-full">
-        {COLUMNS.map((col) => {
+    <div className="h-[calc(100vh-220px)] overflow-x-auto pb-6 custom-scrollbar">
+      <div className="flex gap-6 h-full min-w-max px-2">
+        {visibleColumns.map((col) => {
           const ColIcon = col.icon;
           const colTasks = tasks.filter((t) => t.status === col.id);
 
           return (
             <div
               key={col.id}
-              className="flex-1 min-w-70 flex flex-col bg-gray-50/50 rounded-2xl border border-gray-100 h-full"
+              className={`flex-1 w-80 flex flex-col bg-gray-50/50 rounded-2xl border-t-4 ${col.color} border-x border-b border-gray-100 h-full transition-all duration-300`}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => handleDrop(e, col.id)}
             >
               {/* COLUMN HEADER */}
-              <div className="p-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-gray-50/50 backdrop-blur-sm rounded-t-2xl z-10">
+              <div className="p-4 flex items-center justify-between sticky top-0 z-10">
                 <div className="flex items-center gap-2">
-                  <ColIcon
-                    size={16}
-                    className={
-                      col.id === "completed"
-                        ? "text-green-500"
-                        : col.id === "in_progress"
-                        ? "text-[#9d4edd]"
-                        : "text-gray-400"
-                    }
-                  />
-                  <h3 className="text-xs font-black uppercase tracking-widest text-gray-500">
+                  <ColIcon size={16} className="text-gray-400" />
+                  <h3 className="text-sm font-bold text-[#333333] capitalize tracking-tight">
                     {col.title}
                   </h3>
                   <span className="bg-white px-2 py-0.5 rounded-full text-[10px] font-bold text-gray-400 border border-gray-100">
@@ -81,7 +91,7 @@ export default function KanbanView({
                 </div>
                 <button
                   onClick={() => onAddTask(col.id)}
-                  className="text-gray-400 hover:text-[#9d4edd] transition-colors"
+                  className="text-gray-400 hover:text-[#9d4edd] transition-colors p-1"
                 >
                   <Plus size={16} />
                 </button>
@@ -94,66 +104,70 @@ export default function KanbanView({
                     key={task.id}
                     draggable
                     onDragStart={() => setDraggedTaskId(task.id)}
-                    className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-grab active:cursor-grabbing hover:shadow-md transition-all group"
+                    className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-purple-100 transition-all group"
                   >
-                    {/* Task Header & Options */}
-                    <div className="flex justify-between items-start mb-2">
-                      <span
-                        className={`text-[9px] px-2 py-1 rounded-md font-bold uppercase tracking-wider border ${
-                          task.client_id
-                            ? "bg-purple-50 text-[#9d4edd] border-purple-100"
-                            : "bg-gray-100 text-gray-500 border-gray-200"
-                        }`}
-                      >
-                        {/* FIX 1: Removed 'category' check */}
-                        {task.client_id ? "Client" : "Personal"}
+                    {/* Card Header: Category & Context */}
+                    <div className="flex justify-between items-start mb-3">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-[#9d4edd] opacity-70">
+                        {task.category ||
+                          (task.client_id ? "Client" : "Personal")}
                       </span>
                       <button className="text-gray-300 hover:text-[#333333]">
                         <MoreHorizontal size={14} />
                       </button>
                     </div>
 
-                    {/* Task Content */}
+                    {/* Task Title */}
                     <h4
                       className={`font-bold text-sm text-[#333333] mb-1 leading-snug ${
                         task.status === "completed"
-                          ? "line-through text-gray-400"
+                          ? "line-through opacity-40"
                           : ""
                       }`}
                     >
                       {task.task_name}
                     </h4>
 
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-3 truncate">
-                      {/* FIX 2: Removed 'category', defaulted to 'Personal' */}
-                      {task.client_id
-                        ? task.clients?.business_name || task.clients?.surname
-                        : "Personal"}
-                    </p>
+                    {/* Client Name (If exists) */}
+                    {task.clients && (
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight mb-4">
+                        {task.clients.surname}
+                      </p>
+                    )}
 
                     {/* Footer: Date & Timer */}
                     <div className="flex items-center justify-between border-t border-gray-50 pt-3 mt-2">
-                      <div className="text-[10px] font-bold text-gray-400">
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#333333]">
+                        <Clock size={12} className="text-gray-300" />
                         {task.due_date
-                          ? format(new Date(task.due_date), "dd MMM")
-                          : "No Date"}
+                          ? format(new Date(task.due_date), "d MMM")
+                          : "No date"}
                       </div>
 
                       <button
-                        onClick={() => onToggleTimer(task)}
-                        className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onToggleTimer(task);
+                        }}
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${
                           task.is_running
                             ? "bg-red-50 text-red-500 border border-red-100 animate-pulse"
-                            : "bg-gray-50 text-gray-400 hover:text-[#9d4edd] hover:bg-purple-50"
+                            : "bg-green-50 text-green-600 border border-green-100 hover:bg-green-100"
                         }`}
                       >
-                        <Clock size={12} />
                         {Math.floor(task.total_minutes / 60)}h{" "}
                         {task.total_minutes % 60}m
                       </button>
                     </div>
                   </div>
                 ))}
+
+                {/* Empty State Drop Zone */}
+                {colTasks.length === 0 && (
+                  <div className="h-20 border-2 border-dashed border-gray-100 rounded-xl flex items-center justify-center text-[10px] font-bold text-gray-300 uppercase tracking-widest">
+                    Drop here
+                  </div>
+                )}
               </div>
             </div>
           );

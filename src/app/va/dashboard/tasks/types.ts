@@ -5,12 +5,13 @@ export interface Task {
   task_name: string;
   status: string;
   due_date: string | null;
-  scheduled_start: string | null; // Added for Calendar
-  scheduled_end: string | null; // Added for Calendar
+  scheduled_start: string | null;
+  scheduled_end: string | null;
   total_minutes: number;
   is_running: boolean;
-  start_time: string | null; // This is for the LIVE timer
+  start_time: string | null;
   details?: string;
+  category?: string; // <--- This is the magic line that fixes the errors
   clients?: {
     business_name: string;
     surname: string;
