@@ -237,7 +237,8 @@ export default function TaskCentrePage() {
         .select("*, clients(business_name, surname)")
         .single();
       if (error && error.message?.toLowerCase().includes("details")) {
-        const { details, ...fallbackPayload } = taskPayload;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { details: _details, ...fallbackPayload } = taskPayload;
         ({ data, error } = await supabase
           .from("tasks")
           .update(fallbackPayload)
@@ -267,7 +268,8 @@ export default function TaskCentrePage() {
         .select("*, clients(business_name, surname)")
         .single();
       if (error && error.message?.toLowerCase().includes("details")) {
-        const { details, ...fallbackPayload } = insertPayload;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { details: _details, ...fallbackPayload } = insertPayload;
         ({ data, error } = await supabase
           .from("tasks")
           .insert([fallbackPayload])
@@ -625,10 +627,10 @@ export default function TaskCentrePage() {
 
                             {/* Category Tag (Underneath) */}
                             <div
-                            className={`inline-block px-2 py-0.5 rounded text-[9px] font-bold tracking-wider border ${catConfig.color}`}
-                          >
-                            {catConfig.label}
-                          </div>
+                              className={`inline-block px-2 py-0.5 rounded text-[9px] font-bold tracking-wider border ${catConfig.color}`}
+                            >
+                              {catConfig.label}
+                            </div>
                           </div>
 
                           {/* 3. Meta Data (Date, Timer, Logged) */}
@@ -835,13 +837,13 @@ export default function TaskCentrePage() {
                   <div className="flex gap-2">
                     <input
                       type="date"
-                      className="w-full bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
+                      className="flex-1 min-w-0 bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
                       value={formStartDate}
                       onChange={(e) => setFormStartDate(e.target.value)}
                     />
                     <input
                       type="time"
-                      className="w-28 bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
+                      className="w-28 shrink-0 bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
                       value={formStartTime}
                       onChange={(e) => setFormStartTime(e.target.value)}
                     />
@@ -854,13 +856,13 @@ export default function TaskCentrePage() {
                   <div className="flex gap-2">
                     <input
                       type="date"
-                      className="w-full bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
+                      className="flex-1 min-w-0 bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
                       value={formEndDate}
                       onChange={(e) => setFormEndDate(e.target.value)}
                     />
                     <input
                       type="time"
-                      className="w-28 bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
+                      className="w-28 shrink-0 bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
                       value={formEndTime}
                       onChange={(e) => setFormEndTime(e.target.value)}
                     />
