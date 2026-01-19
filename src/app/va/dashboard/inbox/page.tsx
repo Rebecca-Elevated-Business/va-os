@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
+import { CheckCircle2, Inbox, Star } from "lucide-react";
 
 type InboxMessage = {
   id: string;
@@ -98,6 +99,18 @@ export default function VAInboxPage() {
     }
   };
 
+  const deleteMessage = async (msg: InboxMessage) => {
+    if (!confirm("Delete this message permanently?")) return;
+    const { error } = await supabase
+      .from("client_requests")
+      .delete()
+      .eq("id", msg.id);
+    if (!error) {
+      setMessages((prev) => prev.filter((m) => m.id !== msg.id));
+      setSelectedMsg(null);
+    }
+  };
+
   const filteredMessages = messages.filter((m) => {
     if (activeTab === "starred") return m.is_starred && !m.is_completed;
     if (activeTab === "completed") return m.is_completed;
@@ -137,12 +150,12 @@ export default function VAInboxPage() {
           onClick={() => setActiveTab("inbox")}
           className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-all ${
             activeTab === "inbox"
-              ? "bg-white text-[#9d4edd] shadow-sm"
-              : "text-gray-500 hover:bg-gray-100"
+              ? "bg-[#D9BAF2] text-[#333333] shadow-sm"
+              : "text-[#333333] hover:bg-gray-100"
           }`}
         >
           <div className="flex items-center gap-3">
-            <span>📥</span> Inbox
+            <Inbox size={16} className="text-[#333333]" /> Inbox
           </div>
           {inboxCount > 0 && (
             <span className="bg-red-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center">
@@ -154,12 +167,12 @@ export default function VAInboxPage() {
           onClick={() => setActiveTab("starred")}
           className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-all ${
             activeTab === "starred"
-              ? "bg-white text-[#9d4edd] shadow-sm"
-              : "text-gray-500 hover:bg-gray-100"
+              ? "bg-[#D9BAF2] text-[#333333] shadow-sm"
+              : "text-[#333333] hover:bg-gray-100"
           }`}
         >
           <div className="flex items-center gap-3">
-            <span>⭐</span> Starred
+            <Star size={16} className="text-[#333333]" /> Starred
           </div>
           {starredCount > 0 && (
             <span className="bg-gray-200 text-[#333333] text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center">
@@ -171,11 +184,11 @@ export default function VAInboxPage() {
           onClick={() => setActiveTab("completed")}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
             activeTab === "completed"
-              ? "bg-white text-[#9d4edd] shadow-sm"
-              : "text-gray-500 hover:bg-gray-100"
+              ? "bg-[#D9BAF2] text-[#333333] shadow-sm"
+              : "text-[#333333] hover:bg-gray-100"
           }`}
         >
-          <span>✅</span> Completed
+          <CheckCircle2 size={16} className="text-[#333333]" /> Completed
         </button>
       </aside>
 
@@ -216,7 +229,7 @@ export default function VAInboxPage() {
                   }}
                   className={`mt-1 text-xl transition-all hover:scale-110 ${
                     msg.is_starred
-                      ? "text-yellow-400"
+                      ? "text-[#9d4edd]"
                       : "text-gray-200 group-hover:text-gray-300"
                   }`}
                 >
@@ -326,7 +339,7 @@ export default function VAInboxPage() {
                       )
                     }
                     className={`text-xl transition-all hover:scale-110 ${
-                      selectedMsg.is_starred ? "text-yellow-400" : "text-gray-200"
+                      selectedMsg.is_starred ? "text-[#9d4edd]" : "text-gray-200"
                     }`}
                   >
                     {selectedMsg.is_starred ? "★" : "☆"}
@@ -371,6 +384,16 @@ export default function VAInboxPage() {
                     : "✅ Mark Completed"}
                 </button>
               </div>
+              {selectedMsg.is_completed && (
+                <div className="pt-2">
+                  <button
+                    onClick={() => deleteMessage(selectedMsg)}
+                    className="text-red-600 border border-red-200 rounded-xl px-3 py-2 text-[10px] font-black tracking-widest hover:bg-red-50 transition-colors"
+                  >
+                    DELETE
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
