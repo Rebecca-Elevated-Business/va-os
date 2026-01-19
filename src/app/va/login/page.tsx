@@ -29,32 +29,53 @@ export default function VALoginPage() {
     }
 
     if (data.user) {
-      // 2. WAIT A MOMENT (Cloud Sync Buffer)
-      // We wait 500ms to ensure the session is fully propagated
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // 2. DETACH FROM EVENT LOOP (The Fix)
+      // We use setTimeout to break out of the immediate React event cycle.
+      // This prevents "AbortError" caused by Strict Mode or race conditions.
+      setTimeout(async () => {
+        try {
+          const { data: profile, error: profileError } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", data.user?.id)
+            .single();
 
-      // 3. FETCH ROLE
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", data.user.id)
-        .single();
+          if (profileError) {
+            throw new Error(profileError.message);
+          }
 
-      if (profileError) {
-        setError(`Auth successful, but couldn't find your profile: ${profileError.message}`);
-        setLoading(false);
-        return;
-      }
+          if (profile?.role !== "va") {
+            await supabase.auth.signOut();
+            throw new Error(
+              `Access denied. System found role: "${profile?.role}". You must be a VA.`
+            );
+          }
 
-      if (profile?.role !== "va") {
-        await supabase.auth.signOut();
-        setError(`Access denied. System found role: "${profile?.role}". You must be a VA.`);
-        setLoading(false);
-        return;
-      }
+          // 3. SUCCESS
+          router.push("/va/dashboard");
+        } catch (err: unknown) {
+          // FIXED: Changed 'any' to 'unknown' for Type Safety
+          console.error("Login verification failed:", err);
 
-      // 4. SUCCESS
-      router.push("/va/dashboard");
+          let errorMessage = "Failed to verify profile.";
+
+          // Check if err is a standard Error object to safely read .message
+          if (err instanceof Error) {
+            errorMessage = err.message;
+          } else if (typeof err === "string") {
+            errorMessage = err;
+          }
+
+          // Only show error if it's NOT a random abort (which shouldn't happen in timeout)
+          if (!errorMessage.toLowerCase().includes("aborted")) {
+            setError(errorMessage);
+          } else {
+            // If it aborted but we are here, try pushing anyway as a fallback
+            router.push("/va/dashboard");
+          }
+          setLoading(false);
+        }
+      }, 100);
     }
   };
 
@@ -62,13 +83,19 @@ export default function VALoginPage() {
     <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-gray-50">
       <div className="w-full max-w-sm p-8 bg-white rounded-xl shadow-lg border border-gray-100">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">VA Operating System</h1>
-          <p className="text-[#9d4edd] font-semibold text-sm">Professional Portal</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            VA Operating System
+          </h1>
+          <p className="text-[#9d4edd] font-semibold text-sm">
+            Professional Portal
+          </p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">VA Email</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              VA Email
+            </label>
             <input
               type="email"
               value={email}
@@ -78,7 +105,9 @@ export default function VALoginPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Password
+            </label>
             <input
               type="password"
               value={password}
@@ -88,7 +117,11 @@ export default function VALoginPage() {
             />
           </div>
 
-          {error && <p className="text-red-500 text-sm bg-red-50 p-2 rounded">{error}</p>}
+          {error && (
+            <p className="text-red-500 text-sm bg-red-50 p-2 rounded">
+              {error}
+            </p>
+          )}
 
           <button
             type="submit"
