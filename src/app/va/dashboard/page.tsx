@@ -18,7 +18,7 @@ type InboxMessage = {
     surname: string;
     business_name: string;
     va_id?: string;
-  };
+  }[];
 };
 
 type CRMClient = {
@@ -106,9 +106,10 @@ export default function VADashboard() {
     if (taskRes.data) setTasks(taskRes.data as Task[]);
     if (clientRes.data) setClients(clientRes.data as CRMClient[]);
     if (messageRes.data) {
-      const filtered = (messageRes.data as InboxMessage[]).filter((item) =>
-        item.clients?.va_id ? item.clients.va_id === user.id : true
-      );
+      const filtered = (messageRes.data as InboxMessage[]).filter((item) => {
+        const client = item.clients?.[0];
+        return client?.va_id ? client.va_id === user.id : true;
+      });
       setMessages(filtered);
     }
     if (noteRes.data && noteRes.data.length > 0) {
@@ -131,12 +132,18 @@ export default function VADashboard() {
   }, [userId]);
 
   useEffect(() => {
-    fetchDashboardData();
+    const timer = setTimeout(() => {
+      fetchDashboardData();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchDashboardData]);
 
   useEffect(() => {
     if (!userId) return;
-    loadTimeEntries(todayDate);
+    const timer = setTimeout(() => {
+      loadTimeEntries(todayDate);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [loadTimeEntries, todayDate, userId]);
 
   useEffect(() => {
