@@ -101,13 +101,16 @@ export default function TaskCentrePage() {
 
   // Form State (New/Edit)
   const [formTaskName, setFormTaskName] = useState("");
+  const [formDetails, setFormDetails] = useState("");
   const [formClientId, setFormClientId] = useState("");
   const [formClientQuery, setFormClientQuery] = useState("");
   const [formCategory, setFormCategory] = useState<
     "client" | "business" | "personal"
   >("client");
-  const [formStartDateTime, setFormStartDateTime] = useState("");
-  const [formEndDateTime, setFormEndDateTime] = useState("");
+  const [formStartDate, setFormStartDate] = useState("");
+  const [formStartTime, setFormStartTime] = useState("");
+  const [formEndDate, setFormEndDate] = useState("");
+  const [formEndTime, setFormEndTime] = useState("");
   const [formStatus, setFormStatus] = useState("todo");
 
   // --- DATA FETCHING ---
@@ -202,16 +205,13 @@ export default function TaskCentrePage() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    const scheduledStart = formStartDateTime
-      ? new Date(formStartDateTime).toISOString()
-      : null;
-    const scheduledEnd =
-      formStartDateTime && formEndDateTime
-        ? new Date(formEndDateTime).toISOString()
-        : null;
-    const dueDate = formStartDateTime
-      ? formStartDateTime.split("T")[0]
-      : selectedTask?.due_date || null;
+    const buildIsoDateTime = (date: string, time: string) => {
+      if (!date || !time) return null;
+      return new Date(`${date}T${time}`).toISOString();
+    };
+    const scheduledStart = buildIsoDateTime(formStartDate, formStartTime);
+    const scheduledEnd = buildIsoDateTime(formEndDate, formEndTime);
+    const dueDate = formStartDate || selectedTask?.due_date || null;
     const clientId = formCategory === "client" ? formClientId || null : null;
 
     // Check if we are updating an existing task or creating new
@@ -220,6 +220,7 @@ export default function TaskCentrePage() {
         .from("tasks")
         .update({
           task_name: formTaskName,
+          details: formDetails.trim() ? formDetails.trim() : null,
           client_id: clientId,
           status: formStatus,
           due_date: dueDate,
@@ -242,6 +243,7 @@ export default function TaskCentrePage() {
           {
             va_id: user?.id,
             task_name: formTaskName,
+            details: formDetails.trim() ? formDetails.trim() : null,
             client_id: clientId,
             status: formStatus,
             due_date: dueDate,
@@ -268,11 +270,14 @@ export default function TaskCentrePage() {
 
   const resetForm = () => {
     setFormTaskName("");
+    setFormDetails("");
     setFormClientId("");
     setFormClientQuery("");
     setFormCategory("client");
-    setFormStartDateTime("");
-    setFormEndDateTime("");
+    setFormStartDate("");
+    setFormStartTime("");
+    setFormEndDate("");
+    setFormEndTime("");
     setFormStatus("todo");
   };
 
@@ -284,22 +289,29 @@ export default function TaskCentrePage() {
         | "personal"
     );
     setFormTaskName(task.task_name);
+    setFormDetails(task.details || "");
     setFormClientId(task.client_id || "");
-    const matchedClient = task.client_id
-      ? clients.find((c) => c.id === task.client_id)
-      : null;
     setFormClientQuery("");
     setFormStatus(task.status);
-    setFormStartDateTime(
-      task.scheduled_start
-        ? format(new Date(task.scheduled_start), "yyyy-MM-dd'T'HH:mm")
-        : ""
-    );
-    setFormEndDateTime(
-      task.scheduled_end
-        ? format(new Date(task.scheduled_end), "yyyy-MM-dd'T'HH:mm")
-        : ""
-    );
+    if (task.scheduled_start) {
+      const start = new Date(task.scheduled_start);
+      setFormStartDate(format(start, "yyyy-MM-dd"));
+      setFormStartTime(format(start, "HH:mm"));
+    } else if (task.due_date) {
+      setFormStartDate(format(new Date(task.due_date), "yyyy-MM-dd"));
+      setFormStartTime("");
+    } else {
+      setFormStartDate("");
+      setFormStartTime("");
+    }
+    if (task.scheduled_end) {
+      const end = new Date(task.scheduled_end);
+      setFormEndDate(format(end, "yyyy-MM-dd"));
+      setFormEndTime(format(end, "HH:mm"));
+    } else {
+      setFormEndDate("");
+      setFormEndTime("");
+    }
 
     setSelectedTask(task);
     setIsAdding(true);
@@ -696,6 +708,19 @@ export default function TaskCentrePage() {
                 />
               </div>
 
+              {/* Detail */}
+              <div>
+                <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-2 ml-1">
+                  Detail
+                </label>
+                <textarea
+                  className="w-full bg-gray-50 border-none rounded-xl p-4 text-xs font-bold text-[#333333] outline-none focus:ring-2 focus:ring-purple-100 resize-none h-24"
+                  value={formDetails}
+                  onChange={(e) => setFormDetails(e.target.value)}
+                  placeholder="Add extra details for this task"
+                />
+              </div>
+
               {/* Category Selection */}
               <div>
                 <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-2 ml-1">
@@ -783,6 +808,47 @@ export default function TaskCentrePage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-2 ml-1">
+                    Start date / time
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="date"
+                      className="w-full bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
+                      value={formStartDate}
+                      onChange={(e) => setFormStartDate(e.target.value)}
+                    />
+                    <input
+                      type="time"
+                      className="w-28 bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
+                      value={formStartTime}
+                      onChange={(e) => setFormStartTime(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-2 ml-1">
+                    End date / time
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="date"
+                      className="w-full bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
+                      value={formEndDate}
+                      onChange={(e) => setFormEndDate(e.target.value)}
+                    />
+                    <input
+                      type="time"
+                      className="w-28 bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
+                      value={formEndTime}
+                      onChange={(e) => setFormEndTime(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-2 ml-1">
                     Status
                   </label>
                   <select
@@ -797,28 +863,7 @@ export default function TaskCentrePage() {
                     ))}
                   </select>
                 </div>
-                <div>
-                  <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-2 ml-1">
-                    Start date and time
-                  </label>
-                  <input
-                    type="datetime-local"
-                    className="w-full bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
-                    value={formStartDateTime}
-                    onChange={(e) => setFormStartDateTime(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-2 ml-1">
-                    End date and time
-                  </label>
-                  <input
-                    type="datetime-local"
-                    className="w-full bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
-                    value={formEndDateTime}
-                    onChange={(e) => setFormEndDateTime(e.target.value)}
-                  />
-                </div>
+                <div />
               </div>
 
               <div className="flex gap-3 pt-4">
@@ -844,11 +889,20 @@ export default function TaskCentrePage() {
         <CalendarView
           tasks={tasks}
           onAddTask={(date: string, time?: string) => {
-            const startValue = time ? `${date}T${time}` : `${date}T09:00`;
-            const startDate = new Date(startValue);
-            const endDate = addMinutes(startDate, 60);
-            setFormStartDateTime(format(startDate, "yyyy-MM-dd'T'HH:mm"));
-            setFormEndDateTime(format(endDate, "yyyy-MM-dd'T'HH:mm"));
+            if (time) {
+              const startValue = `${date}T${time}`;
+              const startDate = new Date(startValue);
+              const endDate = addMinutes(startDate, 60);
+              setFormStartDate(format(startDate, "yyyy-MM-dd"));
+              setFormStartTime(format(startDate, "HH:mm"));
+              setFormEndDate(format(endDate, "yyyy-MM-dd"));
+              setFormEndTime(format(endDate, "HH:mm"));
+            } else {
+              setFormStartDate(date);
+              setFormStartTime("");
+              setFormEndDate("");
+              setFormEndTime("");
+            }
             setIsAdding(true);
           }}
           onUpdateTask={(taskId, updates) => updateTask(taskId, updates)}
