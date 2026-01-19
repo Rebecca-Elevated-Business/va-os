@@ -59,6 +59,7 @@ export default function DashboardHeader() {
   const [supportMessage, setSupportMessage] = useState("");
   const [supportSubmitting, setSupportSubmitting] = useState(false);
   const [supportStatus, setSupportStatus] = useState<"idle" | "sent">("idle");
+  const [supportError, setSupportError] = useState<string | null>(null);
 
   const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -205,19 +206,27 @@ export default function DashboardHeader() {
   const handleSupportSubmit = async () => {
     if (!user?.id || supportMessage.trim().length < 10) return;
     setSupportSubmitting(true);
-    const { error } = await supabase.from("va_support_requests").insert([
+    setSupportError(null);
+    const { data, error } = await supabase.functions.invoke(
+      "support-request",
       {
-        va_id: user.id,
-        request_type: supportType,
-        message: supportMessage.trim(),
-        full_name: user.full_name || null,
-        email: user.email || null,
-      },
-    ]);
+        body: {
+          requestType: supportType,
+          message: supportMessage.trim(),
+        },
+      }
+    );
     setSupportSubmitting(false);
-    if (!error) {
+    if (!error && data?.ok) {
       setSupportStatus("sent");
       setSupportMessage("");
+      if (data?.warning) {
+        setSupportError(data.warning);
+      }
+    } else {
+      setSupportError(
+        error?.message || data?.error || "Unable to send right now."
+      );
     }
   };
 
@@ -228,12 +237,12 @@ export default function DashboardHeader() {
         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
           <Search
             size={18}
-            className="text-gray-400 group-focus-within:text-[#9d4edd] transition-colors"
+            className="text-[#9d4edd] transition-colors"
           />
         </div>
         <input
           type="text"
-          className="block w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-transparent rounded-2xl text-sm placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-100 focus:border-[#9d4edd] transition-all text-black"
+          className="block w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-[#707070] rounded-2xl text-sm placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-purple-100 focus:border-[#707070] transition-all text-black"
           placeholder="Search for clients, tasks, or documents..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -277,6 +286,7 @@ export default function DashboardHeader() {
             onClick={() => {
               setShowSupport((prev) => !prev);
               setSupportStatus("idle");
+              setSupportError(null);
             }}
             className="w-10 h-10 rounded-full bg-[#7b2cbf] flex items-center justify-center text-white font-bold hover:opacity-90 transition-opacity shadow-sm"
             title="Reach out"
@@ -346,6 +356,9 @@ export default function DashboardHeader() {
                     </span>
                   )}
                 </div>
+                {supportError && (
+                  <p className="text-xs text-red-500">{supportError}</p>
+                )}
                 <button
                   onClick={handleSupportSubmit}
                   disabled={

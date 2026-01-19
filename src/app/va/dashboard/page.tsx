@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { Pencil } from "lucide-react";
 import { Task } from "./tasks/types";
 
 type InboxMessage = {
@@ -60,6 +61,9 @@ const formatDateLabel = (value: string) =>
     month: "short",
   });
 
+const formatUkDate = (value: string) =>
+  new Date(value).toLocaleDateString("en-GB");
+
 export default function VADashboard() {
   const [userId, setUserId] = useState<string | null>(null);
   const [agendaDate, setAgendaDate] = useState(getTodayDateString());
@@ -72,6 +76,7 @@ export default function VADashboard() {
   const [note, setNote] = useState("");
   const [noteUpdatedAt, setNoteUpdatedAt] = useState<string | null>(null);
   const [savingNote, setSavingNote] = useState(false);
+  const [isEditingNote, setIsEditingNote] = useState(false);
 
   const fetchDashboardData = useCallback(async () => {
     const {
@@ -230,14 +235,17 @@ export default function VADashboard() {
       { onConflict: "va_id" }
     );
     setSavingNote(false);
-    if (!error) setNoteUpdatedAt(updatedAt);
+    if (!error) {
+      setNoteUpdatedAt(updatedAt);
+      setIsEditingNote(false);
+    }
   };
 
   return (
     <main className="animate-in fade-in duration-500 text-[#333333]">
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
         <h1>Dashboard</h1>
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-[0.3em]">
+        <p className="text-xs font-semibold text-[#333333]">
           {formatDateLabel(todayDate)}
         </p>
       </div>
@@ -247,7 +255,7 @@ export default function VADashboard() {
           <div className="px-6 py-4 border-b border-gray-50 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="text-base font-bold">Agenda</h3>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-[#333333]">
                 Overdue tasks appear first
               </p>
             </div>
@@ -267,7 +275,7 @@ export default function VADashboard() {
               <>
                 {overdueTasks.length > 0 && (
                   <div>
-                    <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-red-400 mb-3">
+                    <p className="text-xs font-semibold text-[#333333] mb-3">
                       Overdue
                     </p>
                     <div className="space-y-3">
@@ -288,8 +296,8 @@ export default function VADashboard() {
                                   "Internal"}
                               </p>
                             </div>
-                            <span className="text-[10px] font-bold uppercase text-red-500">
-                              Due {getDateKey(task.due_date || "")}
+                            <span className="text-[10px] font-semibold text-red-500">
+                              Due {formatUkDate(task.due_date || "")}
                             </span>
                           </div>
                         </Link>
@@ -300,7 +308,7 @@ export default function VADashboard() {
 
                 {dayTasks.length > 0 && (
                   <div>
-                    <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-3">
+                    <p className="text-xs font-semibold text-[#333333] mb-3">
                       {formatDateLabel(agendaDate)}
                     </p>
                     <div className="space-y-3">
@@ -322,8 +330,8 @@ export default function VADashboard() {
                               </p>
                             </div>
                             {task.due_date && (
-                              <span className="text-[10px] font-bold uppercase text-gray-500">
-                                Due {getDateKey(task.due_date)}
+                              <span className="text-[10px] font-semibold text-gray-500">
+                                Due {formatUkDate(task.due_date)}
                               </span>
                             )}
                           </div>
@@ -340,21 +348,21 @@ export default function VADashboard() {
         <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-50">
             <h3 className="text-base font-bold">Priority Inbox</h3>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-[#333333]">
               Unread, approvals, and action-needed
             </p>
           </div>
           <div className="p-6 space-y-4">
             <div className="flex items-center justify-between text-sm font-semibold">
-              <span>Unread messages</span>
+              <span className="text-[#333333]">Unread messages</span>
               <span className="text-[#9d4edd]">{unreadCount}</span>
             </div>
             <div className="flex items-center justify-between text-sm font-semibold">
-              <span>Pending approvals</span>
+              <span className="text-[#333333]">Pending approvals</span>
               <span className="text-[#9d4edd]">{pendingApprovalCount}</span>
             </div>
             <div className="flex items-center justify-between text-sm font-semibold">
-              <span>Client replies needing action</span>
+              <span className="text-[#333333]">Client replies needing action</span>
               <span className="text-[#9d4edd]">{replyNeededCount}</span>
             </div>
             <Link
@@ -372,10 +380,10 @@ export default function VADashboard() {
           <div className="px-6 py-4 border-b border-gray-50 flex items-center justify-between gap-3">
             <div>
               <h3 className="text-base font-bold">Opportunity Status</h3>
-              <p className="text-xs text-gray-400">
-                Clients at this pipeline stage
-              </p>
-            </div>
+            <p className="text-xs text-[#333333]">
+              Clients at this pipeline stage
+            </p>
+          </div>
             <select
               value={selectedStatus}
               onChange={(event) => setSelectedStatus(event.target.value)}
@@ -403,7 +411,7 @@ export default function VADashboard() {
                   <p className="text-sm font-semibold">
                     {client.first_name} {client.surname}
                   </p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-[#333333]">
                     {client.business_name || "No business name"}
                   </p>
                 </Link>
@@ -415,7 +423,7 @@ export default function VADashboard() {
         <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-50">
             <h3 className="text-base font-bold">Time Today</h3>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-[#333333]">
               {formatDateLabel(todayDate)}
             </p>
           </div>
@@ -423,7 +431,7 @@ export default function VADashboard() {
             <div className="text-4xl font-black tracking-tight">
               {formatDuration(totalMinutesToday)}
             </div>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-[#333333]">
               Based on entries logged in Time Tracking.
             </p>
             <Link
@@ -438,17 +446,30 @@ export default function VADashboard() {
         <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-50">
             <h3 className="text-base font-bold">Quick Add Notes</h3>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-[#333333]">
               Brain dump sticky note for later
             </p>
           </div>
-          <div className="p-6 space-y-4 min-h-55 flex flex-col">
+          <div className="p-6 space-y-4 min-h-55 flex flex-col relative">
             <textarea
               value={note}
               onChange={(event) => setNote(event.target.value)}
               placeholder="Jot anything down..."
-              className="flex-1 w-full rounded-xl border border-gray-200 p-4 text-sm text-[#333333] focus:ring-2 focus:ring-[#9d4edd] outline-none resize-none"
+              readOnly={!isEditingNote}
+              className={`flex-1 w-full rounded-xl border p-4 text-sm text-[#333333] outline-none resize-none transition-colors ${
+                isEditingNote
+                  ? "border-gray-200 focus:ring-2 focus:ring-[#9d4edd]"
+                  : "border-gray-100 bg-gray-50 text-gray-500"
+              }`}
             />
+            <button
+              type="button"
+              onClick={() => setIsEditingNote(true)}
+              className="absolute bottom-20 right-8 w-9 h-9 rounded-full bg-[#9d4edd] text-white flex items-center justify-center shadow-sm hover:bg-[#7b2cbf] transition-colors"
+              title="Edit note"
+            >
+              <Pencil size={16} />
+            </button>
             <div className="flex items-center justify-between text-xs text-gray-400">
               <span>
                 {noteUpdatedAt
@@ -457,9 +478,9 @@ export default function VADashboard() {
               </span>
               <button
                 onClick={saveNote}
-                disabled={savingNote}
+                disabled={savingNote || !isEditingNote}
                 className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors ${
-                  savingNote
+                  savingNote || !isEditingNote
                     ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                     : "bg-[#9d4edd] text-white hover:bg-[#7b2cbf]"
                 }`}
