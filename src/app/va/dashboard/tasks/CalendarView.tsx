@@ -10,6 +10,10 @@ import {
   startOfDay,
   addMinutes,
   isSameMonth,
+  addMonths,
+  startOfMonth,
+  endOfMonth,
+  endOfWeek,
 } from "date-fns";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { Task } from "./types";
@@ -34,7 +38,7 @@ export default function CalendarView({
   onUpdateTask,
 }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<"week" | "day">("week");
+  const [viewMode, setViewMode] = useState<"month" | "week" | "day">("month");
   const [now, setNow] = useState(new Date());
   const scrollRef = useRef<HTMLDivElement>(null);
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
@@ -58,6 +62,21 @@ export default function CalendarView({
     addDays(startDate, i)
   );
   const hours = Array.from({ length: 24 }, (_, i) => i);
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(currentDate);
+  const monthGridStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+  const monthGridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+  const monthDays = [];
+  for (
+    let day = monthGridStart;
+    day <= monthGridEnd;
+    day = addDays(day, 1)
+  ) {
+    monthDays.push(day);
+  }
+  const weekDayLabels = Array.from({ length: 7 }, (_, i) =>
+    format(addDays(monthGridStart, i), "EEE")
+  );
 
   // Helper: Red Line Position (64px height per hour to save vertical space)
   const HOUR_HEIGHT = 64;
@@ -79,6 +98,25 @@ export default function CalendarView({
       return Math.max(15, Math.round(duration));
     }
     return 60;
+  };
+
+  const isTaskOnDay = (task: Task, day: Date) => {
+    const dayStart = startOfDay(day);
+    const dayEnd = addMinutes(dayStart, 24 * 60 - 1);
+    if (task.scheduled_start) {
+      const taskStart = new Date(task.scheduled_start);
+      const taskEnd = task.scheduled_end
+        ? new Date(task.scheduled_end)
+        : addMinutes(taskStart, 60);
+      return (
+        taskStart.getTime() <= dayEnd.getTime() &&
+        taskEnd.getTime() >= dayStart.getTime()
+      );
+    }
+    if (task.due_date) {
+      return isSameDay(new Date(task.due_date), day);
+    }
+    return false;
   };
 
   const handleDropToSlot = (day: Date, hour?: number) => {
@@ -117,6 +155,16 @@ export default function CalendarView({
         {/* Left: View Toggle */}
         <div className="flex bg-gray-100 p-1 rounded-lg">
           <button
+            onClick={() => setViewMode("month")}
+            className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${
+              viewMode === "month"
+                ? "bg-white shadow-sm text-[#333333]"
+                : "text-[#333333]/60 hover:text-[#333333]"
+            }`}
+          >
+            Month
+          </button>
+          <button
             onClick={() => setViewMode("week")}
             className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${
               viewMode === "week"
@@ -143,7 +191,9 @@ export default function CalendarView({
           <button
             onClick={() =>
               setCurrentDate(
-                addDays(currentDate, viewMode === "week" ? -7 : -1)
+                viewMode === "month"
+                  ? addMonths(currentDate, -1)
+                  : addDays(currentDate, viewMode === "week" ? -7 : -1)
               )
             }
             className="p-1.5 hover:bg-gray-50 rounded-lg text-gray-400 hover:text-[#333333] transition-colors"
@@ -158,7 +208,11 @@ export default function CalendarView({
           </button>
           <button
             onClick={() =>
-              setCurrentDate(addDays(currentDate, viewMode === "week" ? 7 : 1))
+              setCurrentDate(
+                viewMode === "month"
+                  ? addMonths(currentDate, 1)
+                  : addDays(currentDate, viewMode === "week" ? 7 : 1)
+              )
             }
             className="p-1.5 hover:bg-gray-50 rounded-lg text-gray-400 hover:text-[#333333] transition-colors"
           >
@@ -167,6 +221,65 @@ export default function CalendarView({
         </div>
       </div>
 
+      {viewMode === "month" && (
+        <div className="flex-1 overflow-y-auto bg-white custom-scrollbar">
+          <div className="grid grid-cols-7 border-b border-gray-100">
+            {weekDayLabels.map((label) => (
+              <div
+                key={label}
+                className="py-3 text-center border-r border-gray-50 last:border-0 text-[10px] font-bold tracking-widest text-[#333333]"
+              >
+                {label}
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-px bg-gray-100">
+            {monthDays.map((day) => {
+              const isCurrentMonth = isSameMonth(day, currentDate);
+              const dayTasks = tasks.filter((task) => isTaskOnDay(task, day));
+              return (
+                <div
+                  key={day.toISOString()}
+                  className="min-h-[120px] bg-white p-2 border-r border-b border-gray-50 last:border-r-0"
+                  onClick={() => onAddTask(format(day, "yyyy-MM-dd"))}
+                >
+                  <div
+                    className={`text-xs font-bold ${
+                      isCurrentMonth ? "text-[#333333]" : "text-[#333333]/40"
+                    }`}
+                  >
+                    {format(day, "d")}
+                  </div>
+                  <div className="mt-2 space-y-1">
+                    {dayTasks.slice(0, 3).map((task) => (
+                      <div
+                        key={task.id}
+                        className="flex items-center bg-white border border-gray-100 rounded px-2 py-1 shadow-sm text-[10px] font-bold text-[#333333] hover:border-purple-100 transition-all"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <div
+                          className={`w-1.5 h-1.5 rounded-full mr-2 shrink-0 ${getStatusLineColor(
+                            task.status
+                          )}`}
+                        />
+                        <span className="truncate">{task.task_name}</span>
+                      </div>
+                    ))}
+                    {dayTasks.length > 3 && (
+                      <span className="text-[10px] font-bold text-[#333333]/60">
+                        +{dayTasks.length - 3} more
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {viewMode !== "month" && (
+        <>
       {/* 2. THE GRID HEADER (Sticky) */}
       <div className="flex flex-col border-b border-gray-100 shadow-[0_4px_10px_-5px_rgba(0,0,0,0.05)] z-10 relative">
         <div
@@ -403,6 +516,8 @@ export default function CalendarView({
           ))}
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }
