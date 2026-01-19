@@ -610,7 +610,7 @@ export default function ClientProfilePage({
                   setClient({ ...client, status: e.target.value })
                 }
               >
-                {["Enquiry", "Provisional", "Won", "Lost"].map((s) => (
+                {["Enquiry", "Provisional", "Won", "Lost", "Paused"].map((s) => (
                   <option key={s} value={s}>
                     {s}
                   </option>

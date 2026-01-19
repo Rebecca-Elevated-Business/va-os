@@ -18,7 +18,7 @@ type Client = {
   created_at: string;
 };
 
-const STATUS_OPTIONS = ["Enquiry", "Provisional", "Won", "Lost"];
+const STATUS_OPTIONS = ["Enquiry", "Provisional", "Won", "Lost", "Paused"];
 
 export default function CRMPage() {
   const [clients, setClients] = useState<Client[]>([]);
