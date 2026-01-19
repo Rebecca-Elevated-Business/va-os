@@ -14,6 +14,7 @@ type Client = {
   source: string;
   status: string;
   has_access: boolean;
+  portal_access_enabled?: boolean | null;
   created_at: string;
 };
 
@@ -206,7 +207,7 @@ export default function CRMPage() {
                   <td className="px-6 py-4 text-center">
                     <div
                       className={`w-2.5 h-2.5 rounded-full mx-auto ${
-                        client.has_access
+                        client.portal_access_enabled ?? client.has_access
                           ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"
                           : "bg-gray-300"
                       }`}

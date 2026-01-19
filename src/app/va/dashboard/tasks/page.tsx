@@ -17,6 +17,7 @@ import {
 import CalendarView from "./CalendarView";
 import KanbanView from "./KanbanView";
 import { STATUS_CONFIG, Task } from "./types"; // Ensure this type has 'category' if possible, or we cast below
+import TaskModal from "./TaskModal";
 
 type CategoryOption = {
   id: string;
@@ -72,19 +73,13 @@ export default function TaskCentrePage() {
   const [actionMenuId, setActionMenuId] = useState<string | null>(null); // For inline 3-dots menu
   const [statusMenuId, setStatusMenuId] = useState<string | null>(null); // For inline status pill
 
-  // Form State (New/Edit)
-  const [formTaskName, setFormTaskName] = useState("");
-  const [formDetails, setFormDetails] = useState("");
-  const [formClientId, setFormClientId] = useState("");
-  const [formClientQuery, setFormClientQuery] = useState("");
-  const [formCategory, setFormCategory] = useState<
-    "client" | "business" | "personal"
-  >("client");
-  const [formStartDate, setFormStartDate] = useState("");
-  const [formStartTime, setFormStartTime] = useState("");
-  const [formEndDate, setFormEndDate] = useState("");
-  const [formEndTime, setFormEndTime] = useState("");
-  const [formStatus, setFormStatus] = useState("todo");
+  const [modalPrefill, setModalPrefill] = useState<{
+    status?: string;
+    startDate?: string;
+    startTime?: string;
+    endDate?: string;
+    endTime?: string;
+  } | null>(null);
 
   // --- DATA FETCHING ---
   const fetchData = useCallback(async () => {
@@ -173,145 +168,10 @@ export default function TaskCentrePage() {
     );
   };
 
-  const handleSaveTask = async () => {
-    if (!formTaskName.trim()) return;
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user?.id) return;
-    const buildIsoDateTime = (date: string, time: string) => {
-      if (!date || !time) return null;
-      return new Date(`${date}T${time}`).toISOString();
-    };
-    const scheduledStart = buildIsoDateTime(formStartDate, formStartTime);
-    const scheduledEnd = buildIsoDateTime(formEndDate, formEndTime);
-    const dueDate = formStartDate || selectedTask?.due_date || null;
-    const clientId = formCategory === "client" ? formClientId || null : null;
-    const isCompleted = formStatus === "completed";
-    const detailsValue = formDetails.trim();
-    const taskPayload = {
-      task_name: formTaskName,
-      details: detailsValue ? detailsValue : null,
-      client_id: clientId,
-      status: formStatus,
-      is_completed: isCompleted,
-      due_date: dueDate,
-      scheduled_start: scheduledStart,
-      scheduled_end: scheduledEnd,
-      category: formCategory,
-    };
-
-    // Check if we are updating an existing task or creating new
-    if (selectedTask) {
-      let { data, error } = await supabase
-        .from("tasks")
-        .update(taskPayload)
-        .eq("id", selectedTask.id)
-        .select("*, clients(business_name, surname)")
-        .single();
-      if (error && error.message?.toLowerCase().includes("details")) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { details: _details, ...fallbackPayload } = taskPayload;
-        ({ data, error } = await supabase
-          .from("tasks")
-          .update(fallbackPayload)
-          .eq("id", selectedTask.id)
-          .select("*, clients(business_name, surname)")
-          .single());
-      }
-      if (error) {
-        console.error("Failed to update task", error);
-        return;
-      }
-      if (data) {
-        upsertTask(data as Task);
-      } else {
-        await fetchData();
-      }
-    } else {
-      const insertPayload = {
-        va_id: user.id,
-        ...taskPayload,
-        total_minutes: 0,
-        is_running: false,
-      };
-      let { data, error } = await supabase
-        .from("tasks")
-        .insert([insertPayload])
-        .select("*, clients(business_name, surname)")
-        .single();
-      if (error && error.message?.toLowerCase().includes("details")) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { details: _details, ...fallbackPayload } = insertPayload;
-        ({ data, error } = await supabase
-          .from("tasks")
-          .insert([fallbackPayload])
-          .select("*, clients(business_name, surname)")
-          .single());
-      }
-      if (error) {
-        console.error("Failed to create task", error);
-        return;
-      }
-      if (data) {
-        upsertTask(data as Task);
-      } else {
-        await fetchData();
-      }
-    }
-
-    setIsAdding(false);
-    setSelectedTask(null);
-    resetForm();
-  };
-
-  const resetForm = () => {
-    setFormTaskName("");
-    setFormDetails("");
-    setFormClientId("");
-    setFormClientQuery("");
-    setFormCategory("client");
-    setFormStartDate("");
-    setFormStartTime("");
-    setFormEndDate("");
-    setFormEndTime("");
-    setFormStatus("todo");
-  };
-
   const openEditModal = (task: Task) => {
-    setFormCategory(
-      (task.category || (task.client_id ? "client" : "personal")) as
-        | "client"
-        | "business"
-        | "personal"
-    );
-    setFormTaskName(task.task_name);
-    setFormDetails(task.details || "");
-    setFormClientId(task.client_id || "");
-    setFormClientQuery("");
-    setFormStatus(task.status);
-    if (task.scheduled_start) {
-      const start = new Date(task.scheduled_start);
-      setFormStartDate(format(start, "yyyy-MM-dd"));
-      setFormStartTime(format(start, "HH:mm"));
-    } else if (task.due_date) {
-      setFormStartDate(format(new Date(task.due_date), "yyyy-MM-dd"));
-      setFormStartTime("");
-    } else {
-      setFormStartDate("");
-      setFormStartTime("");
-    }
-    if (task.scheduled_end) {
-      const end = new Date(task.scheduled_end);
-      setFormEndDate(format(end, "yyyy-MM-dd"));
-      setFormEndTime(format(end, "HH:mm"));
-    } else {
-      setFormEndDate("");
-      setFormEndTime("");
-    }
-
     setSelectedTask(task);
     setIsAdding(true);
+    setModalPrefill(null);
     setActionMenuId(null); // Close the inline menu
   };
 
@@ -392,13 +252,6 @@ export default function TaskCentrePage() {
   };
 
   // --- GROUPING LOGIC ---
-  const clientSearch = formClientQuery.trim().toLowerCase();
-  const filteredClients = clientSearch
-    ? clients.filter((c) =>
-        `${c.surname} (${c.business_name})`.toLowerCase().includes(clientSearch)
-      )
-    : clients;
-
   const groupedTasks = STATUS_ORDER.map((status) => ({
     status,
     items: tasks
@@ -501,7 +354,8 @@ export default function TaskCentrePage() {
           {/* 3. New Task Button */}
           <button
             onClick={() => {
-              resetForm();
+              setSelectedTask(null);
+              setModalPrefill(null);
               setIsAdding(true);
             }}
             className="bg-[#9d4edd] text-white px-5 py-2.5 rounded-xl font-bold text-xs tracking-widest shadow-lg shadow-purple-100 hover:bg-[#7b2cbf] transition-all flex items-center gap-2"
@@ -728,223 +582,42 @@ export default function TaskCentrePage() {
         </div>
       )}
 
-      {/* --- ADD/EDIT MODAL --- */}
-      {isAdding && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-100 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in duration-200">
-            <h2 className="text-xl font-black mb-6 text-[#333333]">
-              {selectedTask ? "Edit Task" : "New Task"}
-            </h2>
-
-            <div className="space-y-5">
-              {/* Task Name */}
-              <div>
-                <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-2 ml-1">
-                  Task Title
-                </label>
-                <input
-                  autoFocus
-                  className="w-full bg-gray-50 border-none rounded-xl p-4 font-bold text-[#333333] outline-none focus:ring-2 focus:ring-purple-100"
-                  value={formTaskName}
-                  onChange={(e) => setFormTaskName(e.target.value)}
-                  placeholder="What needs to be done?"
-                />
-              </div>
-
-              {/* Detail */}
-              <div>
-                <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-2 ml-1">
-                  Detail
-                </label>
-                <textarea
-                  className="w-full bg-gray-50 border-none rounded-xl p-4 text-xs font-bold text-[#333333] outline-none focus:ring-2 focus:ring-purple-100 resize-none h-24"
-                  value={formDetails}
-                  onChange={(e) => setFormDetails(e.target.value)}
-                  placeholder="Add extra details for this task"
-                />
-              </div>
-
-              {/* Category Selection */}
-              <div>
-                <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-2 ml-1">
-                  Category
-                </label>
-                <div className="flex gap-2">
-                  {Object.values(CATEGORY_CONFIG).map((cat) => (
-                    <button
-                      key={cat.id}
-                      onClick={() => {
-                        setFormCategory(
-                          cat.id as "client" | "business" | "personal"
-                        );
-                        if (cat.id !== "client") {
-                          setFormClientId("");
-                          setFormClientQuery("");
-                        }
-                      }}
-                      className={`flex-1 py-2.5 rounded-xl text-[10px] font-bold transition-all border ${
-                        formCategory === cat.id
-                          ? `${cat.color} shadow-sm`
-                          : "bg-white border-gray-100 text-gray-400 hover:border-gray-200"
-                      }`}
-                    >
-                      {cat.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Client Selection (Only if Client Category) */}
-              {formCategory === "client" && (
-                <div className="animate-in fade-in slide-in-from-top-2">
-                  <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-2 ml-1">
-                    Assign Client
-                  </label>
-                  <input
-                    className="w-full bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
-                    value={formClientQuery}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setFormClientQuery(value);
-                      setFormClientId("");
-                    }}
-                    placeholder="Type a client name"
-                  />
-                  {formClientQuery.trim().length > 0 && (
-                    <div className="mt-2 max-h-40 overflow-auto rounded-xl border border-gray-100 bg-white shadow-sm">
-                      {filteredClients.slice(0, 6).map((c) => (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => {
-                            setFormClientId(c.id);
-                            setFormClientQuery("");
-                          }}
-                          className="w-full text-left px-3 py-2 text-xs font-bold text-[#333333] hover:bg-gray-50 transition-colors"
-                        >
-                          {c.surname} ({c.business_name})
-                        </button>
-                      ))}
-                      {filteredClients.length === 0 && (
-                        <p className="px-3 py-2 text-xs font-bold text-[#333333]">
-                          No clients found.
-                        </p>
-                      )}
-                    </div>
-                  )}
-                  {formClientId && (
-                    <p className="mt-2 text-xs font-bold text-[#333333]">
-                      Assigned client:{" "}
-                      {(() => {
-                        const selectedClient = clients.find(
-                          (c) => c.id === formClientId
-                        );
-                        return selectedClient
-                          ? `${selectedClient.surname} (${selectedClient.business_name})`
-                          : "Client selected";
-                      })()}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              <div className="space-y-4">
-                <div>
-                  <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-2 ml-1">
-                    Start date / time
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="date"
-                      className="flex-1 min-w-0 bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
-                      value={formStartDate}
-                      onChange={(e) => setFormStartDate(e.target.value)}
-                    />
-                    <input
-                      type="time"
-                      className="w-28 shrink-0 bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
-                      value={formStartTime}
-                      onChange={(e) => setFormStartTime(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-2 ml-1">
-                    End date / time
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="date"
-                      className="flex-1 min-w-0 bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
-                      value={formEndDate}
-                      onChange={(e) => setFormEndDate(e.target.value)}
-                    />
-                    <input
-                      type="time"
-                      className="w-28 shrink-0 bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
-                      value={formEndTime}
-                      onChange={(e) => setFormEndTime(e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-2 ml-1">
-                    Status
-                  </label>
-                  <select
-                    className="w-full bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd] capitalize"
-                    value={formStatus}
-                    onChange={(e) => setFormStatus(e.target.value)}
-                  >
-                    {Object.values(STATUS_CONFIG).map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div />
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={() => setIsAdding(false)}
-                  className="px-6 py-3 rounded-xl border-2 border-gray-100 text-[#333333] font-bold text-xs tracking-widest hover:border-gray-300 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveTask}
-                  className="flex-1 bg-[#9d4edd] text-white py-3 rounded-xl font-bold text-xs tracking-widest shadow-lg shadow-purple-100 hover:bg-[#7b2cbf] transition-all"
-                >
-                  {selectedTask ? "Save Changes" : "Create Task"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <TaskModal
+        isOpen={isAdding}
+        onClose={() => {
+          setIsAdding(false);
+          setSelectedTask(null);
+          setModalPrefill(null);
+        }}
+        clients={clients}
+        task={selectedTask}
+        prefill={modalPrefill}
+        onSaved={(task) => upsertTask(task)}
+        onFallbackRefresh={fetchData}
+      />
 
       {view === "calendar" && (
         <CalendarView
           tasks={tasks}
           onAddTask={(date: string, time?: string) => {
+            setSelectedTask(null);
             if (time) {
               const startValue = `${date}T${time}`;
               const startDate = new Date(startValue);
               const endDate = addMinutes(startDate, 60);
-              setFormStartDate(format(startDate, "yyyy-MM-dd"));
-              setFormStartTime(format(startDate, "HH:mm"));
-              setFormEndDate(format(endDate, "yyyy-MM-dd"));
-              setFormEndTime(format(endDate, "HH:mm"));
+              setModalPrefill({
+                startDate: format(startDate, "yyyy-MM-dd"),
+                startTime: format(startDate, "HH:mm"),
+                endDate: format(endDate, "yyyy-MM-dd"),
+                endTime: format(endDate, "HH:mm"),
+              });
             } else {
-              setFormStartDate(date);
-              setFormStartTime("");
-              setFormEndDate("");
-              setFormEndTime("");
+              setModalPrefill({
+                startDate: date,
+                startTime: "",
+                endDate: "",
+                endTime: "",
+              });
             }
             setIsAdding(true);
           }}
@@ -959,7 +632,8 @@ export default function TaskCentrePage() {
           onOpenTask={openEditModal}
           onDeleteTask={deleteTask}
           onAddTask={(status: string) => {
-            setFormStatus(status);
+            setSelectedTask(null);
+            setModalPrefill({ status });
             setIsAdding(true);
           }}
           filterStatus={filterStatus}

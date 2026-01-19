@@ -3,6 +3,9 @@
 import { useState, useEffect, use, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { FileSignature, FileText, ReceiptText } from "lucide-react";
+import TaskModal from "../../tasks/TaskModal";
+import { Task } from "../../tasks/types";
 
 // --- TYPES ---
 type Client = {
@@ -16,17 +19,10 @@ type Client = {
   price_quoted: string;
   work_type: string;
   has_access: boolean;
-};
-
-type Task = {
-  id: string;
-  task_name: string;
-  due_date: string | null;
-  start_time: string | null;
-  is_running: boolean;
-  total_minutes: number;
-  is_completed: boolean;
-  created_at: string;
+  portal_invite_link?: string | null;
+  portal_access_enabled?: boolean | null;
+  portal_access_revoked_at?: string | null;
+  auth_user_id?: string | null;
 };
 
 type ClientDocument = {
@@ -67,8 +63,7 @@ export default function ClientProfilePage({
   const [clientDocuments, setClientDocuments] = useState<ClientDocument[]>([]);
 
   // Task Manager State
-  const [newTaskName, setNewTaskName] = useState("");
-  const [newTaskDate, setNewTaskDate] = useState("");
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
   const [now, setNow] = useState(0); // Initialize with 0 to satisfy React Purity
   // NEW: State for Editing Tasks
@@ -76,8 +71,12 @@ export default function ClientProfilePage({
   const [editTaskName, setEditTaskName] = useState("");
   const [editTaskDate, setEditTaskDate] = useState("");
   // UI States
-  const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [portalManageOpen, setPortalManageOpen] = useState(false);
+  const [revokeInput, setRevokeInput] = useState("");
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
+  const [portalCopied, setPortalCopied] = useState(false);
+  const [deleteClientBusy, setDeleteClientBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [newNote, setNewNote] = useState("");
 
@@ -160,33 +159,7 @@ export default function ClientProfilePage({
 
   // --- ACTIONS ---
 
-  // 1. Create New Task
-  const addTask = async () => {
-    if (!newTaskName.trim()) return;
-    const { data: userData } = await supabase.auth.getUser();
-
-    // Default billing type based on client setup
-    const billingType = client?.work_type === "Ongoing" ? "Retainer" : "Billed";
-
-    await supabase.from("tasks").insert([
-      {
-        client_id: id,
-        va_id: userData.user?.id,
-        task_name: newTaskName,
-        due_date: newTaskDate || null,
-        is_running: false,
-        total_minutes: 0,
-        is_completed: false,
-        billing_type: billingType,
-      },
-    ]);
-
-    setNewTaskName("");
-    setNewTaskDate("");
-    refreshData();
-  };
-
-  // 2. Toggle Timer (Play/Stop logic)
+  // 1. Toggle Timer (Play/Stop logic)
   const toggleTimer = async (task: Task) => {
     if (task.is_running) {
       // STOPPING: Calculate elapsed time and add to total
@@ -361,13 +334,86 @@ export default function ClientProfilePage({
       refreshData();
     }
   };
-  // 6. Generate Portal Link
-  const generateInviteLink = () => {
+  const issuePortalAccess = async () => {
+    if (!client) return;
     const baseUrl = window.location.origin;
     const link = `${baseUrl}/client/setup?email=${encodeURIComponent(
-      client?.email || ""
+      client.email || ""
     )}&id=${id}`;
-    setInviteLink(link);
+    const { error } = await supabase
+      .from("clients")
+      .update({
+        portal_invite_link: link,
+        portal_access_enabled: false,
+        portal_access_revoked_at: null,
+      })
+      .eq("id", id);
+    if (!error) {
+      setClient({ ...client, portal_invite_link: link });
+    }
+  };
+
+  const copyInviteLink = async () => {
+    if (!client?.portal_invite_link) return;
+    await navigator.clipboard.writeText(client.portal_invite_link);
+    setPortalCopied(true);
+    setTimeout(() => setPortalCopied(false), 1500);
+  };
+
+  const reissuePortalAccess = async () => {
+    if (!client) return;
+    const baseUrl = window.location.origin;
+    const link = `${baseUrl}/client/setup?email=${encodeURIComponent(
+      client.email || ""
+    )}&id=${id}`;
+    const { error } = await supabase
+      .from("clients")
+      .update({ portal_invite_link: link })
+      .eq("id", id);
+    if (!error) {
+      setClient({ ...client, portal_invite_link: link });
+    }
+  };
+
+  const revokePortalAccess = async () => {
+    if (!client || revokeInput.trim() !== "REVOKE") return;
+    const { error } = await supabase
+      .from("clients")
+      .update({
+        portal_access_enabled: false,
+        portal_access_revoked_at: new Date().toISOString(),
+        has_access: false,
+      })
+      .eq("id", id);
+
+    if (client.auth_user_id) {
+      await supabase
+        .from("profiles")
+        .update({ status: "revoked" })
+        .eq("id", client.auth_user_id);
+    }
+
+    if (!error) {
+      setClient({ ...client, portal_access_enabled: false, has_access: false });
+      setPortalManageOpen(false);
+      setRevokeInput("");
+    }
+  };
+
+  const deleteClient = async () => {
+    if (!client || deleteConfirmInput.trim() !== "DELETE") return;
+    if (!confirm("Delete this client permanently?")) return;
+    setDeleteClientBusy(true);
+    await supabase.from("tasks").delete().eq("client_id", id);
+    await supabase.from("client_notes").delete().eq("client_id", id);
+    await supabase.from("client_documents").delete().eq("client_id", id);
+    await supabase.from("client_agreements").delete().eq("client_id", id);
+    await supabase.from("client_requests").delete().eq("client_id", id);
+    const { error } = await supabase.from("clients").delete().eq("id", id);
+    setDeleteClientBusy(false);
+    if (!error) {
+      router.push("/va/dashboard/crm");
+    }
   };
 
   // --- HELPER: Format Time Display ---
@@ -397,6 +443,15 @@ export default function ClientProfilePage({
   const visibleTasks = tasks.filter((t) =>
     showCompleted ? true : !t.is_completed
   );
+  const portalInviteLink = client.portal_invite_link?.trim() || "";
+  const portalAccessEnabled = client.portal_access_enabled ?? client.has_access;
+  const documentIcon = (type: string) => {
+    if (type === "invoice") return ReceiptText;
+    if (type === "booking_form") return FileSignature;
+    return FileText;
+  };
+  const hasDocuments = clientDocuments.length > 0;
+  const hasAgreements = clientAgreements.length > 0;
 
   return (
     <div className="flex flex-col h-full text-black space-y-8 pb-20">
@@ -417,30 +472,80 @@ export default function ClientProfilePage({
           >
             {isEditing ? "Cancel" : "Edit Details"}
           </button>
-          <button
-            onClick={generateInviteLink}
-            className="bg-[#9d4edd] text-white px-4 py-2 rounded-lg font-bold shadow-sm hover:bg-[#7b2cbf]"
-          >
-            {inviteLink ? "Link Generated!" : "Issue Portal Access"}
-          </button>
+          {!portalAccessEnabled && !portalInviteLink && (
+            <button
+              onClick={issuePortalAccess}
+              className="bg-[#9d4edd] text-white px-4 py-2 rounded-lg font-bold shadow-sm hover:bg-[#7b2cbf]"
+            >
+              Issue Portal Access
+            </button>
+          )}
+          {!portalAccessEnabled && portalInviteLink && (
+            <button
+              onClick={copyInviteLink}
+              className="bg-[#9d4edd] text-white px-4 py-2 rounded-lg font-bold shadow-sm hover:bg-[#7b2cbf]"
+            >
+              {portalCopied ? "Copied" : "Copy Invite Link"}
+            </button>
+          )}
+          {portalAccessEnabled && (
+            <button
+              onClick={() => setPortalManageOpen((prev) => !prev)}
+              className="bg-[#9d4edd] text-white px-4 py-2 rounded-lg font-bold shadow-sm hover:bg-[#7b2cbf]"
+            >
+              Manage Portal Access
+            </button>
+          )}
         </div>
       </div>
-
-      {inviteLink && (
-        <div className="p-4 bg-purple-50 border border-[#9d4edd] rounded-lg flex justify-between items-center animate-in fade-in">
-          <p className="text-sm font-bold text-purple-900">
-            Portal Invite Link:{" "}
-            <span className="font-normal text-gray-600 ml-2">{inviteLink}</span>
-          </p>
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(inviteLink);
-              alert("Copied!");
-            }}
-            className="ml-4 bg-white text-[#9d4edd] border border-[#9d4edd] px-3 py-1 rounded font-bold text-xs hover:bg-purple-100"
-          >
-            Copy
-          </button>
+      {portalAccessEnabled && portalManageOpen && (
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold">Manage Portal Access</h2>
+            <button
+              onClick={() => setPortalManageOpen(false)}
+              className="text-sm text-gray-500 hover:text-black"
+            >
+              Close
+            </button>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              onClick={copyInviteLink}
+              className="border border-[#9d4edd] text-[#9d4edd] px-4 py-2 rounded-lg font-bold hover:bg-purple-50"
+            >
+              {portalCopied ? "Copied" : "Copy Invite Link"}
+            </button>
+            <button
+              onClick={reissuePortalAccess}
+              className="bg-gray-900 text-white px-4 py-2 rounded-lg font-bold hover:bg-black"
+            >
+              Re-issue Portal Access
+            </button>
+          </div>
+          <div className="mt-6 border-t border-gray-100 pt-4">
+            <p className="text-xs font-bold text-gray-400 mb-2">
+              Danger Zone
+            </p>
+            <p className="text-sm text-gray-600 mb-3">
+              Revoke portal access immediately for this client.
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <input
+                value={revokeInput}
+                onChange={(e) => setRevokeInput(e.target.value)}
+                placeholder="Type REVOKE to confirm"
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+              />
+              <button
+                onClick={revokePortalAccess}
+                disabled={revokeInput.trim() !== "REVOKE"}
+                className="text-red-600 border border-red-200 px-4 py-2 rounded-lg font-bold disabled:opacity-50"
+              >
+                Revoke Access
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -518,6 +623,30 @@ export default function ClientProfilePage({
             >
               Save
             </button>
+            <div className="w-full border-t border-gray-200 pt-4 mt-4">
+              <p className="text-xs font-bold text-red-500 mb-1">
+                DELETE CLIENT?
+              </p>
+              <p className="text-xs text-gray-500 mb-3">
+                This permanently removes the client and related data.
+              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <input
+                  value={deleteConfirmInput}
+                  onChange={(e) => setDeleteConfirmInput(e.target.value)}
+                  placeholder="Type DELETE to confirm"
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={deleteClient}
+                  disabled={deleteConfirmInput.trim() !== "DELETE" || deleteClientBusy}
+                  className="text-red-600 border border-red-200 px-4 py-2 rounded-lg font-bold disabled:opacity-50"
+                >
+                  Delete Client
+                </button>
+              </div>
+            </div>
           </form>
         ) : (
           <div className="flex flex-wrap gap-x-12 gap-y-4 text-sm">
@@ -578,33 +707,10 @@ export default function ClientProfilePage({
           </label>
         </div>
 
-        {/* Add New Task Row */}
-        <div className="flex gap-4 mb-6 bg-gray-50 p-4 rounded-lg border border-gray-100 items-end">
-          <div className="flex-1">
-            <label className="block text-xs font-bold text-gray-400 mb-1">
-              NEW TASK NAME
-            </label>
-            <input
-              className="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-[#9d4edd] text-black"
-              placeholder="e.g. Monthly Newsletter"
-              value={newTaskName}
-              onChange={(e) => setNewTaskName(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-gray-400 mb-1">
-              DUE DATE
-            </label>
-            <input
-              type="date"
-              className="border p-2 rounded outline-none focus:ring-2 focus:ring-[#9d4edd] text-black"
-              value={newTaskDate}
-              onChange={(e) => setNewTaskDate(e.target.value)}
-            />
-          </div>
+        <div className="flex justify-end mb-6">
           <button
-            onClick={addTask}
-            className="bg-black text-white px-6 py-2 rounded font-bold hover:bg-gray-800 h-10.5"
+            onClick={() => setIsTaskModalOpen(true)}
+            className="bg-black text-white px-6 py-2 rounded font-bold hover:bg-gray-800"
           >
             Add Task
           </button>
@@ -622,7 +728,7 @@ export default function ClientProfilePage({
                   Task
                 </th>
                 <th className="px-4 py-3 text-xs font-bold text-gray-400 uppercase w-32">
-                  Due Date
+                  Start Date
                 </th>
                 <th className="px-4 py-3 text-xs font-bold text-gray-400 uppercase w-24 text-center">
                   Timer
@@ -719,7 +825,7 @@ export default function ClientProfilePage({
                         )}
                       </td>
 
-                      {/* 3. DUE DATE (Editable) */}
+                      {/* 3. DATE (Editable) */}
                       <td className="px-4 py-3 text-sm text-gray-500 align-top pt-4">
                         {isEditing ? (
                           <input
@@ -728,6 +834,10 @@ export default function ClientProfilePage({
                             value={editTaskDate}
                             onChange={(e) => setEditTaskDate(e.target.value)}
                           />
+                        ) : task.scheduled_start ? (
+                          new Date(task.scheduled_start).toLocaleDateString(
+                            "en-GB"
+                          )
                         ) : task.due_date ? (
                           new Date(task.due_date).toLocaleDateString("en-GB")
                         ) : (
@@ -767,6 +877,21 @@ export default function ClientProfilePage({
           </table>
         </div>
       </section>
+      <TaskModal
+        isOpen={isTaskModalOpen}
+        onClose={() => setIsTaskModalOpen(false)}
+        clients={[
+          {
+            id: client.id,
+            business_name: client.business_name,
+            surname: client.surname,
+          },
+        ]}
+        lockClient
+        prefill={{ clientId: client.id, category: "client" }}
+        onSaved={() => refreshData()}
+        onFallbackRefresh={refreshData}
+      />
 
       {/* SERVICE AGREEMENTS SECTION */}
       <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -795,20 +920,17 @@ export default function ClientProfilePage({
           <table className="w-full text-left">
             <tbody className="divide-y divide-gray-100">
               {/* --- NEW DOCUMENTS LIST --- */}
-              {clientDocuments.map((doc) => (
+              {hasDocuments &&
+                clientDocuments.map((doc) => {
+                  const DocIcon = documentIcon(doc.type);
+                  return (
                 <tr
                   key={doc.id}
                   className="hover:bg-purple-50/30 transition-colors"
                 >
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <span className="text-xl">
-                        {doc.type === "invoice"
-                          ? "💰"
-                          : doc.type === "booking_form"
-                          ? "🖋️"
-                          : "📋"}
-                      </span>
+                      <DocIcon size={18} className="text-[#333333]" />
                       <div>
                         <div className="font-bold text-black">{doc.title}</div>
                         <div className="text-[10px] text-gray-400 uppercase tracking-widest">
@@ -871,14 +993,9 @@ export default function ClientProfilePage({
                     </button>
                   </td>
                 </tr>
-              ))}
-              {clientAgreements.length === 0 ? (
-                <tr>
-                  <td className="p-8 text-center text-gray-400 italic">
-                    No agreements issued for this client yet.
-                  </td>
-                </tr>
-              ) : (
+                  );
+                })}
+              {hasAgreements &&
                 clientAgreements.map((ag) => (
                   <tr
                     key={ag.id}
@@ -957,8 +1074,7 @@ export default function ClientProfilePage({
                       </button>
                     </td>
                   </tr>
-                ))
-              )}
+                ))}
             </tbody>
           </table>
         </div>
