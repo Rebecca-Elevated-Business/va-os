@@ -215,25 +215,36 @@ export default function TaskCentrePage() {
     const dueDate = formStartDate || selectedTask?.due_date || null;
     const clientId = formCategory === "client" ? formClientId || null : null;
     const isCompleted = formStatus === "completed";
+    const detailsValue = formDetails.trim();
+    const taskPayload = {
+      task_name: formTaskName,
+      details: detailsValue ? detailsValue : null,
+      client_id: clientId,
+      status: formStatus,
+      is_completed: isCompleted,
+      due_date: dueDate,
+      scheduled_start: scheduledStart,
+      scheduled_end: scheduledEnd,
+      category: formCategory,
+    };
 
     // Check if we are updating an existing task or creating new
     if (selectedTask) {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from("tasks")
-        .update({
-          task_name: formTaskName,
-          details: formDetails.trim() ? formDetails.trim() : null,
-          client_id: clientId,
-          status: formStatus,
-          is_completed: isCompleted,
-          due_date: dueDate,
-          scheduled_start: scheduledStart,
-          scheduled_end: scheduledEnd,
-          category: formCategory,
-        })
+        .update(taskPayload)
         .eq("id", selectedTask.id)
         .select("*, clients(business_name, surname)")
         .single();
+      if (error && error.message?.toLowerCase().includes("details")) {
+        const { details, ...fallbackPayload } = taskPayload;
+        ({ data, error } = await supabase
+          .from("tasks")
+          .update(fallbackPayload)
+          .eq("id", selectedTask.id)
+          .select("*, clients(business_name, surname)")
+          .single());
+      }
       if (error) {
         console.error("Failed to update task", error);
         return;
@@ -244,26 +255,25 @@ export default function TaskCentrePage() {
         await fetchData();
       }
     } else {
-      const { data, error } = await supabase
+      const insertPayload = {
+        va_id: user.id,
+        ...taskPayload,
+        total_minutes: 0,
+        is_running: false,
+      };
+      let { data, error } = await supabase
         .from("tasks")
-        .insert([
-          {
-            va_id: user.id,
-            task_name: formTaskName,
-            details: formDetails.trim() ? formDetails.trim() : null,
-            client_id: clientId,
-            status: formStatus,
-            is_completed: isCompleted,
-            due_date: dueDate,
-            scheduled_start: scheduledStart,
-            scheduled_end: scheduledEnd,
-            total_minutes: 0,
-            is_running: false,
-            category: formCategory,
-          },
-        ])
+        .insert([insertPayload])
         .select("*, clients(business_name, surname)")
         .single();
+      if (error && error.message?.toLowerCase().includes("details")) {
+        const { details, ...fallbackPayload } = insertPayload;
+        ({ data, error } = await supabase
+          .from("tasks")
+          .insert([fallbackPayload])
+          .select("*, clients(business_name, surname)")
+          .single());
+      }
       if (error) {
         console.error("Failed to create task", error);
         return;
