@@ -282,7 +282,7 @@ export default function CalendarView({
                 style={{ height: `${HOUR_HEIGHT}px` }}
               >
                 <span className="text-[10px] font-bold text-gray-300 relative -top-2">
-                  {format(setHours(startOfDay(new Date()), hour), "H a")}
+                  {format(setHours(startOfDay(new Date()), hour), "HH:mm")}
                 </span>
               </div>
             ))}
@@ -328,26 +328,40 @@ export default function CalendarView({
 
               {/* Timed Task Cards */}
               {tasks
-                .filter(
-                  (t) =>
-                    isSameDay(new Date(t.due_date || ""), day) &&
-                    t.scheduled_start
-                )
+                .filter((t) => t.scheduled_start)
                 .map((task) => {
-                  const start = new Date(task.scheduled_start!);
-                  const end = task.scheduled_end
+                  const taskStart = new Date(task.scheduled_start!);
+                  const taskEnd = task.scheduled_end
                     ? new Date(task.scheduled_end)
-                    : addMinutes(start, 60); // Default 1h visual
+                    : addMinutes(taskStart, 60);
+                  const dayStart = startOfDay(day);
+                  const dayEnd = addMinutes(dayStart, 24 * 60 - 1);
 
+                  if (
+                    taskEnd.getTime() <= dayStart.getTime() ||
+                    taskStart.getTime() >= dayEnd.getTime()
+                  ) {
+                    return null;
+                  }
+
+                  const renderStart = new Date(
+                    Math.max(taskStart.getTime(), dayStart.getTime())
+                  );
+                  const renderEnd = new Date(
+                    Math.min(taskEnd.getTime(), dayEnd.getTime())
+                  );
                   const top =
-                    ((start.getHours() * 60 + start.getMinutes()) / 60) *
+                    ((renderStart.getHours() * 60 +
+                      renderStart.getMinutes()) /
+                      60) *
                     HOUR_HEIGHT;
-                  const durationMin = (end.getTime() - start.getTime()) / 60000;
+                  const durationMin =
+                    (renderEnd.getTime() - renderStart.getTime()) / 60000;
                   const height = (durationMin / 60) * HOUR_HEIGHT;
 
                   return (
                     <div
-                      key={task.id}
+                      key={`${task.id}-${day.toISOString()}`}
                       draggable
                       onDragStart={(event) => {
                         event.dataTransfer.setData("text/plain", task.id);
@@ -377,7 +391,8 @@ export default function CalendarView({
                         {height > 45 && (
                           <p className="text-[9px] font-bold text-gray-400 flex items-center gap-1 mt-0.5">
                             <Clock size={8} />
-                            {format(start, "HH:mm")} - {format(end, "HH:mm")}
+                            {format(renderStart, "HH:mm")} -{" "}
+                            {format(renderEnd, "HH:mm")}
                           </p>
                         )}
                       </div>
