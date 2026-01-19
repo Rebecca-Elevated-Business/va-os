@@ -167,7 +167,10 @@ export default function TimeTrackingPage() {
 
   useEffect(() => {
     if (!userId) return;
-    loadEntries(activeRange.start, activeRange.end);
+    const timer = setTimeout(() => {
+      loadEntries(activeRange.start, activeRange.end);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [activeRange, loadEntries, userId]);
 
   useEffect(() => {
@@ -232,12 +235,6 @@ export default function TimeTrackingPage() {
 
     return () => clearTimeout(timer);
   }, [isFilterActive]);
-
-  useEffect(() => {
-    if (selectedTask && searchValue !== selectedTask.task_name) {
-      setSearchValue(selectedTask.task_name);
-    }
-  }, [searchValue, selectedTask]);
 
   const applyFilter = () => {
     if (!filterStart || !filterEnd) return;
@@ -393,9 +390,6 @@ export default function TimeTrackingPage() {
                 }}
                 onFocus={() => setIsDropdownOpen(true)}
               />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs font-bold">
-                {filteredTasks.length}
-              </div>
 
               {isDropdownOpen && (
                 <div className="absolute z-30 mt-2 w-full rounded-xl border border-gray-100 bg-white shadow-xl max-h-72 overflow-auto">

@@ -130,6 +130,29 @@ export default function TaskCentrePage() {
     };
   }, [fetchData]);
 
+  useEffect(() => {
+    const handleRefresh = () => {
+      const timer = setTimeout(() => {
+        fetchData();
+      }, 0);
+      return () => clearTimeout(timer);
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        handleRefresh();
+      }
+    };
+
+    window.addEventListener("focus", handleRefresh);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      window.removeEventListener("focus", handleRefresh);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [fetchData]);
+
   // Click Outside Listener to close menus
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
