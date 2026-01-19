@@ -205,6 +205,7 @@ export default function TaskCentrePage() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
+    if (!user?.id) return;
     const buildIsoDateTime = (date: string, time: string) => {
       if (!date || !time) return null;
       return new Date(`${date}T${time}`).toISOString();
@@ -213,16 +214,18 @@ export default function TaskCentrePage() {
     const scheduledEnd = buildIsoDateTime(formEndDate, formEndTime);
     const dueDate = formStartDate || selectedTask?.due_date || null;
     const clientId = formCategory === "client" ? formClientId || null : null;
+    const isCompleted = formStatus === "completed";
 
     // Check if we are updating an existing task or creating new
     if (selectedTask) {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("tasks")
         .update({
           task_name: formTaskName,
           details: formDetails.trim() ? formDetails.trim() : null,
           client_id: clientId,
           status: formStatus,
+          is_completed: isCompleted,
           due_date: dueDate,
           scheduled_start: scheduledStart,
           scheduled_end: scheduledEnd,
@@ -231,21 +234,26 @@ export default function TaskCentrePage() {
         .eq("id", selectedTask.id)
         .select("*, clients(business_name, surname)")
         .single();
+      if (error) {
+        console.error("Failed to update task", error);
+        return;
+      }
       if (data) {
         upsertTask(data as Task);
       } else {
         await fetchData();
       }
     } else {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("tasks")
         .insert([
           {
-            va_id: user?.id,
+            va_id: user.id,
             task_name: formTaskName,
             details: formDetails.trim() ? formDetails.trim() : null,
             client_id: clientId,
             status: formStatus,
+            is_completed: isCompleted,
             due_date: dueDate,
             scheduled_start: scheduledStart,
             scheduled_end: scheduledEnd,
@@ -256,6 +264,10 @@ export default function TaskCentrePage() {
         ])
         .select("*, clients(business_name, surname)")
         .single();
+      if (error) {
+        console.error("Failed to create task", error);
+        return;
+      }
       if (data) {
         upsertTask(data as Task);
       } else {
