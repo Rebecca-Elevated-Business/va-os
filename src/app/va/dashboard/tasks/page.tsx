@@ -829,7 +829,7 @@ export default function TaskCentrePage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <div>
                   <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-2 ml-1">
                     Start date / time
