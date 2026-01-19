@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
-import { format } from "date-fns";
+import { addMinutes, format } from "date-fns";
 import {
   Filter,
   MoreHorizontal,
@@ -102,10 +102,12 @@ export default function TaskCentrePage() {
   // Form State (New/Edit)
   const [formTaskName, setFormTaskName] = useState("");
   const [formClientId, setFormClientId] = useState("");
+  const [formClientQuery, setFormClientQuery] = useState("");
   const [formCategory, setFormCategory] = useState<
     "client" | "business" | "personal"
   >("client");
-  const [formDate, setFormDate] = useState("");
+  const [formStartDateTime, setFormStartDateTime] = useState("");
+  const [formEndDateTime, setFormEndDateTime] = useState("");
   const [formStatus, setFormStatus] = useState("todo");
 
   // --- DATA FETCHING ---
@@ -200,6 +202,17 @@ export default function TaskCentrePage() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
+    const scheduledStart = formStartDateTime
+      ? new Date(formStartDateTime).toISOString()
+      : null;
+    const scheduledEnd =
+      formStartDateTime && formEndDateTime
+        ? new Date(formEndDateTime).toISOString()
+        : null;
+    const dueDate = formStartDateTime
+      ? formStartDateTime.split("T")[0]
+      : selectedTask?.due_date || null;
+    const clientId = formCategory === "client" ? formClientId || null : null;
 
     // Check if we are updating an existing task or creating new
     if (selectedTask) {
@@ -207,9 +220,11 @@ export default function TaskCentrePage() {
         .from("tasks")
         .update({
           task_name: formTaskName,
-          client_id: formClientId || null,
+          client_id: clientId,
           status: formStatus,
-          due_date: formDate || null,
+          due_date: dueDate,
+          scheduled_start: scheduledStart,
+          scheduled_end: scheduledEnd,
           category: formCategory,
         })
         .eq("id", selectedTask.id)
@@ -227,9 +242,11 @@ export default function TaskCentrePage() {
           {
             va_id: user?.id,
             task_name: formTaskName,
-            client_id: formClientId || null,
+            client_id: clientId,
             status: formStatus,
-            due_date: formDate || null,
+            due_date: dueDate,
+            scheduled_start: scheduledStart,
+            scheduled_end: scheduledEnd,
             total_minutes: 0,
             is_running: false,
             category: formCategory,
@@ -252,8 +269,10 @@ export default function TaskCentrePage() {
   const resetForm = () => {
     setFormTaskName("");
     setFormClientId("");
+    setFormClientQuery("");
     setFormCategory("client");
-    setFormDate("");
+    setFormStartDateTime("");
+    setFormEndDateTime("");
     setFormStatus("todo");
   };
 
@@ -266,9 +285,25 @@ export default function TaskCentrePage() {
     );
     setFormTaskName(task.task_name);
     setFormClientId(task.client_id || "");
+    const matchedClient = task.client_id
+      ? clients.find((c) => c.id === task.client_id)
+      : null;
+    const clientLabel = matchedClient
+      ? `${matchedClient.surname} (${matchedClient.business_name})`
+      : task.clients
+        ? `${task.clients.surname} (${task.clients.business_name})`
+        : "";
+    setFormClientQuery(clientLabel);
     setFormStatus(task.status);
-    setFormDate(
-      task.due_date ? format(new Date(task.due_date), "yyyy-MM-dd") : ""
+    setFormStartDateTime(
+      task.scheduled_start
+        ? format(new Date(task.scheduled_start), "yyyy-MM-dd'T'HH:mm")
+        : ""
+    );
+    setFormEndDateTime(
+      task.scheduled_end
+        ? format(new Date(task.scheduled_end), "yyyy-MM-dd'T'HH:mm")
+        : ""
     );
 
     setSelectedTask(task);
@@ -348,6 +383,13 @@ export default function TaskCentrePage() {
   };
 
   // --- GROUPING LOGIC ---
+  const clientSearch = formClientQuery.trim().toLowerCase();
+  const filteredClients = clientSearch
+    ? clients.filter((c) =>
+        `${c.surname} (${c.business_name})`.toLowerCase().includes(clientSearch)
+      )
+    : clients;
+
   const groupedTasks = STATUS_ORDER.map((status) => ({
     status,
     items: tasks
@@ -412,7 +454,7 @@ export default function TaskCentrePage() {
 
             {isFilterOpen && (
               <div className="absolute left-0 mt-2 w-56 bg-white border border-gray-100 rounded-xl shadow-xl z-50 p-3 animate-in fade-in slide-in-from-top-2">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 ml-1">
+                <p className="text-[10px] font-black text-[#333333] tracking-widest mb-3 ml-1">
                   Visible Statuses
                 </p>
                 <div className="space-y-1">
@@ -453,7 +495,7 @@ export default function TaskCentrePage() {
               resetForm();
               setIsAdding(true);
             }}
-            className="bg-[#9d4edd] text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-purple-100 hover:bg-[#7b2cbf] transition-all flex items-center gap-2"
+            className="bg-[#9d4edd] text-white px-5 py-2.5 rounded-xl font-bold text-xs tracking-widest shadow-lg shadow-purple-100 hover:bg-[#7b2cbf] transition-all flex items-center gap-2"
           >
             <span className="text-lg leading-none">+</span> New Task
           </button>
@@ -477,7 +519,7 @@ export default function TaskCentrePage() {
                   {/* Status Header */}
                   <div className="sticky top-20 z-10 bg-[#fcfcfc] py-2">
                     <span
-                      className={`inline-block px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest ${statusConfig.color}`}
+                      className={`inline-block px-3 py-1 rounded-md text-[10px] font-black tracking-widest ${statusConfig.color}`}
                     >
                       {statusConfig.label} ({group.items.length})
                     </span>
@@ -508,7 +550,7 @@ export default function TaskCentrePage() {
                                   statusMenuId === task.id ? null : task.id
                                 )
                               }
-                              className={`w-full text-center py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all hover:brightness-95 ${statusConfig.color}`}
+                              className={`w-full text-center py-1.5 rounded-lg text-[10px] font-bold tracking-wider transition-all hover:brightness-95 ${statusConfig.color}`}
                             >
                               {statusConfig.label}
                             </button>
@@ -554,10 +596,10 @@ export default function TaskCentrePage() {
 
                             {/* Category Tag (Underneath) */}
                             <div
-                              className={`inline-block px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${catConfig.color}`}
-                            >
-                              {catConfig.label}
-                            </div>
+                            className={`inline-block px-2 py-0.5 rounded text-[9px] font-bold tracking-wider border ${catConfig.color}`}
+                          >
+                            {catConfig.label}
+                          </div>
                           </div>
 
                           {/* 3. Meta Data (Date, Timer, Logged) */}
@@ -647,7 +689,7 @@ export default function TaskCentrePage() {
             <div className="space-y-5">
               {/* Task Name */}
               <div>
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2 ml-1">
+                <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-2 ml-1">
                   Task Title
                 </label>
                 <input
@@ -661,19 +703,23 @@ export default function TaskCentrePage() {
 
               {/* Category Selection */}
               <div>
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2 ml-1">
+                <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-2 ml-1">
                   Category
                 </label>
                 <div className="flex gap-2">
                   {Object.values(CATEGORY_CONFIG).map((cat) => (
                     <button
                       key={cat.id}
-                      onClick={() =>
+                      onClick={() => {
                         setFormCategory(
                           cat.id as "client" | "business" | "personal"
-                        )
-                      }
-                      className={`flex-1 py-2.5 rounded-xl text-[10px] font-bold uppercase transition-all border ${
+                        );
+                        if (cat.id !== "client") {
+                          setFormClientId("");
+                          setFormClientQuery("");
+                        }
+                      }}
+                      className={`flex-1 py-2.5 rounded-xl text-[10px] font-bold transition-all border ${
                         formCategory === cat.id
                           ? `${cat.color} shadow-sm`
                           : "bg-white border-gray-100 text-gray-400 hover:border-gray-200"
@@ -688,27 +734,54 @@ export default function TaskCentrePage() {
               {/* Client Selection (Only if Client Category) */}
               {formCategory === "client" && (
                 <div className="animate-in fade-in slide-in-from-top-2">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2 ml-1">
+                  <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-2 ml-1">
                     Assign Client
                   </label>
-                  <select
+                  <input
                     className="w-full bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
-                    value={formClientId}
-                    onChange={(e) => setFormClientId(e.target.value)}
-                  >
-                    <option value="">-- Select Client --</option>
-                    {clients.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.surname} ({c.business_name})
-                      </option>
-                    ))}
-                  </select>
+                    value={formClientQuery}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFormClientQuery(value);
+                      const exactMatch = clients.find(
+                        (c) =>
+                          `${c.surname} (${c.business_name})`.toLowerCase() ===
+                          value.toLowerCase()
+                      );
+                      setFormClientId(exactMatch ? exactMatch.id : "");
+                    }}
+                    placeholder="Type a client name"
+                  />
+                  {formClientQuery.trim().length > 0 && (
+                    <div className="mt-2 max-h-40 overflow-auto rounded-xl border border-gray-100 bg-white shadow-sm">
+                      {filteredClients.slice(0, 6).map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => {
+                            setFormClientId(c.id);
+                            setFormClientQuery(
+                              `${c.surname} (${c.business_name})`
+                            );
+                          }}
+                          className="w-full text-left px-3 py-2 text-xs font-bold text-[#333333] hover:bg-gray-50 transition-colors"
+                        >
+                          {c.surname} ({c.business_name})
+                        </button>
+                      ))}
+                      {filteredClients.length === 0 && (
+                        <p className="px-3 py-2 text-xs font-bold text-[#333333]">
+                          No clients found.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2 ml-1">
+                  <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-2 ml-1">
                     Status
                   </label>
                   <select
@@ -724,14 +797,25 @@ export default function TaskCentrePage() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2 ml-1">
-                    Due Date
+                  <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-2 ml-1">
+                    Start date and time
                   </label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     className="w-full bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
-                    value={formDate}
-                    onChange={(e) => setFormDate(e.target.value)}
+                    value={formStartDateTime}
+                    onChange={(e) => setFormStartDateTime(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-2 ml-1">
+                    End date and time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    className="w-full bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
+                    value={formEndDateTime}
+                    onChange={(e) => setFormEndDateTime(e.target.value)}
                   />
                 </div>
               </div>
@@ -739,13 +823,13 @@ export default function TaskCentrePage() {
               <div className="flex gap-3 pt-4">
                 <button
                   onClick={() => setIsAdding(false)}
-                  className="px-6 py-3 rounded-xl border-2 border-gray-100 text-gray-400 font-bold text-xs uppercase tracking-widest hover:text-[#333333] hover:border-gray-300 transition-colors"
+                  className="px-6 py-3 rounded-xl border-2 border-gray-100 text-[#333333] font-bold text-xs tracking-widest hover:border-gray-300 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSaveTask}
-                  className="flex-1 bg-[#9d4edd] text-white py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-purple-100 hover:bg-[#7b2cbf] transition-all"
+                  className="flex-1 bg-[#9d4edd] text-white py-3 rounded-xl font-bold text-xs tracking-widest shadow-lg shadow-purple-100 hover:bg-[#7b2cbf] transition-all"
                 >
                   {selectedTask ? "Save Changes" : "Create Task"}
                 </button>
@@ -758,10 +842,15 @@ export default function TaskCentrePage() {
       {view === "calendar" && (
         <CalendarView
           tasks={tasks}
-          onAddTask={(date: string) => {
-            setFormDate(date);
+          onAddTask={(date: string, time?: string) => {
+            const startValue = time ? `${date}T${time}` : `${date}T09:00`;
+            const startDate = new Date(startValue);
+            const endDate = addMinutes(startDate, 60);
+            setFormStartDateTime(format(startDate, "yyyy-MM-dd'T'HH:mm"));
+            setFormEndDateTime(format(endDate, "yyyy-MM-dd'T'HH:mm"));
             setIsAdding(true);
           }}
+          onUpdateTask={(taskId, updates) => updateTask(taskId, updates)}
         />
       )}
       {view === "kanban" && (

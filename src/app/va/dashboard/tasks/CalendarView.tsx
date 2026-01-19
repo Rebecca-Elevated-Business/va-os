@@ -17,6 +17,7 @@ import { Task } from "./types";
 interface CalendarViewProps {
   tasks: Task[];
   onAddTask: (date: string, time?: string) => void;
+  onUpdateTask: (taskId: string, updates: Partial<Task>) => void;
 }
 
 // Visual Config for Status Lines
@@ -27,11 +28,16 @@ const STATUS_COLORS: Record<string, string> = {
   completed: "bg-green-400",
 };
 
-export default function CalendarView({ tasks, onAddTask }: CalendarViewProps) {
+export default function CalendarView({
+  tasks,
+  onAddTask,
+  onUpdateTask,
+}: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<"week" | "day">("week");
   const [now, setNow] = useState(new Date());
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [draggedTask, setDraggedTask] = useState<Task | null>(null);
 
   // Keep current time indicator updated
   useEffect(() => {
@@ -64,6 +70,46 @@ export default function CalendarView({ tasks, onAddTask }: CalendarViewProps) {
     return STATUS_COLORS[status] || STATUS_COLORS["todo"];
   };
 
+  const getTaskDurationMinutes = (task: Task) => {
+    if (task.scheduled_start && task.scheduled_end) {
+      const duration =
+        (new Date(task.scheduled_end).getTime() -
+          new Date(task.scheduled_start).getTime()) /
+        60000;
+      return Math.max(15, Math.round(duration));
+    }
+    return 60;
+  };
+
+  const handleDropToSlot = (day: Date, hour?: number) => {
+    if (!draggedTask) return;
+    const dateString = format(day, "yyyy-MM-dd");
+
+    if (typeof hour === "number") {
+      const existingStart = draggedTask.scheduled_start
+        ? new Date(draggedTask.scheduled_start)
+        : null;
+      const minutes = existingStart ? existingStart.getMinutes() : 0;
+      const newStart = addMinutes(setHours(startOfDay(day), hour), minutes);
+      const durationMinutes = getTaskDurationMinutes(draggedTask);
+      const newEnd = addMinutes(newStart, durationMinutes);
+
+      onUpdateTask(draggedTask.id, {
+        due_date: dateString,
+        scheduled_start: newStart.toISOString(),
+        scheduled_end: newEnd.toISOString(),
+      });
+    } else {
+      onUpdateTask(draggedTask.id, {
+        due_date: dateString,
+        scheduled_start: null,
+        scheduled_end: null,
+      });
+    }
+
+    setDraggedTask(null);
+  };
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col font-sans text-[#333333] h-[calc(100vh-220px)] overflow-hidden">
       {/* 1. CALENDAR HEADER & CONTROLS */}
@@ -75,7 +121,7 @@ export default function CalendarView({ tasks, onAddTask }: CalendarViewProps) {
             className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${
               viewMode === "week"
                 ? "bg-white shadow-sm text-[#333333]"
-                : "text-gray-400 hover:text-gray-600"
+                : "text-[#333333]/60 hover:text-[#333333]"
             }`}
           >
             Week
@@ -85,7 +131,7 @@ export default function CalendarView({ tasks, onAddTask }: CalendarViewProps) {
             className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${
               viewMode === "day"
                 ? "bg-white shadow-sm text-[#333333]"
-                : "text-gray-400 hover:text-gray-600"
+                : "text-[#333333]/60 hover:text-[#333333]"
             }`}
           >
             Day
@@ -106,7 +152,7 @@ export default function CalendarView({ tasks, onAddTask }: CalendarViewProps) {
           </button>
           <button
             onClick={() => setCurrentDate(new Date())}
-            className="px-3 py-1.5 text-xs font-bold uppercase tracking-widest hover:bg-gray-50 rounded-lg border border-gray-100"
+            className="px-3 py-1.5 text-xs font-bold hover:bg-gray-50 rounded-lg border border-gray-100 text-[#333333]"
           >
             Today
           </button>
@@ -129,10 +175,12 @@ export default function CalendarView({ tasks, onAddTask }: CalendarViewProps) {
         >
           {/* Top Left: Month Label (Integrated) */}
           <div className="p-3 border-r border-gray-50 flex items-end justify-center pb-2">
-            <span className="text-xs font-black text-[#333333] uppercase leading-tight tracking-tight text-center">
+            <span className="text-xs font-black text-[#333333] leading-tight tracking-tight text-center">
               {format(startDate, "MMM")}
               <br />
-              <span className="text-gray-300">{format(startDate, "yyyy")}</span>
+              <span className="text-[#333333]">
+                {format(startDate, "yyyy")}
+              </span>
             </span>
           </div>
 
@@ -144,7 +192,7 @@ export default function CalendarView({ tasks, onAddTask }: CalendarViewProps) {
                 !isSameMonth(day, currentDate) ? "bg-gray-50/30" : ""
               }`}
             >
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">
+              <p className="text-[10px] font-bold tracking-widest text-[#333333] mb-0.5">
                 {format(day, "EEE")}
               </p>
               <div
@@ -167,7 +215,7 @@ export default function CalendarView({ tasks, onAddTask }: CalendarViewProps) {
         >
           <div className="py-2 px-1 border-r border-gray-50 flex items-center justify-center">
             <span
-              className="text-[9px] font-bold text-gray-300 uppercase rotate-180"
+              className="text-[9px] font-bold text-[#333333] rotate-180"
               style={{ writingMode: "vertical-rl" }}
             >
               All Day
@@ -179,6 +227,12 @@ export default function CalendarView({ tasks, onAddTask }: CalendarViewProps) {
               key={`allday-${day}`}
               className="p-1 border-r border-gray-50 min-h-10 flex flex-col gap-1 cursor-pointer hover:bg-gray-50/50 transition-colors"
               onClick={() => onAddTask(format(day, "yyyy-MM-dd"))}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                handleDropToSlot(day);
+              }}
             >
               {tasks
                 .filter(
@@ -189,6 +243,12 @@ export default function CalendarView({ tasks, onAddTask }: CalendarViewProps) {
                 .map((task) => (
                   <div
                     key={task.id}
+                    draggable
+                    onDragStart={(event) => {
+                      event.dataTransfer.setData("text/plain", task.id);
+                      setDraggedTask(task);
+                    }}
+                    onDragEnd={() => setDraggedTask(null)}
                     className="flex items-center bg-white border border-gray-100 rounded px-2 py-1 shadow-sm text-[10px] font-bold text-[#333333] hover:border-purple-100 transition-all"
                   >
                     <div
@@ -246,6 +306,12 @@ export default function CalendarView({ tasks, onAddTask }: CalendarViewProps) {
                       `${hour.toString().padStart(2, "0")}:00`
                     )
                   }
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    handleDropToSlot(day, hour);
+                  }}
                 />
               ))}
 
@@ -282,6 +348,12 @@ export default function CalendarView({ tasks, onAddTask }: CalendarViewProps) {
                   return (
                     <div
                       key={task.id}
+                      draggable
+                      onDragStart={(event) => {
+                        event.dataTransfer.setData("text/plain", task.id);
+                        setDraggedTask(task);
+                      }}
+                      onDragEnd={() => setDraggedTask(null)}
                       className="absolute left-1 right-1 px-2 py-1 bg-white rounded-lg border border-gray-100 shadow-sm z-10 cursor-pointer hover:shadow-md hover:border-[#9d4edd]/30 transition-all flex items-start gap-2 overflow-hidden"
                       style={{
                         top: `${top}px`,

@@ -85,7 +85,7 @@ export default function KanbanView({
                   <h3 className="text-sm font-bold text-[#333333] capitalize tracking-tight">
                     {col.title}
                   </h3>
-                  <span className="bg-white px-2 py-0.5 rounded-full text-[10px] font-bold text-gray-400 border border-gray-100">
+                  <span className="bg-white px-2 py-0.5 rounded-full text-[10px] font-bold text-[#333333] border border-gray-100">
                     {colTasks.length}
                   </span>
                 </div>
@@ -108,7 +108,7 @@ export default function KanbanView({
                   >
                     {/* Card Header: Category & Context */}
                     <div className="flex justify-between items-start mb-3">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-[#9d4edd] opacity-70">
+                      <span className="text-[9px] font-black tracking-widest text-[#333333] opacity-70">
                         {task.category ||
                           (task.client_id ? "Client" : "Personal")}
                       </span>
@@ -130,7 +130,7 @@ export default function KanbanView({
 
                     {/* Client Name (If exists) */}
                     {task.clients && (
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight mb-4">
+                      <p className="text-[10px] font-bold text-[#333333] tracking-tight mb-4">
                         {task.clients.surname}
                       </p>
                     )}
@@ -164,7 +164,7 @@ export default function KanbanView({
 
                 {/* Empty State Drop Zone */}
                 {colTasks.length === 0 && (
-                  <div className="h-20 border-2 border-dashed border-gray-100 rounded-xl flex items-center justify-center text-[10px] font-bold text-gray-300 uppercase tracking-widest">
+                  <div className="h-20 border-2 border-dashed border-gray-100 rounded-xl flex items-center justify-center text-[10px] font-bold text-[#333333] tracking-widest">
                     Drop here
                   </div>
                 )}
