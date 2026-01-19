@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft, X } from "lucide-react";
 
 const DOCUMENT_TYPES = [
   { id: "proposal", label: "Project Proposal", accent: "bg-[#9d4edd]" },
@@ -92,11 +93,28 @@ function CreateDocumentForm() {
       c.surname.toLowerCase().includes(search.toLowerCase()) ||
       c.business_name?.toLowerCase().includes(search.toLowerCase())
   );
-  const clientList = search ? filteredClients : clients;
+  const canShowResults =
+    !isClientLocked && !selectedClient && search.trim().length >= 2;
+  const clientList = canShowResults ? filteredClients : [];
+  const shouldShowEmptyState = canShowResults && clientList.length === 0;
 
   return (
-    <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl border border-gray-100 max-w-5xl mx-auto">
-      <div className="flex flex-col items-center text-center mb-8 gap-2">
+    <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl border border-gray-100 max-w-5xl mx-auto relative">
+      <button
+        onClick={() => {
+          if (clientIdParam) {
+            router.push(`/va/dashboard/crm/profile/${clientIdParam}`);
+          } else {
+            router.back();
+          }
+        }}
+        className="absolute left-6 top-6 flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-widest hover:text-black"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        {clientIdParam ? "Back to CRM" : "Back"}
+      </button>
+
+      <div className="flex flex-col items-center text-center mb-8 gap-2 pt-6">
         <h2 className="text-2xl font-black text-gray-900 tracking-tight">
           Generate Document
         </h2>
@@ -166,17 +184,6 @@ function CreateDocumentForm() {
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
               Client Selection
             </p>
-            {selectedClient && !isClientLocked && (
-              <button
-                onClick={() => {
-                  setSelectedClient(null);
-                  setSearch("");
-                }}
-                className="text-xs font-bold text-gray-300 hover:text-red-400 transition-colors uppercase tracking-widest"
-              >
-                Clear
-              </button>
-            )}
           </div>
 
           <div className="rounded-2xl border border-gray-100 p-4 bg-white shadow-sm">
@@ -209,50 +216,61 @@ function CreateDocumentForm() {
                 />
 
                 <div className="mt-4 max-h-64 overflow-y-auto grid gap-2">
-                  {clientList.length === 0 ? (
+                  {shouldShowEmptyState && (
                     <div className="text-center text-xs text-gray-400 py-6">
                       No clients match your search.
                     </div>
-                  ) : (
-                    clientList.map((c) => {
-                      const isActive = selectedClient?.id === c.id;
-                      return (
-                        <button
-                          key={c.id}
-                          disabled={loading}
-                          onClick={() => {
-                            setSelectedClient(c);
-                            setSearch(`${c.first_name} ${c.surname}`);
-                          }}
-                          className={`w-full text-left p-4 rounded-xl border transition flex justify-between items-center ${
-                            isActive
-                              ? "border-[#9d4edd] bg-purple-50"
-                              : "border-gray-100 hover:border-[#9d4edd]"
-                          }`}
-                        >
-                          <span className="font-bold text-gray-900">
-                            {c.first_name} {c.surname}
-                          </span>
-                          <span className="text-[10px] font-black text-[#9d4edd] bg-purple-100 px-2 py-1 rounded-lg uppercase">
-                            {c.business_name || "Personal"}
-                          </span>
-                        </button>
-                      );
-                    })
                   )}
+                  {clientList.map((c) => {
+                    const isActive = selectedClient?.id === c.id;
+                    return (
+                      <button
+                        key={c.id}
+                        disabled={loading}
+                        onClick={() => {
+                          setSelectedClient(c);
+                          setSearch("");
+                        }}
+                        className={`w-full text-left p-4 rounded-xl border transition flex justify-between items-center ${
+                          isActive
+                            ? "border-[#9d4edd] bg-purple-50"
+                            : "border-gray-100 hover:border-[#9d4edd]"
+                        }`}
+                      >
+                        <span className="font-bold text-gray-900">
+                          {c.first_name} {c.surname}
+                        </span>
+                        <span className="text-[10px] font-black text-[#9d4edd] bg-purple-100 px-2 py-1 rounded-lg uppercase">
+                          {c.business_name || "Personal"}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </>
             )}
           </div>
 
           {selectedClient && (
-            <div className="p-4 bg-green-50 border border-green-100 rounded-2xl text-center">
+            <div className="relative p-4 bg-green-50 border border-green-100 rounded-2xl text-center">
               <p className="text-[10px] text-green-600 font-black uppercase tracking-widest mb-1">
                 Target Client
               </p>
               <p className="font-bold text-green-900">
                 {selectedClient.first_name} {selectedClient.surname}
               </p>
+              {!isClientLocked && (
+                <button
+                  onClick={() => {
+                    setSelectedClient(null);
+                    setSearch("");
+                  }}
+                  className="absolute bottom-3 right-3 text-red-400 hover:text-red-500"
+                  aria-label="Remove client"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
           )}
 

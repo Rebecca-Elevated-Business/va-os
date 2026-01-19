@@ -1,7 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  FileText,
+  FileSignature,
+  ReceiptText,
+  Upload,
+  Search,
+} from "lucide-react";
 
 // Define the document types based on your workflow
 const DOCUMENT_TYPES = [
@@ -10,7 +17,7 @@ const DOCUMENT_TYPES = [
     title: "Project Proposal",
     description:
       "Outline project scope, service options, and estimated timelines for potential clients.",
-    icon: "📋",
+    icon: FileText,
     category: "Pre-Onboarding",
   },
   {
@@ -18,7 +25,7 @@ const DOCUMENT_TYPES = [
     title: "Booking Form (Contract)",
     description:
       "Formal legal agreement and booking confirmation with E-Signature requirements.",
-    icon: "🖋️",
+    icon: FileSignature,
     category: "Legal",
   },
   {
@@ -26,7 +33,7 @@ const DOCUMENT_TYPES = [
     title: "Professional Invoice",
     description:
       "Generate billable item summaries with British Pound (£) currency and due dates.",
-    icon: "💰",
+    icon: ReceiptText,
     category: "Financial",
   },
   {
@@ -34,7 +41,7 @@ const DOCUMENT_TYPES = [
     title: "Upload & send own document",
     description:
       "Upload an existing PDF or document from your device to send directly to the client portal.",
-    icon: "📤",
+    icon: Upload,
     category: "Custom",
   },
 ];
@@ -44,49 +51,73 @@ export default function DocumentLibraryPage() {
   const [selectedType, setSelectedType] = useState<
     (typeof DOCUMENT_TYPES)[0] | null
   >(null);
+  const [search, setSearch] = useState("");
+
+  const filteredTypes = useMemo(() => {
+    if (!search.trim()) return DOCUMENT_TYPES;
+    const value = search.toLowerCase();
+    return DOCUMENT_TYPES.filter(
+      (doc) =>
+        doc.title.toLowerCase().includes(value) ||
+        doc.description.toLowerCase().includes(value) ||
+        doc.category.toLowerCase().includes(value)
+    );
+  }, [search]);
 
   return (
     <div className="text-black">
-      {/* 1. HEADER SECTION (Mirrors Service Agreements) */}
-      <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 mb-8">
-        <h1 className="text-3xl font-bold mb-2">Document Centre</h1>
-        <p className="text-gray-500 max-w-3xl">
-          Select a document type below to generate professional{" "}
-          <strong>Proposals, Contracts, or Invoices</strong>. Once generated,
-          you can customise the content before issuing it to the client portal.
-        </p>
-      </div>
-
-      {/* 2. DOCUMENT SELECTOR GRID (Mirrors Service Agreements Icons) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl">
-        {DOCUMENT_TYPES.map((doc) => (
-          <div
-            key={doc.id}
-            onClick={() => setSelectedType(doc)}
-            className="group cursor-pointer flex flex-col items-center text-center space-y-3"
-          >
-            {/* PDF Style Icon Card */}
-            <div className="w-full aspect-3/4 bg-white rounded-lg border-2 border-gray-100 shadow-sm group-hover:border-[#9d4edd] group-hover:shadow-md transition-all flex flex-col items-center justify-center p-6 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-8 h-8 bg-gray-50 border-l border-b border-gray-100 rounded-bl-lg" />
-              <div className="text-5xl mb-4 group-hover:scale-110 transition-transform">
-                {doc.icon}
-              </div>
-              <div className="h-1 w-12 bg-[#9d4edd] rounded-full mb-4" />
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                {doc.category}
-              </span>
-            </div>
-
-            <div>
-              <h3 className="font-bold text-sm group-hover:text-[#9d4edd] transition-colors uppercase tracking-tight">
-                {doc.title}
-              </h3>
-              <p className="text-[10px] text-gray-400 mt-1 px-4">
-                {doc.description}
-              </p>
+      <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 mb-8">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Document Centre</h1>
+            <p className="text-gray-500 max-w-2xl">
+              Create polished proposals, contracts, and invoices in minutes.
+              Drafts are saved to the client vault for review and sending.
+            </p>
+          </div>
+          <div className="w-full max-w-md">
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">
+              Search Document Type
+            </label>
+            <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-purple-100">
+              <Search className="h-4 w-4 text-gray-400" aria-hidden />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search proposals, invoices, uploads..."
+                className="w-full bg-transparent text-sm text-gray-700 outline-none"
+              />
             </div>
           </div>
-        ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {filteredTypes.map((doc) => {
+          const Icon = doc.icon;
+          return (
+            <button
+              key={doc.id}
+              onClick={() => setSelectedType(doc)}
+              className="group text-left bg-white border border-gray-100 rounded-2xl p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg hover:border-[#9d4edd]"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div className="h-12 w-12 rounded-2xl bg-purple-50 flex items-center justify-center text-[#9d4edd]">
+                  <Icon className="h-6 w-6" />
+                </div>
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                  {doc.category}
+                </span>
+              </div>
+              <h3 className="font-bold text-sm text-gray-900 group-hover:text-[#9d4edd] transition-colors uppercase tracking-tight">
+                {doc.title}
+              </h3>
+              <p className="text-[11px] text-gray-500 mt-3 leading-relaxed">
+                {doc.description}
+              </p>
+            </button>
+          );
+        })}
       </div>
 
       {selectedType && (
