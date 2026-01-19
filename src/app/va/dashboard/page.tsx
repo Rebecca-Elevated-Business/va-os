@@ -118,18 +118,21 @@ export default function VADashboard() {
     }
   }, []);
 
-  const loadTimeEntries = useCallback(async (dateValue: string) => {
-    if (!userId) return;
-    const startIso = new Date(`${dateValue}T00:00:00`).toISOString();
-    const endIso = new Date(`${dateValue}T23:59:59.999`).toISOString();
-    const { data } = await supabase
-      .from("time_entries")
-      .select("id, task_id, started_at, ended_at, duration_minutes")
-      .eq("va_id", userId)
-      .gte("started_at", startIso)
-      .lte("started_at", endIso);
-    setTimeEntries((data as TimeEntry[]) || []);
-  }, [userId]);
+  const loadTimeEntries = useCallback(
+    async (dateValue: string) => {
+      if (!userId) return;
+      const startIso = new Date(`${dateValue}T00:00:00`).toISOString();
+      const endIso = new Date(`${dateValue}T23:59:59.999`).toISOString();
+      const { data } = await supabase
+        .from("time_entries")
+        .select("id, task_id, started_at, ended_at, duration_minutes")
+        .eq("va_id", userId)
+        .gte("started_at", startIso)
+        .lte("started_at", endIso);
+      setTimeEntries((data as TimeEntry[]) || []);
+    },
+    [userId]
+  );
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -181,7 +184,8 @@ export default function VADashboard() {
       .filter((task) => {
         if (task.status === "completed") return false;
         if (task.due_date && matchesDate(task.due_date)) return true;
-        if (task.scheduled_start && matchesDate(task.scheduled_start)) return true;
+        if (task.scheduled_start && matchesDate(task.scheduled_start))
+          return true;
         if (task.scheduled_end && matchesDate(task.scheduled_end)) return true;
         return false;
       })
@@ -254,7 +258,7 @@ export default function VADashboard() {
               className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-[#333333] focus:ring-2 focus:ring-[#9d4edd] outline-none"
             />
           </div>
-          <div className="p-6 space-y-6 min-h-[320px]">
+          <div className="p-6 space-y-6 min-h-80">
             {overdueTasks.length === 0 && dayTasks.length === 0 ? (
               <div className="text-sm text-gray-400 italic text-center py-10">
                 Nothing scheduled for this day yet.
@@ -384,7 +388,7 @@ export default function VADashboard() {
               ))}
             </select>
           </div>
-          <div className="p-6 space-y-3 min-h-[220px]">
+          <div className="p-6 space-y-3 min-h-55">
             {opportunityClients.length === 0 ? (
               <div className="text-sm text-gray-400 italic text-center py-10">
                 No clients in this status.
@@ -411,9 +415,11 @@ export default function VADashboard() {
         <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-50">
             <h3 className="text-base font-bold">Time Today</h3>
-            <p className="text-xs text-gray-400">{formatDateLabel(todayDate)}</p>
+            <p className="text-xs text-gray-400">
+              {formatDateLabel(todayDate)}
+            </p>
           </div>
-          <div className="p-6 space-y-4 min-h-[220px] flex flex-col">
+          <div className="p-6 space-y-4 min-h-55 flex flex-col">
             <div className="text-4xl font-black tracking-tight">
               {formatDuration(totalMinutesToday)}
             </div>
@@ -436,7 +442,7 @@ export default function VADashboard() {
               Brain dump sticky note for later
             </p>
           </div>
-          <div className="p-6 space-y-4 min-h-[220px] flex flex-col">
+          <div className="p-6 space-y-4 min-h-55 flex flex-col">
             <textarea
               value={note}
               onChange={(event) => setNote(event.target.value)}
