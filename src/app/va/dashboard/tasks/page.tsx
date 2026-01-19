@@ -16,39 +16,12 @@ import {
 } from "lucide-react";
 import CalendarView from "./CalendarView";
 import KanbanView from "./KanbanView";
-import { Task } from "./types"; // Ensure this type has 'category' if possible, or we cast below
-
-// Define options locally to ensure colors match your request
-type StatusOption = {
-  id: string;
-  label: string;
-  color: string;
-};
+import { STATUS_CONFIG, Task } from "./types"; // Ensure this type has 'category' if possible, or we cast below
 
 type CategoryOption = {
   id: string;
   label: string;
   color: string;
-};
-
-// 1. STATUS CONFIG (Pastels)
-const STATUS_CONFIG: Record<string, StatusOption> = {
-  todo: { id: "todo", label: "To Do", color: "bg-purple-100 text-purple-700" },
-  up_next: {
-    id: "up_next",
-    label: "Up Next",
-    color: "bg-blue-100 text-blue-700",
-  },
-  in_progress: {
-    id: "in_progress",
-    label: "In Progress",
-    color: "bg-yellow-100 text-yellow-700",
-  },
-  completed: {
-    id: "completed",
-    label: "Completed",
-    color: "bg-green-100 text-green-700",
-  },
 };
 
 // 2. CATEGORY CONFIG (New 3 Colors)
@@ -413,6 +386,11 @@ export default function TaskCentrePage() {
     return `${h}h ${m}m`;
   };
 
+  const formatDateCell = (dateValue: string | null | undefined) => {
+    if (!dateValue) return "-";
+    return format(new Date(dateValue), "d MMM");
+  };
+
   // --- GROUPING LOGIC ---
   const clientSearch = formClientQuery.trim().toLowerCase();
   const filteredClients = clientSearch
@@ -541,59 +519,79 @@ export default function TaskCentrePage() {
               No tasks match your filter.
             </p>
           ) : (
-            groupedTasks.map((group) => {
-              const statusConfig =
-                STATUS_CONFIG[group.status] || STATUS_CONFIG["todo"];
+            <>
+              <div className="sticky top-16 z-20 bg-[#fcfcfc] border border-gray-100 rounded-xl px-6 py-3 text-[10px] font-black tracking-widest text-[#333333]">
+                <div className="flex items-center">
+                  <div className="w-32 shrink-0">Status</div>
+                  <div className="flex-1 px-6">Task</div>
+                  <div className="w-24 text-right">Start Date</div>
+                  <div className="w-24 text-right">End Date</div>
+                  <div className="w-10 text-center">Timer</div>
+                  <div className="w-20 text-right">Time Count</div>
+                  <div className="w-6" />
+                </div>
+              </div>
+              {groupedTasks.map((group) => {
+                const statusConfig =
+                  STATUS_CONFIG[group.status] || STATUS_CONFIG["todo"];
 
-              return (
-                <div key={group.status} className="space-y-3">
-                  {/* Status Header */}
-                  <div className="sticky top-20 z-10 bg-[#fcfcfc] py-2">
-                    <span
-                      className={`inline-block px-3 py-1 rounded-md text-[10px] font-black tracking-widest ${statusConfig.color}`}
-                    >
-                      {statusConfig.label} ({group.items.length})
-                    </span>
-                  </div>
+                return (
+                  <div key={group.status} className="space-y-3">
+                    {/* Status Header */}
+                    <div className="sticky top-28 z-10 bg-[#fcfcfc] py-2">
+                      <span
+                        className={`inline-block px-3 py-1 rounded-md text-[10px] font-black tracking-widest ${statusConfig.color}`}
+                      >
+                        {statusConfig.label} ({group.items.length})
+                      </span>
+                    </div>
 
-                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-visible">
-                    {group.items.map((task, index) => {
-                      // Determine Category Style
-                      const catKey =
-                        task.category ||
-                        (task.client_id ? "client" : "personal");
-                      const catConfig =
-                        CATEGORY_CONFIG[catKey] || CATEGORY_CONFIG["personal"];
-                      const isLast = index === group.items.length - 1;
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-visible">
+                      {group.items.map((task, index) => {
+                        // Determine Category Style
+                        const catKey =
+                          task.category ||
+                          (task.client_id ? "client" : "personal");
+                        const catConfig =
+                          CATEGORY_CONFIG[catKey] || CATEGORY_CONFIG["personal"];
+                        const isLast = index === group.items.length - 1;
+                        const taskStatusConfig =
+                          STATUS_CONFIG[task.status] || STATUS_CONFIG["todo"];
 
-                      return (
-                        <div
-                          key={task.id}
-                          className={`relative flex items-center py-4 px-6 hover:bg-gray-50/50 transition-colors ${
-                            !isLast ? "border-b border-gray-50" : ""
-                          }`}
-                        >
+                        return (
+                          <div
+                            key={task.id}
+                            onClick={() => openEditModal(task)}
+                            className={`relative flex items-center py-4 px-6 hover:bg-gray-50/50 transition-colors cursor-pointer ${
+                              !isLast ? "border-b border-gray-50" : ""
+                            }`}
+                          >
                           {/* 1. Status Pill (Quick Change) */}
                           <div className="w-32 shrink-0 relative status-menu-trigger">
                             <button
-                              onClick={() =>
+                              onClick={(event) => {
+                                event.stopPropagation();
                                 setStatusMenuId(
                                   statusMenuId === task.id ? null : task.id
-                                )
-                              }
-                              className={`w-full text-center py-1.5 rounded-lg text-[10px] font-bold tracking-wider transition-all hover:brightness-95 ${statusConfig.color}`}
+                                );
+                              }}
+                              className={`w-full text-center py-1.5 rounded-lg text-[10px] font-bold tracking-wider transition-all hover:brightness-95 ${taskStatusConfig.color}`}
                             >
-                              {statusConfig.label}
+                              {taskStatusConfig.label}
                             </button>
 
                             {statusMenuId === task.id && (
-                              <div className="absolute top-full left-0 mt-2 w-40 bg-white rounded-xl shadow-xl border border-gray-100 z-50 p-2 animate-in fade-in zoom-in duration-200">
+                              <div
+                                className="absolute top-full left-0 mt-2 w-40 bg-white rounded-xl shadow-xl border border-gray-100 z-50 p-2 animate-in fade-in zoom-in duration-200"
+                                onClick={(event) => event.stopPropagation()}
+                              >
                                 {Object.values(STATUS_CONFIG).map((opt) => (
                                   <button
                                     key={opt.id}
-                                    onClick={() =>
-                                      updateTaskStatus(task.id, opt.id)
-                                    }
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      updateTaskStatus(task.id, opt.id);
+                                    }}
                                     className={`w-full text-left px-3 py-2 text-[10px] font-bold rounded-lg hover:bg-gray-50 mb-1 ${opt.color}`}
                                   >
                                     {opt.label}
@@ -634,20 +632,30 @@ export default function TaskCentrePage() {
                           </div>
 
                           {/* 3. Meta Data (Date, Timer, Logged) */}
-                          <div className="flex items-center gap-8 shrink-0">
-                            {/* Due Date */}
+                          <div className="flex items-center gap-6 shrink-0">
+                            {/* Start Date */}
                             <div className="w-24 text-right">
                               <span className="text-xs font-medium text-[#333333]">
-                                {task.due_date
-                                  ? format(new Date(task.due_date), "d MMM")
-                                  : "-"}
+                                {formatDateCell(
+                                  task.scheduled_start || task.due_date
+                                )}
+                              </span>
+                            </div>
+
+                            {/* End Date */}
+                            <div className="w-24 text-right">
+                              <span className="text-xs font-medium text-[#333333]">
+                                {formatDateCell(task.scheduled_end)}
                               </span>
                             </div>
 
                             {/* Timer Button */}
                             <div className="w-10 flex justify-center">
                               <button
-                                onClick={() => toggleTimer(task)}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  toggleTimer(task);
+                                }}
                                 className={`w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-sm ${
                                   task.is_running
                                     ? "bg-red-50 text-red-500 border border-red-100 animate-pulse"
@@ -670,26 +678,36 @@ export default function TaskCentrePage() {
                             {/* 4. Action Menu (Inline Edit/Delete) */}
                             <div className="relative action-menu-trigger w-6 flex justify-end">
                               <button
-                                onClick={() =>
+                                onClick={(event) => {
+                                  event.stopPropagation();
                                   setActionMenuId(
                                     actionMenuId === task.id ? null : task.id
-                                  )
-                                }
-                                className="text-gray-300 hover:text-[#333333] transition-colors"
+                                  );
+                                }}
+                                className="text-[#333333] transition-colors"
                               >
                                 <MoreHorizontal size={18} />
                               </button>
 
                               {actionMenuId === task.id && (
-                                <div className="absolute right-0 top-full mt-1 w-32 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-1">
+                                <div
+                                  className="absolute right-0 top-full mt-1 w-32 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-1"
+                                  onClick={(event) => event.stopPropagation()}
+                                >
                                   <button
-                                    onClick={() => openEditModal(task)}
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      openEditModal(task);
+                                    }}
                                     className="w-full text-left px-4 py-3 text-xs font-bold text-[#333333] hover:bg-gray-50 flex items-center gap-2"
                                   >
                                     <Edit2 size={12} /> Edit
                                   </button>
                                   <button
-                                    onClick={() => deleteTask(task.id)}
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      deleteTask(task.id);
+                                    }}
                                     className="w-full text-left px-4 py-3 text-xs font-bold text-red-500 hover:bg-red-50 flex items-center gap-2 border-t border-gray-50"
                                   >
                                     <Trash2 size={12} /> Delete
@@ -704,7 +722,8 @@ export default function TaskCentrePage() {
                   </div>
                 </div>
               );
-            })
+            })}
+            </>
           )}
         </div>
       )}
@@ -937,6 +956,8 @@ export default function TaskCentrePage() {
           tasks={tasks}
           onUpdateStatus={handleKanbanUpdate}
           onToggleTimer={toggleTimer}
+          onOpenTask={openEditModal}
+          onDeleteTask={deleteTask}
           onAddTask={(status: string) => {
             setFormStatus(status);
             setIsAdding(true);

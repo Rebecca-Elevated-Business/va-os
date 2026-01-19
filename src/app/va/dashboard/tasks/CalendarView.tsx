@@ -16,21 +16,13 @@ import {
   endOfWeek,
 } from "date-fns";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
-import { Task } from "./types";
+import { STATUS_CONFIG, Task } from "./types";
 
 interface CalendarViewProps {
   tasks: Task[];
   onAddTask: (date: string, time?: string) => void;
   onUpdateTask: (taskId: string, updates: Partial<Task>) => void;
 }
-
-// Visual Config for Status Lines
-const STATUS_COLORS: Record<string, string> = {
-  todo: "bg-purple-400",
-  up_next: "bg-blue-400",
-  in_progress: "bg-yellow-400",
-  completed: "bg-green-400",
-};
 
 export default function CalendarView({
   tasks,
@@ -86,7 +78,7 @@ export default function CalendarView({
   };
 
   const getStatusLineColor = (status: string) => {
-    return STATUS_COLORS[status] || STATUS_COLORS["todo"];
+    return STATUS_CONFIG[status]?.color || STATUS_CONFIG["todo"].color;
   };
 
   const getTaskDurationMinutes = (task: Task) => {
@@ -153,7 +145,8 @@ export default function CalendarView({
       {/* 1. CALENDAR HEADER & CONTROLS */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white z-20">
         {/* Left: View Toggle */}
-        <div className="flex bg-gray-100 p-1 rounded-lg">
+        <div className="flex items-center gap-3">
+          <div className="flex bg-gray-100 p-1 rounded-lg">
           <button
             onClick={() => setViewMode("month")}
             className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${
@@ -184,6 +177,12 @@ export default function CalendarView({
           >
             Day
           </button>
+          </div>
+          {viewMode === "month" && (
+            <span className="text-sm font-bold text-[#333333]">
+              {format(currentDate, "MMMM yyyy")}
+            </span>
+          )}
         </div>
 
         {/* Right: Navigation */}

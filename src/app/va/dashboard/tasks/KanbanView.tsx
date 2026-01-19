@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { format } from "date-fns";
 import {
   MoreHorizontal,
@@ -11,7 +11,7 @@ import {
   PlayCircle,
   CheckCircle2,
 } from "lucide-react";
-import { Task } from "./types";
+import { STATUS_CONFIG, Task } from "./types";
 
 interface KanbanViewProps {
   tasks: Task[];
@@ -19,6 +19,8 @@ interface KanbanViewProps {
   onToggleTimer: (task: Task) => Promise<void>;
   onAddTask: (status: string) => void;
   filterStatus: string[]; // Added to handle dynamic column hiding
+  onOpenTask: (task: Task) => void;
+  onDeleteTask: (taskId: string) => void;
 }
 
 // 1. Unified Config to match List & Calendar
@@ -28,7 +30,7 @@ const COLUMNS = [
     id: "up_next",
     title: "Up next",
     icon: ArrowRightCircle,
-    color: "border-blue-200",
+    color: "border-[#e0f2fe]",
   },
   {
     id: "in_progress",
@@ -50,8 +52,12 @@ export default function KanbanView({
   onToggleTimer,
   onAddTask,
   filterStatus,
+  onOpenTask,
+  onDeleteTask,
 }: KanbanViewProps) {
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const [actionMenuId, setActionMenuId] = useState<string | null>(null);
+  const isDraggingRef = useRef(false);
 
   const handleDrop = (e: React.DragEvent, status: string) => {
     e.preventDefault();
@@ -59,6 +65,11 @@ export default function KanbanView({
       onUpdateStatus(draggedTaskId, status);
       setDraggedTaskId(null);
     }
+  };
+
+  const handleCardClick = (task: Task) => {
+    if (isDraggingRef.current) return;
+    onOpenTask(task);
   };
 
   // 2. Filter columns: Only show columns that are active in the filter
@@ -103,18 +114,71 @@ export default function KanbanView({
                   <div
                     key={task.id}
                     draggable
-                    onDragStart={() => setDraggedTaskId(task.id)}
+                    onDragStart={() => {
+                      isDraggingRef.current = true;
+                      setDraggedTaskId(task.id);
+                    }}
+                    onDragEnd={() => {
+                      setTimeout(() => {
+                        isDraggingRef.current = false;
+                      }, 0);
+                    }}
+                    onClick={() => handleCardClick(task)}
                     className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-purple-100 transition-all group"
                   >
                     {/* Card Header: Category & Context */}
                     <div className="flex justify-between items-start mb-3">
-                      <span className="text-[9px] font-black tracking-widest text-[#333333] opacity-70">
-                        {task.category ||
-                          (task.client_id ? "Client" : "Personal")}
-                      </span>
-                      <button className="text-gray-300 hover:text-[#333333]">
-                        <MoreHorizontal size={14} />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`text-[9px] font-black tracking-widest px-2 py-0.5 rounded-full ${STATUS_CONFIG[task.status]?.color || STATUS_CONFIG.todo.color}`}
+                        >
+                          {STATUS_CONFIG[task.status]?.label || "To Do"}
+                        </span>
+                        <span className="text-[9px] font-black tracking-widest text-[#333333] opacity-70">
+                          {task.category ||
+                            (task.client_id ? "Client" : "Personal")}
+                        </span>
+                      </div>
+                      <div className="relative">
+                        <button
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setActionMenuId(
+                              actionMenuId === task.id ? null : task.id
+                            );
+                          }}
+                          className="text-[#333333]"
+                        >
+                          <MoreHorizontal size={14} />
+                        </button>
+                        {actionMenuId === task.id && (
+                          <div
+                            className="absolute right-0 top-full mt-1 w-32 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-1"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            <button
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onOpenTask(task);
+                                setActionMenuId(null);
+                              }}
+                              className="w-full text-left px-4 py-3 text-xs font-bold text-[#333333] hover:bg-gray-50 flex items-center gap-2"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onDeleteTask(task.id);
+                                setActionMenuId(null);
+                              }}
+                              className="w-full text-left px-4 py-3 text-xs font-bold text-red-500 hover:bg-red-50 flex items-center gap-2 border-t border-gray-50"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Task Title */}
