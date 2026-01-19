@@ -583,6 +583,11 @@ export default function TaskCentrePage() {
       )}
 
       <TaskModal
+        key={`${selectedTask?.id || "new"}-${modalPrefill?.status || ""}-${
+          modalPrefill?.startDate || ""
+        }-${modalPrefill?.startTime || ""}-${modalPrefill?.endDate || ""}-${
+          modalPrefill?.endTime || ""
+        }-${isAdding ? "open" : "closed"}`}
         isOpen={isAdding}
         onClose={() => {
           setIsAdding(false);

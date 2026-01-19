@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { supabase } from "@/lib/supabase";
 import { STATUS_CONFIG, Task } from "./types";
@@ -66,18 +66,76 @@ export default function TaskModal({
   onSaved,
   onFallbackRefresh,
 }: TaskModalProps) {
-  const [formTaskName, setFormTaskName] = useState("");
-  const [formDetails, setFormDetails] = useState("");
-  const [formClientId, setFormClientId] = useState("");
-  const [formClientQuery, setFormClientQuery] = useState("");
+  const initialState = useMemo(() => {
+    if (task) {
+      const start = task.scheduled_start
+        ? new Date(task.scheduled_start)
+        : null;
+      const end = task.scheduled_end ? new Date(task.scheduled_end) : null;
+      const due = task.due_date ? new Date(task.due_date) : null;
+      return {
+        formTaskName: task.task_name,
+        formDetails: task.details || "",
+        formClientId: task.client_id || "",
+        formClientQuery: "",
+        formCategory: (task.category ||
+          (task.client_id ? "client" : "personal")) as
+          | "client"
+          | "business"
+          | "personal",
+        formStartDate: start
+          ? format(start, "yyyy-MM-dd")
+          : due
+            ? format(due, "yyyy-MM-dd")
+            : "",
+        formStartTime: start ? format(start, "HH:mm") : "",
+        formEndDate: end ? format(end, "yyyy-MM-dd") : "",
+        formEndTime: end ? format(end, "HH:mm") : "",
+        formStatus: task.status,
+      };
+    }
+
+    const prefillCategory = prefill?.category || "client";
+    const clientId = prefill?.clientId || "";
+    return {
+      formTaskName: "",
+      formDetails: "",
+      formClientId: clientId,
+      formClientQuery: "",
+      formCategory: (lockClient ? "client" : prefillCategory) as
+        | "client"
+        | "business"
+        | "personal",
+      formStartDate: prefill?.startDate || "",
+      formStartTime: prefill?.startTime || "",
+      formEndDate: prefill?.endDate || "",
+      formEndTime: prefill?.endTime || "",
+      formStatus: prefill?.status || "todo",
+    };
+  }, [task, prefill, lockClient]);
+
+  const [formTaskName, setFormTaskName] = useState(
+    initialState.formTaskName
+  );
+  const [formDetails, setFormDetails] = useState(initialState.formDetails);
+  const [formClientId, setFormClientId] = useState(
+    initialState.formClientId
+  );
+  const [formClientQuery, setFormClientQuery] = useState(
+    initialState.formClientQuery
+  );
   const [formCategory, setFormCategory] = useState<
     "client" | "business" | "personal"
-  >("client");
-  const [formStartDate, setFormStartDate] = useState("");
-  const [formStartTime, setFormStartTime] = useState("");
-  const [formEndDate, setFormEndDate] = useState("");
-  const [formEndTime, setFormEndTime] = useState("");
-  const [formStatus, setFormStatus] = useState("todo");
+  >(initialState.formCategory);
+  const [formStartDate, setFormStartDate] = useState(
+    initialState.formStartDate
+  );
+  const [formStartTime, setFormStartTime] = useState(
+    initialState.formStartTime
+  );
+  const [formEndDate, setFormEndDate] = useState(initialState.formEndDate);
+  const [formEndTime, setFormEndTime] = useState(initialState.formEndTime);
+  const [formStatus, setFormStatus] = useState(initialState.formStatus);
 
   const clientSearch = formClientQuery.trim().toLowerCase();
   const filteredClients = clientSearch
@@ -92,56 +150,6 @@ export default function TaskModal({
       ? `${selectedClient.surname} (${selectedClient.business_name})`
       : "";
   }, [clients, formClientId]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    if (task) {
-      setFormTaskName(task.task_name);
-      setFormDetails(task.details || "");
-      setFormClientId(task.client_id || "");
-      setFormClientQuery("");
-      setFormCategory(
-        (task.category || (task.client_id ? "client" : "personal")) as
-          | "client"
-          | "business"
-          | "personal"
-      );
-      setFormStatus(task.status);
-      if (task.scheduled_start) {
-        const start = new Date(task.scheduled_start);
-        setFormStartDate(format(start, "yyyy-MM-dd"));
-        setFormStartTime(format(start, "HH:mm"));
-      } else if (task.due_date) {
-        setFormStartDate(format(new Date(task.due_date), "yyyy-MM-dd"));
-        setFormStartTime("");
-      } else {
-        setFormStartDate("");
-        setFormStartTime("");
-      }
-      if (task.scheduled_end) {
-        const end = new Date(task.scheduled_end);
-        setFormEndDate(format(end, "yyyy-MM-dd"));
-        setFormEndTime(format(end, "HH:mm"));
-      } else {
-        setFormEndDate("");
-        setFormEndTime("");
-      }
-      return;
-    }
-
-    const prefillCategory = prefill?.category || "client";
-    const lockedClientId = lockClient ? prefill?.clientId || "" : "";
-    setFormTaskName("");
-    setFormDetails("");
-    setFormClientId(prefill?.clientId || lockedClientId);
-    setFormClientQuery("");
-    setFormCategory(lockClient ? "client" : prefillCategory);
-    setFormStatus(prefill?.status || "todo");
-    setFormStartDate(prefill?.startDate || "");
-    setFormStartTime(prefill?.startTime || "");
-    setFormEndDate(prefill?.endDate || "");
-    setFormEndTime(prefill?.endTime || "");
-  }, [isOpen, task, prefill, lockClient]);
 
   const handleSaveTask = async () => {
     if (!formTaskName.trim()) return;
@@ -184,7 +192,8 @@ export default function TaskModal({
         .select("*, clients(business_name, surname)")
         .single();
       if (error && error.message?.toLowerCase().includes("details")) {
-        const { details: _details, ...fallbackPayload } = payload;
+        const { details: ignoredDetails, ...fallbackPayload } = payload;
+        void ignoredDetails;
         ({ data, error } = await supabase
           .from("tasks")
           .update(fallbackPayload)
@@ -214,7 +223,8 @@ export default function TaskModal({
         .select("*, clients(business_name, surname)")
         .single();
       if (error && error.message?.toLowerCase().includes("details")) {
-        const { details: _details, ...fallbackPayload } = insertPayload;
+        const { details: ignoredDetails, ...fallbackPayload } = insertPayload;
+        void ignoredDetails;
         ({ data, error } = await supabase
           .from("tasks")
           .insert([fallbackPayload])

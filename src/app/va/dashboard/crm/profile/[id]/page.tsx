@@ -4,8 +4,8 @@ import { useState, useEffect, use, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { FileSignature, FileText, ReceiptText } from "lucide-react";
-import TaskModal from "../../tasks/TaskModal";
-import { Task } from "../../tasks/types";
+import TaskModal from "../../../tasks/TaskModal";
+import { Task } from "../../../tasks/types";
 
 // --- TYPES ---
 type Client = {
@@ -878,6 +878,7 @@ export default function ClientProfilePage({
         </div>
       </section>
       <TaskModal
+        key={`${client.id}-${isTaskModalOpen ? "open" : "closed"}`}
         isOpen={isTaskModalOpen}
         onClose={() => setIsTaskModalOpen(false)}
         clients={[

@@ -9,6 +9,7 @@ export interface Task {
   scheduled_end: string | null;
   total_minutes: number;
   is_running: boolean;
+  is_completed?: boolean;
   start_time: string | null;
   details?: string;
   category?: string; // <--- This is the magic line that fixes the errors
