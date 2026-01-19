@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { FileText, Search, X } from "lucide-react";
 
 type SOPTemplate = {
   id: string;
@@ -12,8 +13,12 @@ type SOPTemplate = {
 };
 
 export default function SOPLibraryPage() {
+  const router = useRouter();
   const [templates, setTemplates] = useState<SOPTemplate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [selectedTemplate, setSelectedTemplate] =
+    useState<SOPTemplate | null>(null);
 
   useEffect(() => {
     async function loadTemplates() {
@@ -30,64 +35,151 @@ export default function SOPLibraryPage() {
     loadTemplates();
   }, []);
 
+  const filteredTemplates = useMemo(() => {
+    if (!search.trim()) return templates;
+    const value = search.toLowerCase();
+    return templates.filter(
+      (template) =>
+        template.title.toLowerCase().includes(value) ||
+        template.description.toLowerCase().includes(value) ||
+        template.category.toLowerCase().includes(value)
+    );
+  }, [search, templates]);
+
   return (
     <div className="text-black">
-      {/* Horizontal Header Info Bar */}
-      <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 mb-8">
-        <h1 className="text-3xl font-bold mb-2">Service Agreement Library</h1>
-        <p className="text-gray-500 max-w-3xl">
-          Deploy professional, pre-structured{" "}
-          <strong>Service Agreements</strong> to your clients. These blueprints
-          define your authority and scope of work, ensuring clear communication
-          and professional boundaries from day one.
-        </p>
+      <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 mb-8">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">
+              Service Agreement Library
+            </h1>
+            <p className="text-gray-500 max-w-2xl">
+              Deploy polished service agreements in minutes. Templates help set
+              clear scope, authority, and delivery standards for each client.
+            </p>
+          </div>
+          <div className="w-full max-w-md">
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">
+              Search Templates
+            </label>
+            <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-purple-100">
+              <Search className="h-4 w-4 text-[#333333]" aria-hidden />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search agreements, categories..."
+                className="w-full bg-transparent text-sm text-gray-700 outline-none"
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       {loading ? (
         <p>Loading blueprints...</p>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8">
-          {templates.map((template) => (
-            <Link
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {filteredTemplates.map((template) => (
+            <button
               key={template.id}
-              href={`/va/dashboard/agreements/view/${template.id}`}
-              className="group flex flex-col items-center text-center space-y-3"
+              onClick={() => setSelectedTemplate(template)}
+              className="group text-left bg-white border border-gray-100 rounded-2xl p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg hover:border-[#9d4edd]"
             >
-              {/* PDF Style Icon Card */}
-              <div className="w-full aspect-3/4 bg-white rounded-lg border-2 border-gray-100 shadow-sm group-hover:border-[#9d4edd] group-hover:shadow-md transition-all flex flex-col items-center justify-center p-6 relative overflow-hidden">
-                {/* Visual "Paper" Accents */}
-                <div className="absolute top-0 right-0 w-8 h-8 bg-gray-50 border-l border-b border-gray-100 rounded-bl-lg" />
-
-                {/* Central Icon (Inbox Envelope Placeholder) */}
-                <div className="text-4xl mb-4 group-hover:scale-110 transition-transform">
-                  📩
+              <div className="flex items-center justify-between mb-6">
+                <div className="h-12 w-12 rounded-2xl bg-gray-50 flex items-center justify-center text-[#333333]">
+                  <FileText className="h-6 w-6" />
                 </div>
-                <div className="h-1 w-12 bg-[#9d4edd] rounded-full mb-4" />
-
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                <span className="text-[10px] font-black text-[#333333] uppercase tracking-widest">
                   {template.category}
                 </span>
               </div>
-
-              <div>
-                <h3 className="font-bold text-sm group-hover:text-[#9d4edd] transition-colors">
-                  {template.title}
-                </h3>
-                <p className="text-[10px] text-gray-400 mt-1 line-clamp-2">
-                  {template.description}
-                </p>
-              </div>
-            </Link>
+              <h3 className="font-bold text-sm text-[#333333] group-hover:text-[#9d4edd] transition-colors uppercase tracking-tight">
+                {template.title}
+              </h3>
+              <p className="text-[11px] text-gray-500 mt-3 leading-relaxed line-clamp-2">
+                {template.description}
+              </p>
+            </button>
           ))}
+        </div>
+      )}
 
-          {/* Placeholder for "Coming Soon" or Custom */}
-          <div className="flex flex-col items-center text-center space-y-3 opacity-50">
-            <div className="w-full aspect-3/4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center">
-              <span className="text-4xl">➕</span>
+      {selectedTemplate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+          <div className="w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-300">
+            <div className="flex items-start justify-between p-6 border-b border-gray-100">
+              <div>
+                <span className="text-xs font-bold text-[#333333] uppercase tracking-widest">
+                  {selectedTemplate.category}
+                </span>
+                <h1 className="text-2xl font-bold text-[#333333]">
+                  {selectedTemplate.title}
+                </h1>
+              </div>
+              <button
+                onClick={() => setSelectedTemplate(null)}
+                className="h-9 w-9 rounded-full border border-gray-200 text-gray-400 hover:text-black hover:border-gray-300 transition"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4 mx-auto" />
+              </button>
             </div>
-            <h3 className="font-bold text-sm text-gray-400">
-              Custom Blueprint
-            </h3>
+
+            <div className="p-6 grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
+              <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+                <h2 className="text-lg font-bold mb-4 uppercase text-[#333333] tracking-tight">
+                  Agreement Summary
+                </h2>
+                <p className="text-gray-700 leading-relaxed mb-6">
+                  This service agreement template defines scope, response
+                  standards, and delivery responsibilities for the selected
+                  client. Customize the clauses during deployment to match each
+                  engagement.
+                </p>
+                <ul className="space-y-3 text-sm text-gray-600">
+                  <li className="flex items-center gap-2">
+                    • Core responsibilities and service boundaries
+                  </li>
+                  <li className="flex items-center gap-2">
+                    • Response times and escalation rules
+                  </li>
+                  <li className="flex items-center gap-2">
+                    • Reporting cadence and communication channels
+                  </li>
+                </ul>
+              </div>
+
+              <div className="bg-gray-50 rounded-xl border border-gray-100 p-6 flex flex-col justify-between gap-6">
+                <div>
+                  <p className="text-[#333333] font-medium">
+                    What you will set up
+                  </p>
+                  <p className="text-sm text-gray-600 mt-2">
+                    Configure agreement details, assign the client, and deploy
+                    the final version to their portal.
+                  </p>
+                </div>
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => setSelectedTemplate(null)}
+                    className="px-4 py-2 text-sm font-bold text-gray-400 hover:text-black"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={() =>
+                      router.push(
+                        `/va/dashboard/agreements/deploy/${selectedTemplate.id}`
+                      )
+                    }
+                    className="bg-[#9d4edd] text-white px-6 py-3 rounded-xl font-bold shadow-md hover:bg-[#7b2cbf] transition-all"
+                  >
+                    Deploy / Set Up for Client
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
