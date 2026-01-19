@@ -2,21 +2,44 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+
+const DOCUMENT_TYPES = [
+  { id: "proposal", label: "Project Proposal", accent: "bg-[#9d4edd]" },
+  { id: "booking_form", label: "Booking Form (Contract)", accent: "bg-black" },
+  { id: "invoice", label: "Invoice", accent: "bg-gray-700" },
+  { id: "upload", label: "Upload Own", accent: "bg-gray-400" },
+] as const;
+
+type DocumentType = (typeof DOCUMENT_TYPES)[number]["id"];
 
 function CreateDocumentForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const typeParamRaw = searchParams.get("type");
+  const typeParam = DOCUMENT_TYPES.some((doc) => doc.id === typeParamRaw)
+    ? (typeParamRaw as DocumentType)
+    : null;
+  const clientIdParam = searchParams.get("clientId");
   const [clients, setClients] = useState<
     { id: string; first_name: string; surname: string; business_name: string }[]
   >([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const [selectedType, setSelectedType] = useState<DocumentType | null>(
+    typeParam
+  );
   const [selectedClient, setSelectedClient] = useState<{
     id: string;
     first_name: string;
     surname: string;
     business_name: string;
   } | null>(null);
+  const isClientLocked = Boolean(clientIdParam);
+
+  useEffect(() => {
+    if (typeParam) setSelectedType(typeParam);
+  }, [typeParam]);
 
   useEffect(() => {
     async function loadClients() {
@@ -24,15 +47,22 @@ function CreateDocumentForm() {
         .from("clients")
         .select("id, first_name, surname, business_name")
         .order("surname");
-      if (data) setClients(data);
+      if (data) {
+        setClients(data);
+        if (clientIdParam) {
+          const match = data.find((client) => client.id === clientIdParam);
+          if (match) {
+            setSelectedClient(match);
+            setSearch(`${match.first_name} ${match.surname}`);
+          }
+        }
+      }
     }
     loadClients();
-  }, []);
+  }, [clientIdParam]);
 
-  const handleCreate = async (
-    type: "proposal" | "booking_form" | "invoice" | "upload"
-  ) => {
-    if (!selectedClient) return;
+  const handleCreate = async () => {
+    if (!selectedClient || !selectedType) return;
     setLoading(true); // Now using the state
 
     const { data, error } = await supabase
@@ -40,8 +70,8 @@ function CreateDocumentForm() {
       .insert([
         {
           client_id: selectedClient.id,
-          type: type,
-          title: `Draft ${type.replace("_", " ")}`,
+          type: selectedType,
+          title: `Draft ${selectedType.replace("_", " ")}`,
           status: "draft",
           content: { sections: [] },
         },
@@ -50,7 +80,7 @@ function CreateDocumentForm() {
       .single();
 
     if (!error) {
-      router.push(`/va/dashboard/documents/edit-${type}/${data.id}`);
+      router.push(`/va/dashboard/documents/edit-${selectedType}/${data.id}`);
     } else {
       alert("Error: " + error.message);
       setLoading(false); // Reset on error
@@ -62,60 +92,160 @@ function CreateDocumentForm() {
       c.surname.toLowerCase().includes(search.toLowerCase()) ||
       c.business_name?.toLowerCase().includes(search.toLowerCase())
   );
+  const clientList = search ? filteredClients : clients;
 
   return (
-    <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl border border-gray-100 max-w-xl mx-auto">
-      <div className="text-center mb-8">
+    <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl border border-gray-100 max-w-5xl mx-auto">
+      <div className="flex flex-col items-center text-center mb-8 gap-2">
         <h2 className="text-2xl font-black text-gray-900 tracking-tight">
           Generate Document
         </h2>
         <p className="text-sm text-gray-400 font-medium">
-          Select a client and choose document type
+          Select a document type and match it with a client
         </p>
       </div>
 
-      <div className="space-y-6">
-        <div>
-          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block ml-1">
-            Search Client
-          </label>
-          <input
-            type="text"
-            placeholder="Search by surname or business..."
-            className="w-full p-4 border-2 border-gray-50 rounded-2xl outline-none focus:ring-4 focus:ring-purple-50 focus:border-[#9d4edd] bg-gray-50 text-black transition-all"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setSelectedClient(null);
-            }}
-          />
-
-          {search && !selectedClient && (
-            <div className="mt-2 border border-gray-100 rounded-2xl max-h-48 overflow-y-auto divide-y shadow-xl bg-white animate-in fade-in slide-in-from-top-2">
-              {filteredClients.map((c) => (
+      <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+        <div className="space-y-4">
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+            Document Type
+          </p>
+          {selectedType ? (
+            <div className="p-5 rounded-2xl border border-gray-100 bg-gray-50 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-black text-gray-400 uppercase tracking-widest">
+                  Selected
+                </p>
+                <p className="text-lg font-bold text-gray-900">
+                  {
+                    DOCUMENT_TYPES.find((doc) => doc.id === selectedType)
+                      ?.label
+                  }
+                </p>
+              </div>
+              {!typeParam && (
                 <button
-                  key={c.id}
-                  disabled={loading}
-                  onClick={() => {
-                    setSelectedClient(c);
-                    setSearch(`${c.first_name} ${c.surname}`);
-                  }}
-                  className="w-full text-left p-4 hover:bg-purple-50 flex justify-between items-center transition-colors disabled:opacity-50"
+                  onClick={() => setSelectedType(null)}
+                  className="text-xs font-bold text-gray-400 hover:text-black uppercase tracking-widest"
                 >
-                  <span className="font-bold text-gray-900">
-                    {c.first_name} {c.surname}
-                  </span>
-                  <span className="text-[10px] font-black text-[#9d4edd] bg-purple-50 px-2 py-1 rounded-lg uppercase">
-                    {c.business_name || "Personal"}
-                  </span>
+                  Change
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="grid gap-3">
+              {DOCUMENT_TYPES.map((doc) => (
+                <button
+                  key={doc.id}
+                  onClick={() => setSelectedType(doc.id)}
+                  className="border border-gray-100 rounded-2xl p-4 text-left hover:border-[#9d4edd] hover:shadow-sm transition flex items-center justify-between"
+                >
+                  <span className="font-bold text-gray-900">{doc.label}</span>
+                  <span
+                    className={`h-3 w-3 rounded-full ${doc.accent}`}
+                    aria-hidden
+                  />
                 </button>
               ))}
             </div>
           )}
+
+          <div className="rounded-2xl border border-purple-100 bg-purple-50 p-5 text-sm text-purple-900">
+            <p className="font-semibold mb-2">
+              Once generated, the draft opens for editing.
+            </p>
+            <p className="text-purple-800">
+              Proposals, booking forms, and invoices each have different sections
+              and validation logic, so the initial selection matters.
+            </p>
+          </div>
         </div>
 
-        {selectedClient && (
-          <div className="space-y-4 animate-in fade-in zoom-in duration-300">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+              Client Selection
+            </p>
+            {selectedClient && !isClientLocked && (
+              <button
+                onClick={() => {
+                  setSelectedClient(null);
+                  setSearch("");
+                }}
+                className="text-xs font-bold text-gray-300 hover:text-red-400 transition-colors uppercase tracking-widest"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
+          <div className="rounded-2xl border border-gray-100 p-4 bg-white shadow-sm">
+            {isClientLocked && selectedClient ? (
+              <div className="text-center py-6">
+                <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-2">
+                  Client Preselected from CRM
+                </p>
+                <p className="text-lg font-bold text-gray-900">
+                  {selectedClient.first_name} {selectedClient.surname}
+                </p>
+                <p className="text-xs text-gray-400 mt-2">
+                  Documents from CRM are generated directly for this client.
+                </p>
+              </div>
+            ) : (
+              <>
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">
+                  Search Client
+                </label>
+                <input
+                  type="text"
+                  placeholder="Search by surname or business..."
+                  className="w-full p-4 border-2 border-gray-50 rounded-2xl outline-none focus:ring-4 focus:ring-purple-50 focus:border-[#9d4edd] bg-gray-50 text-black transition-all"
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setSelectedClient(null);
+                  }}
+                />
+
+                <div className="mt-4 max-h-64 overflow-y-auto grid gap-2">
+                  {clientList.length === 0 ? (
+                    <div className="text-center text-xs text-gray-400 py-6">
+                      No clients match your search.
+                    </div>
+                  ) : (
+                    clientList.map((c) => {
+                      const isActive = selectedClient?.id === c.id;
+                      return (
+                        <button
+                          key={c.id}
+                          disabled={loading}
+                          onClick={() => {
+                            setSelectedClient(c);
+                            setSearch(`${c.first_name} ${c.surname}`);
+                          }}
+                          className={`w-full text-left p-4 rounded-xl border transition flex justify-between items-center ${
+                            isActive
+                              ? "border-[#9d4edd] bg-purple-50"
+                              : "border-gray-100 hover:border-[#9d4edd]"
+                          }`}
+                        >
+                          <span className="font-bold text-gray-900">
+                            {c.first_name} {c.surname}
+                          </span>
+                          <span className="text-[10px] font-black text-[#9d4edd] bg-purple-100 px-2 py-1 rounded-lg uppercase">
+                            {c.business_name || "Personal"}
+                          </span>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+
+          {selectedClient && (
             <div className="p-4 bg-green-50 border border-green-100 rounded-2xl text-center">
               <p className="text-[10px] text-green-600 font-black uppercase tracking-widest mb-1">
                 Target Client
@@ -124,52 +254,16 @@ function CreateDocumentForm() {
                 {selectedClient.first_name} {selectedClient.surname}
               </p>
             </div>
+          )}
 
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                disabled={loading}
-                onClick={() => handleCreate("proposal")}
-                className="bg-[#9d4edd] text-white p-4 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-[#7b2cbf] transition-all shadow-lg shadow-purple-100 disabled:bg-gray-300"
-              >
-                {loading ? "..." : "Proposal"}
-              </button>
-              <button
-                disabled={loading}
-                onClick={() => handleCreate("booking_form")}
-                className="bg-gray-900 text-white p-4 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-black transition-all disabled:bg-gray-300"
-              >
-                {loading ? "..." : "Booking Form"}
-              </button>
-              <button
-                disabled={loading}
-                onClick={() => handleCreate("invoice")}
-                className="bg-gray-100 text-gray-600 p-4 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-all disabled:bg-gray-300"
-              >
-                {loading ? "..." : "Invoice"}
-              </button>
-              <button
-                disabled={loading}
-                onClick={() => handleCreate("upload")}
-                className="border-2 border-dashed border-gray-200 text-gray-400 p-4 rounded-2xl font-bold text-xs uppercase tracking-widest hover:border-[#9d4edd] hover:text-[#9d4edd] transition-all disabled:bg-gray-300"
-              >
-                {loading ? "..." : "Upload Own"}
-              </button>
-            </div>
-
-            <div className="text-center pt-2">
-              <button
-                disabled={loading}
-                onClick={() => {
-                  setSelectedClient(null);
-                  setSearch("");
-                }}
-                className="text-xs font-bold text-gray-300 hover:text-red-400 transition-colors uppercase tracking-widest disabled:hidden"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
+          <button
+            disabled={loading || !selectedClient || !selectedType}
+            onClick={handleCreate}
+            className="w-full bg-[#9d4edd] text-white p-4 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-[#7b2cbf] transition-all shadow-lg shadow-purple-100 disabled:bg-gray-300"
+          >
+            {loading ? "Generating..." : "Generate Document"}
+          </button>
+        </div>
       </div>
     </div>
   );
