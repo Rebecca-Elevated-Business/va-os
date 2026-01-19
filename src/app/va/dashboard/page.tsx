@@ -1,45 +1,461 @@
 "use client";
 
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { supabase } from "@/lib/supabase";
+import { Task } from "./tasks/types";
+
+type InboxMessage = {
+  id: string;
+  created_at: string;
+  client_id: string;
+  type: string;
+  message: string;
+  is_read: boolean;
+  is_completed: boolean;
+  clients: {
+    first_name: string;
+    surname: string;
+    business_name: string;
+    va_id?: string;
+  };
+};
+
+type CRMClient = {
+  id: string;
+  first_name: string;
+  surname: string;
+  business_name: string;
+  status: string;
+};
+
+type TimeEntry = {
+  id: string;
+  task_id: string;
+  started_at: string;
+  ended_at: string;
+  duration_minutes: number;
+};
+
+const STATUS_OPTIONS = ["Enquiry", "Provisional", "Won", "Lost", "Paused"];
+
+const getTodayDateString = () => new Date().toISOString().split("T")[0];
+
+const getDateKey = (value: string | null) => {
+  if (!value) return null;
+  return value.includes("T") ? value.split("T")[0] : value;
+};
+
+const formatDuration = (totalMinutes: number) => {
+  const safeMinutes = Math.max(0, Math.floor(totalMinutes));
+  const hours = Math.floor(safeMinutes / 60);
+  const minutes = safeMinutes % 60;
+  return `${hours}h ${String(minutes).padStart(2, "0")}m`;
+};
+
+const formatDateLabel = (value: string) =>
+  new Date(value).toLocaleDateString(undefined, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+
 export default function VADashboard() {
+  const [userId, setUserId] = useState<string | null>(null);
+  const [agendaDate, setAgendaDate] = useState(getTodayDateString());
+  const [todayDate, setTodayDate] = useState(getTodayDateString());
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [messages, setMessages] = useState<InboxMessage[]>([]);
+  const [clients, setClients] = useState<CRMClient[]>([]);
+  const [selectedStatus, setSelectedStatus] = useState("Enquiry");
+  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
+  const [note, setNote] = useState("");
+  const [noteUpdatedAt, setNoteUpdatedAt] = useState<string | null>(null);
+  const [savingNote, setSavingNote] = useState(false);
+
+  const fetchDashboardData = useCallback(async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    setUserId(user.id);
+
+    const [taskRes, clientRes, messageRes, noteRes] = await Promise.all([
+      supabase
+        .from("tasks")
+        .select("*, clients(business_name, surname)")
+        .eq("va_id", user.id)
+        .order("due_date", { ascending: true }),
+      supabase
+        .from("clients")
+        .select("id, first_name, surname, business_name, status")
+        .eq("va_id", user.id)
+        .order("surname", { ascending: true }),
+      supabase
+        .from("client_requests")
+        .select(
+          "id, created_at, client_id, type, message, is_read, is_completed, clients(first_name, surname, business_name, va_id)"
+        )
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("va_dashboard_notes")
+        .select("content, updated_at")
+        .eq("va_id", user.id),
+    ]);
+
+    if (taskRes.data) setTasks(taskRes.data as Task[]);
+    if (clientRes.data) setClients(clientRes.data as CRMClient[]);
+    if (messageRes.data) {
+      const filtered = (messageRes.data as InboxMessage[]).filter((item) =>
+        item.clients?.va_id ? item.clients.va_id === user.id : true
+      );
+      setMessages(filtered);
+    }
+    if (noteRes.data && noteRes.data.length > 0) {
+      setNote(noteRes.data[0].content || "");
+      setNoteUpdatedAt(noteRes.data[0].updated_at || null);
+    }
+  }, []);
+
+  const loadTimeEntries = useCallback(async (dateValue: string) => {
+    if (!userId) return;
+    const startIso = new Date(`${dateValue}T00:00:00`).toISOString();
+    const endIso = new Date(`${dateValue}T23:59:59.999`).toISOString();
+    const { data } = await supabase
+      .from("time_entries")
+      .select("id, task_id, started_at, ended_at, duration_minutes")
+      .eq("va_id", userId)
+      .gte("started_at", startIso)
+      .lte("started_at", endIso);
+    setTimeEntries((data as TimeEntry[]) || []);
+  }, [userId]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  useEffect(() => {
+    if (!userId) return;
+    loadTimeEntries(todayDate);
+  }, [loadTimeEntries, todayDate, userId]);
+
+  useEffect(() => {
+    const now = new Date();
+    const nextMidnight = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() + 1
+    );
+    const timeout = nextMidnight.getTime() - now.getTime();
+    const timer = setTimeout(() => {
+      const nextDay = getTodayDateString();
+      setTodayDate(nextDay);
+      setAgendaDate((prev) => (prev ? prev : nextDay));
+    }, timeout);
+    return () => clearTimeout(timer);
+  }, [todayDate]);
+
+  const overdueTasks = useMemo(() => {
+    return tasks
+      .filter((task) => {
+        if (!task.due_date) return false;
+        const due = getDateKey(task.due_date);
+        if (!due) return false;
+        return due < agendaDate && task.status !== "completed";
+      })
+      .sort((a, b) => (a.due_date || "").localeCompare(b.due_date || ""));
+  }, [agendaDate, tasks]);
+
+  const dayTasks = useMemo(() => {
+    const matchesDate = (value: string | null) =>
+      getDateKey(value) === agendaDate;
+
+    return tasks
+      .filter((task) => {
+        if (task.status === "completed") return false;
+        if (task.due_date && matchesDate(task.due_date)) return true;
+        if (task.scheduled_start && matchesDate(task.scheduled_start)) return true;
+        if (task.scheduled_end && matchesDate(task.scheduled_end)) return true;
+        return false;
+      })
+      .filter((task) => {
+        if (!task.due_date) return true;
+        const due = getDateKey(task.due_date);
+        return !due || due >= agendaDate;
+      })
+      .sort((a, b) => (a.due_date || "").localeCompare(b.due_date || ""));
+  }, [agendaDate, tasks]);
+
+  const unreadCount = messages.filter(
+    (msg) => !msg.is_read && !msg.is_completed
+  ).length;
+  const pendingApprovalCount = messages.filter(
+    (msg) => msg.type === "document" && !msg.is_completed
+  ).length;
+  const replyNeededCount = messages.filter(
+    (msg) => msg.type === "work" && !msg.is_completed
+  ).length;
+
+  const opportunityClients = useMemo(
+    () => clients.filter((client) => client.status === selectedStatus),
+    [clients, selectedStatus]
+  );
+
+  const totalMinutesToday = useMemo(
+    () => timeEntries.reduce((sum, entry) => sum + entry.duration_minutes, 0),
+    [timeEntries]
+  );
+
+  const saveNote = async () => {
+    if (!userId) return;
+    setSavingNote(true);
+    const updatedAt = new Date().toISOString();
+    const { error } = await supabase.from("va_dashboard_notes").upsert(
+      {
+        va_id: userId,
+        content: note,
+        updated_at: updatedAt,
+      },
+      { onConflict: "va_id" }
+    );
+    setSavingNote(false);
+    if (!error) setNoteUpdatedAt(updatedAt);
+  };
+
   return (
-    <main className="animate-in fade-in duration-500">
-      {/* 1. Header (Now using global h1 rule) */}
-      <div className="mb-8">
+    <main className="animate-in fade-in duration-500 text-[#333333]">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <h1>Dashboard</h1>
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-[0.3em]">
+          {formatDateLabel(todayDate)}
+        </p>
       </div>
 
-      {/* 2. First Row: 3 Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {[1, 2, 3].map((num) => (
-          <div
-            key={num}
-            className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
-          >
-            <div className="px-6 py-4 border-b border-gray-50">
-              <h3>Dash Card {num}</h3>
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden xl:col-span-2">
+          <div className="px-6 py-4 border-b border-gray-50 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-base font-bold">Agenda</h3>
+              <p className="text-xs text-gray-400">
+                Overdue tasks appear first
+              </p>
             </div>
-            <div className="p-6 min-h-32 flex items-center justify-center text-gray-300 italic text-sm">
-              Content placeholder
-            </div>
+            <input
+              type="date"
+              value={agendaDate}
+              onChange={(event) => setAgendaDate(event.target.value)}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-[#333333] focus:ring-2 focus:ring-[#9d4edd] outline-none"
+            />
           </div>
-        ))}
+          <div className="p-6 space-y-6 min-h-[320px]">
+            {overdueTasks.length === 0 && dayTasks.length === 0 ? (
+              <div className="text-sm text-gray-400 italic text-center py-10">
+                Nothing scheduled for this day yet.
+              </div>
+            ) : (
+              <>
+                {overdueTasks.length > 0 && (
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-red-400 mb-3">
+                      Overdue
+                    </p>
+                    <div className="space-y-3">
+                      {overdueTasks.map((task) => (
+                        <Link
+                          key={task.id}
+                          href={`/va/dashboard/tasks?taskId=${task.id}`}
+                          className="block rounded-xl border border-red-100 bg-red-50/40 px-4 py-3 hover:border-red-200 transition-colors"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold">
+                                {task.task_name}
+                              </p>
+                              <p className="text-xs text-gray-400">
+                                {task.clients?.surname ||
+                                  task.clients?.business_name ||
+                                  "Internal"}
+                              </p>
+                            </div>
+                            <span className="text-[10px] font-bold uppercase text-red-500">
+                              Due {getDateKey(task.due_date || "")}
+                            </span>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {dayTasks.length > 0 && (
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-3">
+                      {formatDateLabel(agendaDate)}
+                    </p>
+                    <div className="space-y-3">
+                      {dayTasks.map((task) => (
+                        <Link
+                          key={task.id}
+                          href={`/va/dashboard/tasks?taskId=${task.id}`}
+                          className="block rounded-xl border border-gray-100 bg-white px-4 py-3 hover:border-[#9d4edd]/40 transition-colors"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold">
+                                {task.task_name}
+                              </p>
+                              <p className="text-xs text-gray-400">
+                                {task.clients?.surname ||
+                                  task.clients?.business_name ||
+                                  "Internal"}
+                              </p>
+                            </div>
+                            {task.due_date && (
+                              <span className="text-[10px] font-bold uppercase text-gray-500">
+                                Due {getDateKey(task.due_date)}
+                              </span>
+                            )}
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </section>
+
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-50">
+            <h3 className="text-base font-bold">Priority Inbox</h3>
+            <p className="text-xs text-gray-400">
+              Unread, approvals, and action-needed
+            </p>
+          </div>
+          <div className="p-6 space-y-4">
+            <div className="flex items-center justify-between text-sm font-semibold">
+              <span>Unread messages</span>
+              <span className="text-[#9d4edd]">{unreadCount}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm font-semibold">
+              <span>Pending approvals</span>
+              <span className="text-[#9d4edd]">{pendingApprovalCount}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm font-semibold">
+              <span>Client replies needing action</span>
+              <span className="text-[#9d4edd]">{replyNeededCount}</span>
+            </div>
+            <Link
+              href="/va/dashboard/inbox"
+              className="inline-flex items-center justify-center w-full mt-4 text-xs font-bold uppercase tracking-widest text-[#9d4edd] border border-[#9d4edd] rounded-lg py-2 hover:bg-[#9d4edd] hover:text-white transition-colors"
+            >
+              Open Inbox
+            </Link>
+          </div>
+        </section>
       </div>
 
-      {/* 3. Second Row: 2 Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-        {[4, 5].map((num) => (
-          <div
-            key={num}
-            className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
-          >
-            <div className="px-6 py-4 border-b border-gray-50">
-              <h3>Dash Card {num}</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-50 flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-base font-bold">Opportunity Status</h3>
+              <p className="text-xs text-gray-400">
+                Clients at this pipeline stage
+              </p>
             </div>
-            <div className="p-6 min-h-48 flex items-center justify-center text-gray-300 italic text-sm">
-              Extended content placeholder
+            <select
+              value={selectedStatus}
+              onChange={(event) => setSelectedStatus(event.target.value)}
+              className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 focus:ring-2 focus:ring-[#9d4edd] outline-none"
+            >
+              {STATUS_OPTIONS.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="p-6 space-y-3 min-h-[220px]">
+            {opportunityClients.length === 0 ? (
+              <div className="text-sm text-gray-400 italic text-center py-10">
+                No clients in this status.
+              </div>
+            ) : (
+              opportunityClients.slice(0, 5).map((client) => (
+                <Link
+                  key={client.id}
+                  href={`/va/dashboard/crm/profile/${client.id}`}
+                  className="block rounded-xl border border-gray-100 px-4 py-3 hover:border-[#9d4edd]/40 transition-colors"
+                >
+                  <p className="text-sm font-semibold">
+                    {client.first_name} {client.surname}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {client.business_name || "No business name"}
+                  </p>
+                </Link>
+              ))
+            )}
+          </div>
+        </section>
+
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-50">
+            <h3 className="text-base font-bold">Time Today</h3>
+            <p className="text-xs text-gray-400">{formatDateLabel(todayDate)}</p>
+          </div>
+          <div className="p-6 space-y-4 min-h-[220px] flex flex-col">
+            <div className="text-4xl font-black tracking-tight">
+              {formatDuration(totalMinutesToday)}
+            </div>
+            <p className="text-xs text-gray-400">
+              Based on entries logged in Time Tracking.
+            </p>
+            <Link
+              href="/va/dashboard/time-tracking"
+              className="mt-auto inline-flex items-center justify-center w-full text-xs font-bold uppercase tracking-widest text-[#9d4edd] border border-[#9d4edd] rounded-lg py-2 hover:bg-[#9d4edd] hover:text-white transition-colors"
+            >
+              Open Time Tracking
+            </Link>
+          </div>
+        </section>
+
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-50">
+            <h3 className="text-base font-bold">Quick Add Notes</h3>
+            <p className="text-xs text-gray-400">
+              Brain dump sticky note for later
+            </p>
+          </div>
+          <div className="p-6 space-y-4 min-h-[220px] flex flex-col">
+            <textarea
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              placeholder="Jot anything down..."
+              className="flex-1 w-full rounded-xl border border-gray-200 p-4 text-sm text-[#333333] focus:ring-2 focus:ring-[#9d4edd] outline-none resize-none"
+            />
+            <div className="flex items-center justify-between text-xs text-gray-400">
+              <span>
+                {noteUpdatedAt
+                  ? `Last saved ${new Date(noteUpdatedAt).toLocaleTimeString()}`
+                  : "Not saved yet"}
+              </span>
+              <button
+                onClick={saveNote}
+                disabled={savingNote}
+                className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors ${
+                  savingNote
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-[#9d4edd] text-white hover:bg-[#7b2cbf]"
+                }`}
+              >
+                {savingNote ? "Saving..." : "Save"}
+              </button>
             </div>
           </div>
-        ))}
+        </section>
       </div>
     </main>
   );

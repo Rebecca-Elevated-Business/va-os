@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { addMinutes, format } from "date-fns";
 import {
@@ -80,6 +81,8 @@ export default function TaskCentrePage() {
     endDate?: string;
     endTime?: string;
   } | null>(null);
+  const searchParams = useSearchParams();
+  const deepLinkHandled = useRef(false);
 
   // --- DATA FETCHING ---
   const fetchData = useCallback(async () => {
@@ -197,6 +200,19 @@ export default function TaskCentrePage() {
     setModalPrefill(null);
     setActionMenuId(null); // Close the inline menu
   };
+
+  useEffect(() => {
+    const taskId = searchParams.get("taskId");
+    if (!taskId || deepLinkHandled.current || tasks.length === 0) return;
+    const target = tasks.find((task) => task.id === taskId);
+    if (!target) return;
+    setView("list");
+    setSelectedTask(target);
+    setIsAdding(true);
+    setModalPrefill(null);
+    setActionMenuId(null);
+    deepLinkHandled.current = true;
+  }, [searchParams, tasks]);
 
   const updateTaskStatus = async (taskId: string, newStatus: string) => {
     await supabase.from("tasks").update({ status: newStatus }).eq("id", taskId);
