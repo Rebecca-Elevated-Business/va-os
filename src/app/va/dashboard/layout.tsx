@@ -15,6 +15,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  Timer,
 } from "lucide-react";
 
 export default function VADashboardLayout({
@@ -93,6 +94,7 @@ export default function VADashboardLayout({
   const navItems = [
     { name: "Dashboard", href: "/va/dashboard", icon: LayoutDashboard },
     { name: "Task Centre", href: "/va/dashboard/tasks", icon: ClipboardList },
+    { name: "Time Tracking", href: "/va/dashboard/time-tracking", icon: Timer },
     { name: "Inbox", href: "/va/dashboard/inbox", icon: Mail },
     { name: "CRM", href: "/va/dashboard/crm", icon: Users },
     { name: "Documents", href: "/va/dashboard/documents", icon: FileText },

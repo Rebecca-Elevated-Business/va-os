@@ -170,22 +170,36 @@ export default function ClientProfilePage({
         1,
         Math.round((end - start) / 60000)
       );
+      const endTime = new Date().toISOString();
 
       await supabase
         .from("tasks")
         .update({
           is_running: false,
           start_time: null,
+          end_time: endTime,
           total_minutes: task.total_minutes + currentSessionMinutes,
         })
         .eq("id", task.id);
+      await supabase.from("time_entries").insert([
+        {
+          task_id: task.id,
+          va_id: task.va_id,
+          started_at: task.start_time,
+          ended_at: endTime,
+          duration_minutes: currentSessionMinutes,
+        },
+      ]);
     } else {
+      const startTime = new Date().toISOString();
       // STARTING: Mark as running and save start timestamp
       await supabase
         .from("tasks")
         .update({
           is_running: true,
-          start_time: new Date().toISOString(),
+          start_time: startTime,
+          end_time: null,
+          status: "in_progress",
         })
         .eq("id", task.id);
     }

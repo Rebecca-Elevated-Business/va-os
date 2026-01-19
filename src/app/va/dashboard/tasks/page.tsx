@@ -200,6 +200,7 @@ export default function TaskCentrePage() {
   const toggleTimer = async (task: Task) => {
     if (task.is_running) {
       if (!task.start_time) return;
+      const endTime = new Date().toISOString();
       const sessionMins = Math.max(
         1,
         Math.round(
@@ -211,26 +212,40 @@ export default function TaskCentrePage() {
         .update({
           is_running: false,
           start_time: null,
+          end_time: endTime,
           total_minutes: task.total_minutes + sessionMins,
         })
         .eq("id", task.id);
+      await supabase.from("time_entries").insert([
+        {
+          task_id: task.id,
+          va_id: task.va_id,
+          started_at: task.start_time,
+          ended_at: endTime,
+          duration_minutes: sessionMins,
+        },
+      ]);
       patchTask(task.id, {
         is_running: false,
         start_time: null,
+        end_time: endTime,
         total_minutes: task.total_minutes + sessionMins,
       });
     } else {
+      const startTime = new Date().toISOString();
       await supabase
         .from("tasks")
         .update({
           is_running: true,
-          start_time: new Date().toISOString(),
+          start_time: startTime,
+          end_time: null,
           status: "in_progress",
         })
         .eq("id", task.id);
       patchTask(task.id, {
         is_running: true,
-        start_time: new Date().toISOString(),
+        start_time: startTime,
+        end_time: null,
         status: "in_progress",
       });
     }
