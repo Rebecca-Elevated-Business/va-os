@@ -288,12 +288,7 @@ export default function TaskCentrePage() {
     const matchedClient = task.client_id
       ? clients.find((c) => c.id === task.client_id)
       : null;
-    const clientLabel = matchedClient
-      ? `${matchedClient.surname} (${matchedClient.business_name})`
-      : task.clients
-        ? `${task.clients.surname} (${task.clients.business_name})`
-        : "";
-    setFormClientQuery(clientLabel);
+    setFormClientQuery("");
     setFormStatus(task.status);
     setFormStartDateTime(
       task.scheduled_start
@@ -743,12 +738,7 @@ export default function TaskCentrePage() {
                     onChange={(e) => {
                       const value = e.target.value;
                       setFormClientQuery(value);
-                      const exactMatch = clients.find(
-                        (c) =>
-                          `${c.surname} (${c.business_name})`.toLowerCase() ===
-                          value.toLowerCase()
-                      );
-                      setFormClientId(exactMatch ? exactMatch.id : "");
+                      setFormClientId("");
                     }}
                     placeholder="Type a client name"
                   />
@@ -760,9 +750,7 @@ export default function TaskCentrePage() {
                           type="button"
                           onClick={() => {
                             setFormClientId(c.id);
-                            setFormClientQuery(
-                              `${c.surname} (${c.business_name})`
-                            );
+                            setFormClientQuery("");
                           }}
                           className="w-full text-left px-3 py-2 text-xs font-bold text-[#333333] hover:bg-gray-50 transition-colors"
                         >
@@ -775,6 +763,19 @@ export default function TaskCentrePage() {
                         </p>
                       )}
                     </div>
+                  )}
+                  {formClientId && (
+                    <p className="mt-2 text-xs font-bold text-[#333333]">
+                      Assigned client:{" "}
+                      {(() => {
+                        const selectedClient = clients.find(
+                          (c) => c.id === formClientId
+                        );
+                        return selectedClient
+                          ? `${selectedClient.surname} (${selectedClient.business_name})`
+                          : "Client selected";
+                      })()}
+                    </p>
                   )}
                 </div>
               )}
