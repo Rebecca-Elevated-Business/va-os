@@ -179,6 +179,22 @@ export default function TaskCentrePage() {
   }, []);
 
   // --- ACTIONS ---
+  const upsertTask = (task: Task) => {
+    setTasks((prev) => {
+      const index = prev.findIndex((t) => t.id === task.id);
+      if (index === -1) return [task, ...prev];
+      const next = [...prev];
+      next[index] = { ...prev[index], ...task };
+      return next;
+    });
+  };
+
+  const patchTask = (taskId: string, updates: Partial<Task>) => {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t))
+    );
+  };
+
   const handleSaveTask = async () => {
     if (!formTaskName.trim()) return;
     const {
@@ -187,7 +203,7 @@ export default function TaskCentrePage() {
 
     // Check if we are updating an existing task or creating new
     if (selectedTask) {
-      await supabase
+      const { data } = await supabase
         .from("tasks")
         .update({
           task_name: formTaskName,
@@ -196,20 +212,36 @@ export default function TaskCentrePage() {
           due_date: formDate || null,
           category: formCategory,
         })
-        .eq("id", selectedTask.id);
+        .eq("id", selectedTask.id)
+        .select("*, clients(business_name, surname)")
+        .single();
+      if (data) {
+        upsertTask(data as Task);
+      } else {
+        await fetchData();
+      }
     } else {
-      await supabase.from("tasks").insert([
-        {
-          va_id: user?.id,
-          task_name: formTaskName,
-          client_id: formClientId || null,
-          status: formStatus,
-          due_date: formDate || null,
-          total_minutes: 0,
-          is_running: false,
-          category: formCategory,
-        },
-      ]);
+      const { data } = await supabase
+        .from("tasks")
+        .insert([
+          {
+            va_id: user?.id,
+            task_name: formTaskName,
+            client_id: formClientId || null,
+            status: formStatus,
+            due_date: formDate || null,
+            total_minutes: 0,
+            is_running: false,
+            category: formCategory,
+          },
+        ])
+        .select("*, clients(business_name, surname)")
+        .single();
+      if (data) {
+        upsertTask(data as Task);
+      } else {
+        await fetchData();
+      }
     }
 
     setIsAdding(false);
@@ -246,11 +278,13 @@ export default function TaskCentrePage() {
 
   const updateTaskStatus = async (taskId: string, newStatus: string) => {
     await supabase.from("tasks").update({ status: newStatus }).eq("id", taskId);
+    patchTask(taskId, { status: newStatus });
     setStatusMenuId(null);
   };
 
   const updateTask = async (taskId: string, updates: Partial<Task>) => {
     await supabase.from("tasks").update(updates).eq("id", taskId);
+    patchTask(taskId, updates);
   };
 
   const handleKanbanUpdate = (taskId: string, newStatus: string) => {
@@ -260,6 +294,7 @@ export default function TaskCentrePage() {
   const deleteTask = async (taskId: string) => {
     if (!confirm("Delete this task permanently?")) return;
     await supabase.from("tasks").delete().eq("id", taskId);
+    setTasks((prev) => prev.filter((t) => t.id !== taskId));
     setActionMenuId(null);
   };
 
@@ -280,6 +315,11 @@ export default function TaskCentrePage() {
           total_minutes: task.total_minutes + sessionMins,
         })
         .eq("id", task.id);
+      patchTask(task.id, {
+        is_running: false,
+        start_time: null,
+        total_minutes: task.total_minutes + sessionMins,
+      });
     } else {
       await supabase
         .from("tasks")
@@ -289,6 +329,11 @@ export default function TaskCentrePage() {
           status: "in_progress",
         })
         .eq("id", task.id);
+      patchTask(task.id, {
+        is_running: true,
+        start_time: new Date().toISOString(),
+        status: "in_progress",
+      });
     }
   };
 
