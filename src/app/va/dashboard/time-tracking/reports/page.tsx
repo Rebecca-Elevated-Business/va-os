@@ -60,6 +60,19 @@ type SavedReportRow = {
   } | null;
 };
 
+type SavedReportRowRaw = Omit<SavedReportRow, "clients"> & {
+  clients:
+    | {
+        business_name: string | null;
+        surname: string | null;
+      }
+    | {
+        business_name: string | null;
+        surname: string | null;
+      }[]
+    | null;
+};
+
 const formatDuration = (totalSeconds: number) => {
   const safeSeconds = Math.max(0, Math.floor(totalSeconds));
   const hours = Math.floor(safeSeconds / 3600);
@@ -122,7 +135,14 @@ export default function TimeReportsPage() {
         )
         .eq("va_user_id", userId)
         .order("created_at", { ascending: false });
-      setSavedReports((data as SavedReportRow[]) || []);
+      const normalized =
+        (data as SavedReportRowRaw[] | null)?.map((row) => ({
+          ...row,
+          clients: Array.isArray(row.clients)
+            ? row.clients[0] || null
+            : row.clients,
+        })) || [];
+      setSavedReports(normalized);
       setLoadingSavedReports(false);
     }
     loadSavedReports();
@@ -132,7 +152,6 @@ export default function TimeReportsPage() {
     if (!userId) return;
     const query = clientSearch.trim();
     if (query.length < 2) {
-      setClientResults([]);
       return;
     }
 
@@ -275,7 +294,14 @@ export default function TimeReportsPage() {
       )
       .eq("va_user_id", userId)
       .order("created_at", { ascending: false });
-    setSavedReports((savedData as SavedReportRow[]) || []);
+    const refreshed =
+      (savedData as SavedReportRowRaw[] | null)?.map((row) => ({
+        ...row,
+        clients: Array.isArray(row.clients)
+          ? row.clients[0] || null
+          : row.clients,
+      })) || [];
+    setSavedReports(refreshed);
   };
 
   const handleDeleteReport = async (reportId: string) => {
@@ -326,8 +352,12 @@ export default function TimeReportsPage() {
                 className="w-full pl-11 pr-4 py-3.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold focus:ring-2 focus:ring-[#9d4edd] outline-none"
                 value={selectedClient ? selectedClientLabel : clientSearch}
                 onChange={(event) => {
+                  const value = event.target.value;
                   setSelectedClient(null);
-                  setClientSearch(event.target.value);
+                  setClientSearch(value);
+                  if (value.trim().length < 2) {
+                    setClientResults([]);
+                  }
                 }}
                 onFocus={() => {
                   if (!selectedClient) setClientSearch((prev) => prev);
@@ -346,6 +376,7 @@ export default function TimeReportsPage() {
                         onClick={() => {
                           setSelectedClient(client);
                           setClientSearch("");
+                          setClientResults([]);
                         }}
                         className="w-full text-left px-4 py-3 text-sm font-semibold text-[#333333] hover:bg-gray-50 transition-colors"
                       >
