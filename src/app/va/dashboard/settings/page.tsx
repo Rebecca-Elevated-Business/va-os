@@ -50,16 +50,11 @@ export default function SettingsPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">
       {/* 1. HEADER */}
-      <div className="bg-white p-8 rounded-4xl shadow-sm border border-gray-100 flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight text-[#333333] uppercase">
-            Settings
-          </h1>
-          <p className="text-gray-400 font-medium uppercase text-[10px] tracking-widest mt-1">
-            Manage your VA-OS environment
-          </p>
-        </div>
-      </div>
+      <header className="mb-8">
+        <h1 className="text-3xl font-black tracking-tight text-[#333333]">
+          Settings
+        </h1>
+      </header>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
         {/* 2. SIDE NAVIGATION */}
