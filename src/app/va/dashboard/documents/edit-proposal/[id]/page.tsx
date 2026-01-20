@@ -129,6 +129,17 @@ export default function EditProposalPage({
     });
   };
 
+  const handleHeroUpload = (file: File) => {
+    if (!doc) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        updateContent({ hero_image_url: reader.result });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const updateInvestment = (updates: Partial<ProposalContent["investment"]>) => {
     if (!doc) return;
     updateContent({
@@ -287,17 +298,43 @@ export default function EditProposalPage({
             </label>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
+            <div className="space-y-3">
               <label className="text-xs font-bold text-gray-500">
-                Hero Image URL
+                Hero Image (optional)
               </label>
               <input
                 className="w-full p-4 bg-white border-2 border-gray-100 rounded-2xl outline-none focus:border-purple-100 text-sm"
+                placeholder="Paste image URL (optional)"
                 value={doc.content.hero_image_url}
                 onChange={(e) =>
                   updateContent({ hero_image_url: e.target.value })
                 }
               />
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="inline-flex items-center gap-2 text-xs font-bold text-gray-500">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleHeroUpload(file);
+                    }}
+                  />
+                  <span className="px-4 py-2 border-2 border-gray-100 rounded-xl cursor-pointer hover:border-purple-200">
+                    Upload image
+                  </span>
+                </label>
+                {doc.content.hero_image_url && (
+                  <button
+                    type="button"
+                    onClick={() => updateContent({ hero_image_url: "" })}
+                    className="text-xs font-bold text-red-400 hover:text-red-500"
+                  >
+                    Remove image
+                  </button>
+                )}
+              </div>
             </div>
             <div className="space-y-2">
               <label className="text-xs font-bold text-gray-500">
