@@ -4,6 +4,11 @@ import { useState, useEffect, use } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import ProposalDocument from "@/components/documents/ProposalDocument";
+import {
+  mergeProposalContent,
+  type ProposalContent,
+} from "@/lib/proposalContent";
 
 type ClientDoc = {
   id: string;
@@ -19,6 +24,26 @@ type ClientDoc = {
     quote_details?: string;
     closing_statement?: string;
     va_name?: string;
+    hero_image_url?: string;
+    hero_title?: string;
+    prepared_for?: string;
+    prepared_by?: string;
+    prepared_date?: string;
+    show_warm_welcome?: boolean;
+    warm_welcome_text?: string;
+    show_scope?: boolean;
+    scope_items?: ProposalContent["scope_items"];
+    show_investment?: boolean;
+    investment?: ProposalContent["investment"];
+    show_trust_signals?: boolean;
+    trust_signals?: ProposalContent["trust_signals"];
+    show_next_steps?: boolean;
+    next_steps?: ProposalContent["next_steps"];
+    show_additional_notes?: boolean;
+    additional_notes?: string;
+    show_thank_you?: boolean;
+    thank_you_text?: string;
+    signature_text?: string;
     // Invoice specific
     invoice_number?: string;
     due_date?: string;
@@ -91,6 +116,10 @@ export default function ClientDocumentView({
     router.push("/client/dashboard");
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   if (loading)
     return (
       <div className="p-10 text-gray-500 italic">
@@ -103,10 +132,10 @@ export default function ClientDocumentView({
     );
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 text-black p-4 md:p-8 font-sans">
-      <div className="max-w-4xl mx-auto bg-white shadow-2xl rounded-4xl overflow-hidden border border-gray-100">
+    <div className="min-h-screen bg-gray-50 pb-20 text-black p-4 md:p-8 font-sans print:bg-white">
+      <div className="max-w-4xl mx-auto bg-white shadow-2xl rounded-4xl overflow-hidden border border-gray-100 print:shadow-none print:border-none">
         {/* HEADER IMAGE */}
-        {doc.content.header_image && doc.type !== "upload" && (
+        {doc.content.header_image && doc.type !== "upload" && doc.type !== "proposal" && (
           <div className="h-64 w-full relative">
             <Image
               src={doc.content.header_image}
@@ -124,41 +153,36 @@ export default function ClientDocumentView({
             doc.content.header_image ? "-mt-12" : ""
           } relative bg-white rounded-t-4xl`}
         >
-          <header>
-            <div className="inline-block px-3 py-1 bg-purple-100 text-[#9d4edd] text-[10px] font-black uppercase tracking-widest rounded-full mb-4">
-              {doc.type.replace("_", " ")}
-            </div>
-            <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tighter leading-none">
-              {doc.title}
-            </h1>
-          </header>
+          {doc.type !== "proposal" && (
+            <header>
+              <div className="inline-block px-3 py-1 bg-purple-100 text-[#9d4edd] text-[10px] font-black uppercase tracking-widest rounded-full mb-4">
+                {doc.type.replace("_", " ")}
+              </div>
+              <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tighter leading-none">
+                {doc.title}
+              </h1>
+            </header>
+          )}
 
           {/* DYNAMIC CONTENT SWITCHER */}
           {(() => {
             switch (doc.type) {
-              case "proposal":
+              case "proposal": {
+                const proposalContent = mergeProposalContent(
+                  doc.content as ProposalContent
+                );
                 return (
                   <div className="space-y-10">
-                    <section className="text-lg text-gray-700 leading-relaxed whitespace-pre-wrap">
-                      {doc.content.intro_text}
-                    </section>
-                    <section className="bg-gray-50 p-8 rounded-3xl border border-gray-100">
-                      <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">
-                        Scope of Work
-                      </h2>
-                      <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
-                        {doc.content.scope_of_work}
-                      </p>
-                    </section>
-                    <section className="p-8 bg-purple-900 text-white rounded-3xl flex justify-between items-center">
-                      <span className="text-xs font-bold uppercase tracking-widest opacity-60">
-                        Investment
-                      </span>
-                      <span className="text-3xl font-black">
-                        {doc.content.quote_details}
-                      </span>
-                    </section>
-                    <div className="grid grid-cols-2 gap-4 pt-6">
+                    <div className="flex justify-end print:hidden">
+                      <button
+                        onClick={handlePrint}
+                        className="px-6 py-2 border-2 border-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
+                      >
+                        Download / Print
+                      </button>
+                    </div>
+                    <ProposalDocument content={proposalContent} />
+                    <div className="grid grid-cols-2 gap-4 pt-6 print:hidden">
                       <button
                         onClick={() => setResponseMode("accept")}
                         className="bg-[#9d4edd] text-white py-4 rounded-2xl font-black uppercase tracking-widest"
@@ -174,6 +198,7 @@ export default function ClientDocumentView({
                     </div>
                   </div>
                 );
+              }
 
               case "booking_form":
                 return (
@@ -272,7 +297,7 @@ export default function ClientDocumentView({
 
           {/* SIGNATURE / FEEDBACK OVERLAY */}
           {responseMode && (
-            <div className="mt-8 p-8 bg-white border-4 border-[#9d4edd] rounded-4xl shadow-2xl animate-in fade-in slide-in-from-top-4">
+            <div className="mt-8 p-8 bg-white border-4 border-[#9d4edd] rounded-4xl shadow-2xl animate-in fade-in slide-in-from-top-4 print:hidden">
               <h3 className="text-xl font-black mb-4 tracking-tight">
                 {responseMode === "accept"
                   ? "Accept Proposal"
@@ -313,14 +338,16 @@ export default function ClientDocumentView({
             </div>
           )}
 
-          <footer className="pt-10 border-t border-gray-100">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
-              Kind Regards,
-            </p>
-            <p className="text-2xl font-black text-[#9d4edd] tracking-tight">
-              {doc.content.va_name}
-            </p>
-          </footer>
+          {doc.type !== "proposal" && (
+            <footer className="pt-10 border-t border-gray-100">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
+                Kind Regards,
+              </p>
+              <p className="text-2xl font-black text-[#9d4edd] tracking-tight">
+                {doc.content.va_name}
+              </p>
+            </footer>
+          )}
         </div>
       </div>
     </div>
