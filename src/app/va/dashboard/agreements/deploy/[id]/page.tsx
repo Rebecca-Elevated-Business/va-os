@@ -75,7 +75,10 @@ export default function DeployAgreementPage({
     const sortedSections = [...template.guidance_content.sections].sort(
       (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
     );
-    setOpenSectionIds(sortedSections[0]?.id ? [sortedSections[0].id] : []);
+    const timeoutId = window.setTimeout(() => {
+      setOpenSectionIds(sortedSections[0]?.id ? [sortedSections[0].id] : []);
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
   }, [template]);
 
   const handleDeploy = async () => {
@@ -130,10 +133,10 @@ export default function DeployAgreementPage({
     );
   };
 
-  const handleSave = async () => {
-    if (!agreement) return;
+  const persistAgreement = async (notify = true) => {
+    if (!agreement) return false;
     const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user) return;
+    if (!userData.user) return false;
 
     const { error: updateError } = await supabase
       .from("client_agreements")
@@ -144,8 +147,8 @@ export default function DeployAgreementPage({
       .eq("id", agreement.id);
 
     if (updateError) {
-      alert("Error saving: " + updateError.message);
-      return;
+      if (notify) alert("Error saving: " + updateError.message);
+      return false;
     }
 
     await supabase.from("agreement_logs").insert([
@@ -157,7 +160,23 @@ export default function DeployAgreementPage({
       },
     ]);
 
-    alert("Changes saved successfully.");
+    if (notify) alert("Changes saved successfully.");
+    return true;
+  };
+
+  const handleSave = async () => {
+    await persistAgreement(true);
+  };
+
+  const handlePreview = async () => {
+    if (!agreement) return;
+    const saved = await persistAgreement(false);
+    if (!saved) return;
+    window.open(
+      `/va/dashboard/agreements/portal-view/${agreement.id}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
   };
 
   if (!template) return <div className="p-10">Loading...</div>;
@@ -354,12 +373,20 @@ export default function DeployAgreementPage({
                     {agreement.title}
                   </p>
                 </div>
-                <button
-                  onClick={handleSave}
-                  className="bg-[#9d4edd] text-white px-6 py-2 rounded-lg font-bold shadow-md hover:bg-[#7b2cbf] transition-all"
-                >
-                  Save as Draft
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handlePreview}
+                    className="border border-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:border-gray-300 hover:text-gray-900 transition-all"
+                  >
+                    Preview
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    className="bg-[#9d4edd] text-white px-6 py-2 rounded-lg font-bold shadow-md hover:bg-[#7b2cbf] transition-all"
+                  >
+                    Save as Draft
+                  </button>
+                </div>
               </div>
 
               <AgreementEditor agreement={agreement} onChange={setAgreement} />
