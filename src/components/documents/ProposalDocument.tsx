@@ -26,7 +26,13 @@ const normalizeImageUrl = (url: string) => {
   const trimmed = url.trim();
   const match = trimmed.match(/unsplash\.com\/photos\/[^/]*-([a-zA-Z0-9_-]+)/);
   if (match) {
-    return `https://source.unsplash.com/${match[1]}/1600x400`;
+    return `https://images.unsplash.com/photo-${match[1]}?auto=format&fit=crop&q=80&w=1600`;
+  }
+  if (trimmed.includes("source.unsplash.com/")) {
+    const idMatch = trimmed.match(/source\.unsplash\.com\/([a-zA-Z0-9_-]+)/);
+    if (idMatch) {
+      return `https://images.unsplash.com/photo-${idMatch[1]}?auto=format&fit=crop&q=80&w=1600`;
+    }
   }
   return trimmed;
 };
@@ -123,7 +129,10 @@ export default function ProposalDocument({
         {content.show_investment && (
           <section className="rounded-3xl border border-gray-100 p-6 md:p-8 bg-white shadow-sm">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div>
+              <div className="text-3xl font-black text-gray-900">
+                {formatPrice(content.investment.price)}
+              </div>
+              <div className="text-left md:text-right">
                 <p className="text-xs font-black text-gray-400 uppercase tracking-widest">
                   Investment
                 </p>
@@ -134,9 +143,6 @@ export default function ProposalDocument({
                   {content.investment.billing_frequency}
                   {content.investment.include_vat ? " (incl. VAT)" : ""}
                 </p>
-              </div>
-              <div className="text-3xl font-black text-gray-900">
-                {formatPrice(content.investment.price)}
               </div>
             </div>
             {content.investment.note && (
@@ -149,9 +155,6 @@ export default function ProposalDocument({
 
         {content.show_trust_signals && content.trust_signals.length > 0 && (
           <section>
-            <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">
-              Trust Signals
-            </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {content.trust_signals.map((item) => (
                 <div

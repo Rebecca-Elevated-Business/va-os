@@ -72,9 +72,8 @@ export const createProposalDefaults = (
   scope_items: [
     {
       id: "scope-1",
-      title: "Inbox Management",
-      summary:
-        "Twice daily check on your inbox with responsibility of unsubscribing from spam, categorising messages, flagging those of urgency, responding where permission is given.",
+      title: "",
+      summary: "",
     },
   ],
   show_investment: true,
