@@ -254,7 +254,7 @@ export default function VADashboard() {
         <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden xl:col-span-2">
           <div className="px-6 py-4 border-b border-gray-50 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h3 className="text-base font-bold">Agenda</h3>
+              <h3 className="text-base font-bold text-[#333333]">Agenda</h3>
               <p className="text-xs text-[#333333]">
                 Overdue tasks appear first
               </p>
@@ -347,7 +347,9 @@ export default function VADashboard() {
 
         <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-50">
-            <h3 className="text-base font-bold">Priority Inbox</h3>
+            <h3 className="text-base font-bold text-[#333333]">
+              Priority Inbox
+            </h3>
             <p className="text-xs text-[#333333]">
               Unread, approvals, and action-needed
             </p>
@@ -379,11 +381,13 @@ export default function VADashboard() {
         <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-50 flex items-center justify-between gap-3">
             <div>
-              <h3 className="text-base font-bold">Opportunity Status</h3>
-            <p className="text-xs text-[#333333]">
-              Clients at this pipeline stage
-            </p>
-          </div>
+              <h3 className="text-base font-bold text-[#333333]">
+                Opportunity Status
+              </h3>
+              <p className="text-xs text-[#333333]">
+                Clients at this pipeline stage
+              </p>
+            </div>
             <select
               value={selectedStatus}
               onChange={(event) => setSelectedStatus(event.target.value)}
@@ -422,7 +426,9 @@ export default function VADashboard() {
 
         <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-50">
-            <h3 className="text-base font-bold">Time Today</h3>
+            <h3 className="text-base font-bold text-[#333333]">
+              Time Today
+            </h3>
             <p className="text-xs text-[#333333]">
               {formatDateLabel(todayDate)}
             </p>
@@ -445,7 +451,9 @@ export default function VADashboard() {
 
         <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-50">
-            <h3 className="text-base font-bold">Quick Add Notes</h3>
+            <h3 className="text-base font-bold text-[#333333]">
+              Quick Add Notes
+            </h3>
             <p className="text-xs text-[#333333]">
               Brain dump sticky note for later
             </p>
