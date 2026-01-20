@@ -362,8 +362,23 @@ export default function TimeTrackingPage() {
 
   return (
     <div className="min-h-screen text-[#333333] pb-20 font-sans">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold">Time Tracking</h1>
+      <header className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Time Tracking</h1>
+          <p className="text-sm text-gray-400">
+            Track time entries and manage reports.
+          </p>
+        </div>
+        <div className="flex items-center gap-3 text-sm font-semibold">
+          <span className="text-[#9d4edd]">Tracker</span>
+          <span className="text-gray-300">/</span>
+          <Link
+            href="/va/dashboard/time-tracking/reports"
+            className="text-gray-400 hover:text-[#9d4edd]"
+          >
+            Reports
+          </Link>
+        </div>
       </header>
 
       <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
