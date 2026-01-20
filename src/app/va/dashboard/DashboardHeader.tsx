@@ -3,14 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
-import {
-  Search,
-  User,
-  CheckSquare,
-  FileText,
-  LifeBuoy,
-  X,
-} from "lucide-react"; // Icons for categories
+import { Search, User, CheckSquare, FileText } from "lucide-react"; // Icons for categories
 
 type UserProfile = {
   id?: string;
@@ -25,46 +18,16 @@ type SearchResult = {
   subtitle?: string;
 };
 
-const SUPPORT_OPTIONS = [
-  {
-    id: "support_request",
-    label: "Support Request",
-    helper:
-      "Need guidance on how to use a specific feature? Tell us what you were trying to do.",
-  },
-  {
-    id: "report_bug",
-    label: "Report Bug",
-    helper:
-      "Something not working as intended? Share steps to reproduce and what you expected.",
-  },
-  {
-    id: "request_feature",
-    label: "Request a Feature",
-    helper:
-      "Have an idea to improve VA-OS? Explain what you want and why it helps.",
-  },
-];
-
-const SUPPORT_MAX_LENGTH = 280;
-
 export default function DashboardHeader() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [showResults, setShowResults] = useState(false);
-  const [showSupport, setShowSupport] = useState(false);
-  const [supportType, setSupportType] = useState(SUPPORT_OPTIONS[0].id);
-  const [supportMessage, setSupportMessage] = useState("");
-  const [supportSubmitting, setSupportSubmitting] = useState(false);
-  const [supportStatus, setSupportStatus] = useState<"idle" | "sent">("idle");
-  const [supportError, setSupportError] = useState<string | null>(null);
 
   const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
-  const supportRef = useRef<HTMLDivElement>(null);
 
   // --- SEARCH LOGIC ---
   useEffect(() => {
@@ -144,12 +107,6 @@ export default function DashboardHeader() {
       ) {
         setShowDropdown(false);
       }
-      if (
-        supportRef.current &&
-        !supportRef.current.contains(event.target as Node)
-      ) {
-        setShowSupport(false);
-      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -197,37 +154,6 @@ export default function DashboardHeader() {
       return names[0].substring(0, 2).toUpperCase();
     }
     return user.email?.substring(0, 2).toUpperCase() || "VA";
-  };
-
-  const activeSupportOption =
-    SUPPORT_OPTIONS.find((option) => option.id === supportType) ||
-    SUPPORT_OPTIONS[0];
-
-  const handleSupportSubmit = async () => {
-    if (!user?.id || supportMessage.trim().length < 10) return;
-    setSupportSubmitting(true);
-    setSupportError(null);
-    const { data, error } = await supabase.functions.invoke(
-      "support-request",
-      {
-        body: {
-          requestType: supportType,
-          message: supportMessage.trim(),
-        },
-      }
-    );
-    setSupportSubmitting(false);
-    if (!error && data?.ok) {
-      setSupportStatus("sent");
-      setSupportMessage("");
-      if (data?.warning) {
-        setSupportError(data.warning);
-      }
-    } else {
-      setSupportError(
-        error?.message || data?.error || "Unable to send right now."
-      );
-    }
   };
 
   return (
@@ -281,101 +207,15 @@ export default function DashboardHeader() {
 
       {/* 2. ICONS CONTAINER (Right side) */}
       <div className="flex items-center gap-4">
-        <div className="relative" ref={supportRef}>
-          <button
-            onClick={() => {
-              setShowSupport((prev) => !prev);
-              setSupportStatus("idle");
-              setSupportError(null);
-            }}
-            className="w-10 h-10 rounded-full bg-[#7b2cbf] flex items-center justify-center text-white font-bold hover:opacity-90 transition-opacity shadow-sm"
-            title="Reach out"
-          >
-            <LifeBuoy size={18} />
-          </button>
-
-          {showSupport && (
-            <div className="absolute right-0 mt-3 w-[360px] bg-white rounded-2xl shadow-2xl border border-gray-100 p-5 animate-in fade-in slide-in-from-top-2 z-50">
-              <div className="flex items-start justify-between gap-3 mb-4">
-                <div>
-                  <p className="text-sm font-bold text-[#333333] flex items-center gap-2">
-                    <LifeBuoy size={16} className="text-[#9d4edd]" />
-                    Reach out
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    We will use your account email to follow up.
-                  </p>
-                </div>
-                <button
-                  onClick={() => setShowSupport(false)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                  aria-label="Close support form"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                <label className="text-[11px] font-bold text-gray-400 tracking-widest uppercase block">
-                  Category
-                </label>
-                <select
-                  value={supportType}
-                  onChange={(event) => setSupportType(event.target.value)}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-[#333333] focus:ring-2 focus:ring-[#9d4edd] outline-none"
-                >
-                  {SUPPORT_OPTIONS.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-gray-400">
-                  {activeSupportOption.helper}
-                </p>
-
-                <label className="text-[11px] font-bold text-gray-400 tracking-widest uppercase block mt-4">
-                  Details
-                </label>
-                <textarea
-                  value={supportMessage}
-                  onChange={(event) =>
-                    setSupportMessage(event.target.value.slice(0, SUPPORT_MAX_LENGTH))
-                  }
-                  maxLength={SUPPORT_MAX_LENGTH}
-                  placeholder="Keep it brief and specific..."
-                  className="w-full min-h-[120px] rounded-xl border border-gray-200 p-3 text-sm text-[#333333] focus:ring-2 focus:ring-[#9d4edd] outline-none resize-none"
-                />
-                <div className="flex items-center justify-between text-xs text-gray-400">
-                  <span>
-                    {supportMessage.length}/{SUPPORT_MAX_LENGTH}
-                  </span>
-                  {supportStatus === "sent" && (
-                    <span className="text-emerald-500 font-semibold">
-                      Sent - thank you
-                    </span>
-                  )}
-                </div>
-                {supportError && (
-                  <p className="text-xs text-red-500">{supportError}</p>
-                )}
-                <button
-                  onClick={handleSupportSubmit}
-                  disabled={
-                    supportSubmitting || supportMessage.trim().length < 10
-                  }
-                  className={`w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors ${
-                    supportSubmitting || supportMessage.trim().length < 10
-                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      : "bg-[#9d4edd] text-white hover:bg-[#7b2cbf]"
-                  }`}
-                >
-                  {supportSubmitting ? "Sending..." : "Send"}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+        <a
+          href="https://elevatedbusiness.co.uk/va-os/ticket"
+          target="_blank"
+          rel="noreferrer"
+          className="w-10 h-10 rounded-full bg-[#7b2cbf] flex items-center justify-center text-white font-bold hover:opacity-90 transition-opacity shadow-sm"
+          title="Support"
+        >
+          ?
+        </a>
 
         <div className="relative" ref={dropdownRef}>
           <button
