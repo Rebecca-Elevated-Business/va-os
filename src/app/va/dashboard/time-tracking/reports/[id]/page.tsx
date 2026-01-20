@@ -27,6 +27,19 @@ type ReportDetail = {
   } | null;
 };
 
+type ReportDetailRow = Omit<ReportDetail, "clients"> & {
+  clients:
+    | {
+        business_name: string | null;
+        surname: string | null;
+      }
+    | {
+        business_name: string | null;
+        surname: string | null;
+      }[]
+    | null;
+};
+
 const formatDuration = (totalSeconds: number) => {
   const safeSeconds = Math.max(0, Math.floor(totalSeconds));
   const hours = Math.floor(safeSeconds / 3600);
@@ -69,7 +82,13 @@ export default function TimeReportDetailPage({
         )
         .eq("id", id)
         .single();
-      if (reportData) setReport(reportData as ReportDetail);
+      if (reportData) {
+        const row = reportData as ReportDetailRow;
+        const clients = Array.isArray(row.clients)
+          ? row.clients[0] || null
+          : row.clients;
+        setReport({ ...row, clients });
+      }
 
       const { data: entryData } = await supabase
         .from("time_report_entries")
