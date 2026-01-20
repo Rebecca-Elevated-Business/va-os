@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactElement } from "react";
 import Image from "next/image";
 import {
   Award,
@@ -11,7 +12,7 @@ import {
 } from "lucide-react";
 import type { ProposalContent, ProposalTrustSignal } from "@/lib/proposalContent";
 
-const trustIconMap: Record<ProposalTrustSignal["icon"], JSX.Element> = {
+const trustIconMap: Record<ProposalTrustSignal["icon"], ReactElement> = {
   gdpr: <ShieldCheck className="h-4 w-4" />,
   experience: <CheckCircle className="h-4 w-4" />,
   communication: <MessageSquare className="h-4 w-4" />,
