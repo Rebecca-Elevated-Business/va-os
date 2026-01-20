@@ -10,7 +10,10 @@ import {
   ShieldCheck,
   Shield,
 } from "lucide-react";
-import type { ProposalContent, ProposalTrustSignal } from "@/lib/proposalContent";
+import type {
+  ProposalContent,
+  ProposalTrustSignal,
+} from "@/lib/proposalContent";
 
 const trustIconMap: Record<ProposalTrustSignal["icon"], ReactElement> = {
   gdpr: <ShieldCheck className="h-4 w-4" />,
@@ -74,7 +77,7 @@ export default function ProposalDocument({
             unoptimized={heroUrl.startsWith("data:")}
           />
         ) : (
-          <div className="h-full w-full bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700" />
+          <div className="h-full w-full bg-linear-to-r from-slate-900 via-slate-800 to-slate-700" />
         )}
         <div className="absolute inset-0 bg-linear-to-t from-black/55 via-black/20 to-transparent" />
         <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-10 text-white">
@@ -179,9 +182,7 @@ export default function ProposalDocument({
             <ol className="space-y-3 text-sm text-gray-700">
               {content.next_steps.map((step, index) => (
                 <li key={step.id} className="flex gap-3">
-                  <span className="font-black text-gray-400">
-                    {index + 1}.
-                  </span>
+                  <span className="font-black text-gray-400">{index + 1}.</span>
                   <span>{step.text}</span>
                 </li>
               ))}
