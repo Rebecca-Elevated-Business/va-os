@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import ProposalDocument from "@/components/documents/ProposalDocument";
 import BookingFormDocument from "@/components/documents/BookingFormDocument";
+import InvoiceDocument, {
+  type InvoiceTimeReport,
+} from "@/components/documents/InvoiceDocument";
 import {
   mergeProposalContent,
   type ProposalContent,
@@ -14,6 +17,10 @@ import {
   mergeBookingContent,
   type BookingFormContent,
 } from "@/lib/bookingFormContent";
+import {
+  mergeInvoiceContent,
+  type InvoiceContent,
+} from "@/lib/invoiceContent";
 import { DOCUMENT_TEMPLATES } from "@/lib/documentTemplates";
 
 type ClientDoc = {
@@ -52,9 +59,26 @@ type ClientDoc = {
     signature_text?: string;
     // Invoice specific
     invoice_number?: string;
+    issue_date?: string;
     due_date?: string;
-    line_items?: { id: string; description: string; amount: string }[];
-    bank_details?: string;
+    po_number?: string;
+    show_po?: boolean;
+    business_name?: string;
+    business_logo_url?: string;
+    business_email?: string;
+    business_phone?: string;
+    business_address?: string;
+    client_business_name?: string;
+    client_contact_name?: string;
+    client_address?: string;
+    client_email?: string;
+    line_items?: InvoiceContent["line_items"];
+    notes?: string;
+    payment_details?: string;
+    va_email?: string;
+    va_business_name?: string;
+    time_report_id?: string;
+    show_time_report_to_client?: boolean;
     // Upload specific
     file_url?: string;
     file_name?: string;
@@ -77,6 +101,10 @@ export default function ClientDocumentView({
   const [comment, setComment] = useState("");
   const [bookingContent, setBookingContent] =
     useState<BookingFormContent | null>(null);
+  const [invoiceContent, setInvoiceContent] =
+    useState<InvoiceContent | null>(null);
+  const [invoiceReport, setInvoiceReport] =
+    useState<InvoiceTimeReport | null>(null);
   const [clientAgreed, setClientAgreed] = useState(false);
   const [signatureError, setSignatureError] = useState("");
 
@@ -94,8 +122,69 @@ export default function ClientDocumentView({
   }, [id]);
 
   useEffect(() => {
-    if (!doc || doc.type !== "booking_form") return;
-    setBookingContent(mergeBookingContent(doc.content as BookingFormContent));
+    if (!doc) return;
+    const timer = setTimeout(() => {
+      if (doc.type === "booking_form") {
+        setBookingContent(
+          mergeBookingContent(doc.content as BookingFormContent)
+        );
+      } else {
+        setBookingContent(null);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [doc]);
+
+  useEffect(() => {
+    if (!doc) return;
+    const timer = setTimeout(() => {
+      if (doc.type !== "invoice") {
+        setInvoiceContent(null);
+        setInvoiceReport(null);
+        return;
+      }
+
+      const merged = mergeInvoiceContent(doc.content as InvoiceContent);
+      setInvoiceContent(merged);
+
+      if (!merged.time_report_id || !merged.show_time_report_to_client) {
+        setInvoiceReport(null);
+        return;
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [doc]);
+
+  useEffect(() => {
+    if (!doc || doc.type !== "invoice") return;
+    const merged = mergeInvoiceContent(doc.content as InvoiceContent);
+    if (!merged.time_report_id || !merged.show_time_report_to_client) return;
+
+    async function loadInvoiceReport() {
+      const { data: reportData } = await supabase
+        .from("time_reports")
+        .select("id, name, date_from, date_to, total_seconds, entry_count")
+        .eq("id", merged.time_report_id)
+        .single();
+
+      if (!reportData) {
+        setInvoiceReport(null);
+        return;
+      }
+
+      const { data: entryData } = await supabase
+        .from("time_report_entries")
+        .select("entry_date, task_title, duration_seconds, notes")
+        .eq("report_id", merged.time_report_id)
+        .order("entry_date", { ascending: false });
+
+      setInvoiceReport({
+        ...(reportData as InvoiceTimeReport),
+        entries: (entryData as InvoiceTimeReport["entries"]) || [],
+      });
+    }
+
+    loadInvoiceReport();
   }, [doc]);
 
   const handleSubmitResponse = async () => {
@@ -227,7 +316,7 @@ export default function ClientDocumentView({
     router.push("/client/dashboard");
   };
 
-  const handleSendBookingMessage = async () => {
+  const handleSendMessage = async () => {
     if (!doc) return;
     if (bookingContent) {
       await supabase
@@ -240,10 +329,32 @@ export default function ClientDocumentView({
         client_id: doc.client_id,
         type: "work",
         status: "new",
-        message: `BOOKING FORM MESSAGE: ${comment || "Client question sent."}`,
+        message: `${doc.type.toUpperCase()} MESSAGE: ${
+          comment || "Client message sent."
+        }`,
       },
     ]);
     alert("Message sent to your VA.");
+    router.push("/client/dashboard");
+  };
+
+  const handleMarkInvoicePaid = async () => {
+    if (!doc || doc.type !== "invoice") return;
+    await supabase
+      .from("client_documents")
+      .update({ status: "paid" })
+      .eq("id", doc.id);
+
+    await supabase.from("client_requests").insert([
+      {
+        client_id: doc.client_id,
+        type: "work",
+        status: "new",
+        message: "INVOICE PAID: Client marked the invoice as paid.",
+      },
+    ]);
+
+    alert("Marked as paid. Your VA has been notified.");
     router.push("/client/dashboard");
   };
 
@@ -269,7 +380,8 @@ export default function ClientDocumentView({
         {doc.content.header_image &&
           doc.type !== "upload" &&
           doc.type !== "proposal" &&
-          doc.type !== "booking_form" && (
+          doc.type !== "booking_form" &&
+          doc.type !== "invoice" && (
           <div className="h-64 w-full relative">
             <Image
               src={doc.content.header_image}
@@ -287,7 +399,9 @@ export default function ClientDocumentView({
             doc.content.header_image ? "-mt-12" : ""
           } relative bg-white rounded-t-4xl`}
         >
-          {doc.type !== "proposal" && doc.type !== "booking_form" && (
+          {doc.type !== "proposal" &&
+            doc.type !== "booking_form" &&
+            doc.type !== "invoice" && (
             <header>
               <div className="inline-block px-3 py-1 bg-purple-100 text-[#9d4edd] text-[10px] font-black uppercase tracking-widest rounded-full mb-4">
                 {doc.type.replace("_", " ")}
@@ -402,49 +516,47 @@ export default function ClientDocumentView({
                 );
 
               case "invoice":
+                if (!invoiceContent) return null;
                 return (
                   <div className="space-y-8">
-                    <div className="flex justify-between border-b pb-6">
-                      <div>
-                        <p className="text-[10px] font-black text-gray-400 uppercase">
-                          Invoice #
-                        </p>
-                        <p className="font-bold">
-                          {doc.content.invoice_number}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[10px] font-black text-gray-400 uppercase">
-                          Due Date
-                        </p>
-                        <p className="font-bold text-red-500">
-                          {doc.content.due_date}
-                        </p>
-                      </div>
+                    <div className="flex justify-end print:hidden">
+                      <button
+                        onClick={handlePrint}
+                        className="px-6 py-2 border-2 border-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
+                      >
+                        Download / Print
+                      </button>
                     </div>
-                    <table className="w-full text-sm">
-                      <thead className="border-b">
-                        <tr className="text-left text-[10px] font-black text-gray-400 uppercase">
-                          <th className="py-4">Service</th>
-                          <th className="py-4 text-right">Amount</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y">
-                        {doc.content.line_items?.map((item) => (
-                          <tr key={item.id}>
-                            <td className="py-4 text-gray-600">
-                              {item.description}
-                            </td>
-                            <td className="py-4 text-right font-bold">
-                              £{item.amount}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    <div className="p-8 bg-gray-900 text-green-400 rounded-3xl font-mono text-xs whitespace-pre-wrap">
-                      {doc.content.bank_details}
-                    </div>
+                    <InvoiceDocument
+                      content={invoiceContent}
+                      report={invoiceReport}
+                    />
+                    {doc.status === "paid" ? (
+                      <div className="p-6 bg-green-50 border border-green-100 rounded-2xl text-green-700 font-bold text-center print:hidden">
+                        ✓ This invoice is marked as paid.
+                      </div>
+                    ) : (
+                      <div className="space-y-3 print:hidden">
+                        <p className="text-xs text-gray-500">
+                          Marking as paid does not process payment. It only
+                          notifies your VA.
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <button
+                            onClick={handleMarkInvoicePaid}
+                            className="bg-[#9d4edd] text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl"
+                          >
+                            Mark as Paid
+                          </button>
+                          <button
+                            onClick={() => setResponseMode("message")}
+                            className="border-2 border-gray-200 text-gray-500 py-4 rounded-2xl font-bold uppercase tracking-widest text-xs"
+                          >
+                            Send Message
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
 
@@ -498,7 +610,7 @@ export default function ClientDocumentView({
                 <button
                   onClick={() => {
                     if (responseMode === "message") {
-                      handleSendBookingMessage();
+                      handleSendMessage();
                     } else {
                       handleSubmitResponse();
                     }
@@ -517,7 +629,9 @@ export default function ClientDocumentView({
             </div>
           )}
 
-          {doc.type !== "proposal" && doc.type !== "booking_form" && (
+          {doc.type !== "proposal" &&
+            doc.type !== "booking_form" &&
+            doc.type !== "invoice" && (
             <footer className="pt-10 border-t border-gray-100">
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
                 Kind Regards,

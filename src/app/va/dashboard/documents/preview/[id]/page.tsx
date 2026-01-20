@@ -4,11 +4,15 @@ import { useEffect, useState, use } from "react";
 import { supabase } from "@/lib/supabase";
 import ProposalDocument from "@/components/documents/ProposalDocument";
 import BookingFormDocument from "@/components/documents/BookingFormDocument";
+import InvoiceDocument, {
+  type InvoiceTimeReport,
+} from "@/components/documents/InvoiceDocument";
 import { mergeProposalContent, type ProposalContent } from "@/lib/proposalContent";
 import {
   mergeBookingContent,
   type BookingFormContent,
 } from "@/lib/bookingFormContent";
+import { mergeInvoiceContent, type InvoiceContent } from "@/lib/invoiceContent";
 import { DOCUMENT_TEMPLATES } from "@/lib/documentTemplates";
 
 type ClientDoc = {
@@ -28,6 +32,41 @@ export default function ProposalPreviewPage({
   const { id } = use(params);
   const [doc, setDoc] = useState<ClientDoc | null>(null);
   const [loading, setLoading] = useState(true);
+  const [invoiceReport, setInvoiceReport] =
+    useState<InvoiceTimeReport | null>(null);
+
+  useEffect(() => {
+    if (!doc || doc.type !== "invoice") return;
+    const merged = mergeInvoiceContent(doc.content as InvoiceContent);
+    if (!merged.time_report_id || !merged.show_time_report_to_client) {
+      const timer = setTimeout(() => {
+        setInvoiceReport(null);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+    async function loadReport() {
+      const { data: reportData } = await supabase
+        .from("time_reports")
+        .select("id, name, date_from, date_to, total_seconds, entry_count")
+        .eq("id", merged.time_report_id)
+        .single();
+      if (!reportData) {
+        setInvoiceReport(null);
+        return;
+      }
+      const { data: entryData } = await supabase
+        .from("time_report_entries")
+        .select("entry_date, task_title, duration_seconds, notes")
+        .eq("report_id", merged.time_report_id)
+        .order("entry_date", { ascending: false });
+
+      setInvoiceReport({
+        ...(reportData as InvoiceTimeReport),
+        entries: (entryData as InvoiceTimeReport["entries"]) || [],
+      });
+    }
+    loadReport();
+  }, [doc]);
 
   useEffect(() => {
     async function loadDoc() {
@@ -51,13 +90,19 @@ export default function ProposalPreviewPage({
   if (!doc)
     return <div className="p-10 text-red-500 font-bold">Document not found.</div>;
 
-  if (doc.type !== "proposal" && doc.type !== "booking_form") {
+  if (
+    doc.type !== "proposal" &&
+    doc.type !== "booking_form" &&
+    doc.type !== "invoice"
+  ) {
     return (
       <div className="p-10 text-gray-500 italic">
-        Preview is only available for proposals and booking forms at the moment.
+        Preview is only available for proposals, booking forms, and invoices at
+        the moment.
       </div>
     );
   }
+
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 text-black p-4 md:p-8 print:bg-white">
@@ -73,7 +118,7 @@ export default function ProposalPreviewPage({
 
         {doc.type === "proposal" ? (
           <ProposalDocument content={mergeProposalContent(doc.content)} />
-        ) : (
+        ) : doc.type === "booking_form" ? (
           <BookingFormDocument
             content={mergeBookingContent(doc.content as BookingFormContent)}
             mode="preview"
@@ -81,6 +126,11 @@ export default function ProposalPreviewPage({
               DOCUMENT_TEMPLATES.booking_form.sections.legal_text ||
               "Terms not available."
             }
+          />
+        ) : (
+          <InvoiceDocument
+            content={mergeInvoiceContent(doc.content as InvoiceContent)}
+            report={invoiceReport}
           />
         )}
       </div>
