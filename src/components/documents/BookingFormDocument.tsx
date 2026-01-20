@@ -97,6 +97,8 @@ type BookingFormDocumentProps = {
   mode: "va" | "client" | "preview";
   standardTerms: string;
   onUpdate?: (updates: Partial<BookingFormContent>) => void;
+  clientAgreed?: boolean;
+  onClientAgreeChange?: (checked: boolean) => void;
 };
 
 export default function BookingFormDocument({
@@ -104,6 +106,8 @@ export default function BookingFormDocument({
   mode,
   standardTerms,
   onUpdate,
+  clientAgreed = false,
+  onClientAgreeChange,
 }: BookingFormDocumentProps) {
   const [termsOpen, setTermsOpen] = useState(false);
   const heroUrl = content.hero_image_url
@@ -116,6 +120,7 @@ export default function BookingFormDocument({
   const readOnlyClientSection = isPreview;
   const readOnlyVaSection = isPreview ? true : isClient ? true : false;
   const readOnlyNonClientSections = isPreview ? true : isClient ? true : false;
+  const signatureLocked = isClient && !clientAgreed;
 
   const updateField = (
     field: keyof BookingFormContent,
@@ -490,16 +495,34 @@ export default function BookingFormDocument({
               form:
             </p>
             {isVa && (
-              <label className="flex items-center gap-2 text-xs font-bold text-gray-500">
-                <input
-                  type="checkbox"
-                  checked={content.use_standard_terms}
-                  onChange={(e) =>
-                    updateField("use_standard_terms", e.target.checked)
-                  }
-                />
-                Include VA-OS standard terms
-              </label>
+              <div className="space-y-3">
+                <div className="space-y-2 text-xs font-bold text-gray-500">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="terms-source"
+                      checked={content.use_standard_terms}
+                      onChange={() => updateField("use_standard_terms", true)}
+                    />
+                    Use VA-OS standard terms
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="terms-source"
+                      checked={!content.use_standard_terms}
+                      onChange={() => updateField("use_standard_terms", false)}
+                    />
+                    Provide your own terms link
+                  </label>
+                </div>
+                <p className="text-[11px] font-semibold text-gray-400">
+                  Internal Note (client will not see this) The VA-OS Standard
+                  Terms are provided for your convenience. We recommend you have
+                  a legal professional review your contract before issuing to
+                  clients.
+                </p>
+              </div>
             )}
 
             {content.use_standard_terms ? (
@@ -578,25 +601,42 @@ export default function BookingFormDocument({
           </h2>
           <div className="space-y-3">
             {isClient && (
-              <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
-                <div className="text-xs font-bold text-gray-500">
-                  Signature style:
+              <>
+                <label className="flex items-center gap-2 text-sm text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={clientAgreed}
+                    onChange={(e) =>
+                      onClientAgreeChange?.(e.target.checked)
+                    }
+                  />
+                  I have read and agree to the terms & conditions.
+                </label>
+                <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
+                  <div className="text-xs font-bold text-gray-500">
+                    Signature style:
+                  </div>
+                  <select
+                    className={`w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none ${
+                      signatureLocked
+                        ? "bg-gray-50 border-gray-100 text-gray-500"
+                        : "bg-white border-gray-200 focus:border-purple-100"
+                    }`}
+                    value={content.client_signature_style}
+                    onChange={(e) =>
+                      updateField(
+                        "client_signature_style",
+                        e.target.value as BookingFormContent["client_signature_style"]
+                      )
+                    }
+                    disabled={signatureLocked}
+                  >
+                    <option value="script">Signature Script</option>
+                    <option value="flow">Signature Flow</option>
+                    <option value="classic">Signature Classic</option>
+                  </select>
                 </div>
-                <select
-                  className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
-                  value={content.client_signature_style}
-                  onChange={(e) =>
-                    updateField(
-                      "client_signature_style",
-                      e.target.value as BookingFormContent["client_signature_style"]
-                    )
-                  }
-                >
-                  <option value="script">Signature Script</option>
-                  <option value="flow">Signature Flow</option>
-                  <option value="classic">Signature Classic</option>
-                </select>
-              </div>
+              </>
             )}
             <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
               <div className="text-xs font-bold text-gray-500">
@@ -604,7 +644,7 @@ export default function BookingFormDocument({
               </div>
               <input
                 className={`w-full rounded-2xl border-2 px-4 py-3 text-2xl outline-none ${
-                  readOnlyAll
+                  readOnlyAll || signatureLocked
                     ? "bg-gray-50 border-gray-100 text-gray-500"
                     : "bg-white border-gray-200 focus:border-purple-100"
                 } ${signatureFontMap[content.client_signature_style]}`}
@@ -612,19 +652,19 @@ export default function BookingFormDocument({
                 onChange={(e) =>
                   updateField("client_signature_name", e.target.value)
                 }
-                readOnly={readOnlyAll}
+                readOnly={readOnlyAll || signatureLocked}
               />
             </div>
             <FieldRow
               label="Print name:"
               value={content.client_print_name}
-              readOnly={readOnlyAll}
+              readOnly={readOnlyAll || signatureLocked}
               onChange={(value) => updateField("client_print_name", value)}
             />
             <FieldRow
               label="Your business name:"
               value={content.client_business_name_signature}
-              readOnly={readOnlyAll}
+              readOnly={readOnlyAll || signatureLocked}
               onChange={(value) =>
                 updateField("client_business_name_signature", value)
               }

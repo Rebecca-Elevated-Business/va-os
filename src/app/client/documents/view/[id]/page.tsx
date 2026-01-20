@@ -467,6 +467,8 @@ export default function ClientDocumentView({
                         DOCUMENT_TEMPLATES.booking_form.sections.legal_text ||
                         "Terms not available."
                       }
+                      clientAgreed={clientAgreed}
+                      onClientAgreeChange={setClientAgreed}
                       onUpdate={(updates) =>
                         setBookingContent((prev) =>
                           prev ? { ...prev, ...updates } : prev
@@ -475,14 +477,6 @@ export default function ClientDocumentView({
                     />
                     {doc.status !== "signed" ? (
                       <div className="bg-gray-50 border border-gray-100 rounded-3xl p-6 space-y-4 print:hidden">
-                        <label className="flex items-center gap-2 text-sm text-gray-600">
-                          <input
-                            type="checkbox"
-                            checked={clientAgreed}
-                            onChange={(e) => setClientAgreed(e.target.checked)}
-                          />
-                          I agree to the terms outlined in this booking form.
-                        </label>
                         {signatureError && (
                           <p className="text-xs text-red-500 font-semibold">
                             {signatureError}
