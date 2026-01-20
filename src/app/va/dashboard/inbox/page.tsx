@@ -143,9 +143,14 @@ export default function VAInboxPage() {
     );
 
   return (
-    <div className="flex h-[calc(100vh-160px)] bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden text-black font-sans">
-      {/* SIDEBAR TABS */}
-      <aside className="w-64 border-r border-gray-50 bg-gray-50/50 p-6 space-y-2">
+    <div className="text-black font-sans">
+      <header className="mb-8">
+        <h1 className="text-3xl font-bold">Inbox</h1>
+      </header>
+
+      <div className="flex h-[calc(100vh-160px)] bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        {/* SIDEBAR TABS */}
+        <aside className="w-64 border-r border-gray-50 bg-gray-50/50 p-6 space-y-2">
         <button
           onClick={() => setActiveTab("inbox")}
           className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-all ${
@@ -190,10 +195,10 @@ export default function VAInboxPage() {
         >
           <CheckCircle2 size={16} className="text-[#333333]" /> Completed
         </button>
-      </aside>
+        </aside>
 
       {/* FEED LIST */}
-      <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto">
         <div className="border-b border-gray-100 px-8 py-6">
           <h2 className="text-lg font-bold text-[#333333]">Notification Feed</h2>
           <p className="text-xs text-gray-400">
@@ -302,102 +307,108 @@ export default function VAInboxPage() {
             ))}
           </div>
         )}
-      </main>
+        </main>
 
       {/* POPUP OVERLAY */}
-      {selectedMsg && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-100 flex items-center justify-center p-6 text-black">
-          <div className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in duration-200">
-            <div className="p-10 space-y-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black border ${getTypeClasses(
-                      selectedMsg.type
-                    )}`}
-                  >
-                    {getTypeLabel(selectedMsg.type)}
-                  </span>
-                  <h2 className="text-2xl font-black mt-2">
-                    {selectedMsg.clients.first_name}{" "}
-                    {selectedMsg.clients.surname}
-                  </h2>
-                  <p className="text-sm font-bold text-gray-400">
-                    {selectedMsg.clients.business_name}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {format(new Date(selectedMsg.created_at), "dd MMM yyyy, HH:mm")}
-                  </p>
+        {selectedMsg && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-100 flex items-center justify-center p-6 text-black">
+            <div className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in duration-200">
+              <div className="p-10 space-y-6">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black border ${getTypeClasses(
+                        selectedMsg.type
+                      )}`}
+                    >
+                      {getTypeLabel(selectedMsg.type)}
+                    </span>
+                    <h2 className="text-2xl font-black mt-2">
+                      {selectedMsg.clients.first_name}{" "}
+                      {selectedMsg.clients.surname}
+                    </h2>
+                    <p className="text-sm font-bold text-gray-400">
+                      {selectedMsg.clients.business_name}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {format(
+                        new Date(selectedMsg.created_at),
+                        "dd MMM yyyy, HH:mm"
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() =>
+                        toggleStatus(
+                          selectedMsg.id,
+                          "is_starred",
+                          !selectedMsg.is_starred
+                        )
+                      }
+                      className={`text-xl transition-all hover:scale-110 ${
+                        selectedMsg.is_starred
+                          ? "text-[#9d4edd]"
+                          : "text-gray-200"
+                      }`}
+                    >
+                      {selectedMsg.is_starred ? "★" : "☆"}
+                    </button>
+                    <button
+                      onClick={() => setSelectedMsg(null)}
+                      className="text-black hover:bg-gray-100 w-10 h-10 rounded-full flex items-center justify-center text-xl font-bold transition-colors"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
+
+                <div className="bg-gray-50 p-8 rounded-3xl border border-gray-100 italic text-gray-700 leading-relaxed shadow-inner">
+                  &quot;{selectedMsg.message}&quot;
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 pt-4">
                   <button
-                    onClick={() =>
+                    onClick={() => convertToTask(selectedMsg)}
+                    className="bg-gray-900 text-white py-4 rounded-2xl font-black text-xs tracking-widest hover:bg-black transition-all active:scale-95"
+                  >
+                    ⚙️ Create Task
+                  </button>
+                  <button
+                    onClick={() => {
                       toggleStatus(
                         selectedMsg.id,
-                        "is_starred",
-                        !selectedMsg.is_starred
-                      )
-                    }
-                    className={`text-xl transition-all hover:scale-110 ${
-                      selectedMsg.is_starred ? "text-[#9d4edd]" : "text-gray-200"
+                        "is_completed",
+                        !selectedMsg.is_completed
+                      );
+                      setSelectedMsg(null);
+                    }}
+                    className={`py-4 rounded-2xl font-black text-xs tracking-widest border-2 transition-all active:scale-95 ${
+                      selectedMsg.is_completed
+                        ? "border-orange-200 text-orange-600 hover:bg-orange-50"
+                        : "border-green-200 text-green-600 hover:bg-green-50"
                     }`}
                   >
-                    {selectedMsg.is_starred ? "★" : "☆"}
-                  </button>
-                  <button
-                    onClick={() => setSelectedMsg(null)}
-                    className="text-black hover:bg-gray-100 w-10 h-10 rounded-full flex items-center justify-center text-xl font-bold transition-colors"
-                  >
-                    ✕
+                    {selectedMsg.is_completed
+                      ? "⏪ Undo Complete"
+                      : "✅ Mark Completed"}
                   </button>
                 </div>
+                {selectedMsg.is_completed && (
+                  <div className="pt-2">
+                    <button
+                      onClick={() => deleteMessage(selectedMsg)}
+                      className="text-red-600 border border-red-200 rounded-xl px-3 py-2 text-[10px] font-black tracking-widest hover:bg-red-50 transition-colors"
+                    >
+                      DELETE
+                    </button>
+                  </div>
+                )}
               </div>
-
-              <div className="bg-gray-50 p-8 rounded-3xl border border-gray-100 italic text-gray-700 leading-relaxed shadow-inner">
-                &quot;{selectedMsg.message}&quot;
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 pt-4">
-                <button
-                  onClick={() => convertToTask(selectedMsg)}
-                  className="bg-gray-900 text-white py-4 rounded-2xl font-black text-xs tracking-widest hover:bg-black transition-all active:scale-95"
-                >
-                  ⚙️ Create Task
-                </button>
-                <button
-                  onClick={() => {
-                    toggleStatus(
-                      selectedMsg.id,
-                      "is_completed",
-                      !selectedMsg.is_completed
-                    );
-                    setSelectedMsg(null);
-                  }}
-                  className={`py-4 rounded-2xl font-black text-xs tracking-widest border-2 transition-all active:scale-95 ${
-                    selectedMsg.is_completed
-                      ? "border-orange-200 text-orange-600 hover:bg-orange-50"
-                      : "border-green-200 text-green-600 hover:bg-green-50"
-                  }`}
-                >
-                  {selectedMsg.is_completed
-                    ? "⏪ Undo Complete"
-                    : "✅ Mark Completed"}
-                </button>
-              </div>
-              {selectedMsg.is_completed && (
-                <div className="pt-2">
-                  <button
-                    onClick={() => deleteMessage(selectedMsg)}
-                    className="text-red-600 border border-red-200 rounded-xl px-3 py-2 text-[10px] font-black tracking-widest hover:bg-red-50 transition-colors"
-                  >
-                    DELETE
-                  </button>
-                </div>
-              )}
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
