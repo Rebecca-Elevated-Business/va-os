@@ -71,7 +71,7 @@ export default function ProposalDocument({
             alt="Proposal header"
             fill
             className="object-cover"
-            unoptimized={heroUrl.startsWith("http")}
+            unoptimized={false}
           />
         ) : (
           <div className="h-full w-full bg-gray-200" />
