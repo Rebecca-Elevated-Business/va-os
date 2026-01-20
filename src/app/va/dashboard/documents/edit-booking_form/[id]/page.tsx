@@ -1,36 +1,31 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { Eye } from "lucide-react";
 import { DOCUMENT_TEMPLATES } from "@/lib/documentTemplates";
+import BookingFormDocument from "@/components/documents/BookingFormDocument";
+import {
+  mergeBookingContent,
+  type BookingFormContent,
+} from "@/lib/bookingFormContent";
 
-// 1. Define the internal content structure
-type BookingContent = {
-  header_image?: string;
-  client_name?: string;
-  va_name?: string;
-  scope_of_work?: string;
-  pricing_summary?: string;
-  start_date?: string;
-  further_agreements?: string;
-  legal_terms?: string;
-};
-
-// 2. Define the main Document type
 type ClientDoc = {
   id: string;
   client_id: string;
   title: string;
+  type: string;
   status: string;
-  content: BookingContent;
+  issued_at: string | null;
+  content: Partial<BookingFormContent>;
 };
 
-// 3. Define the shape of the data coming back from Supabase Join
 type FetchedDoc = ClientDoc & {
   clients: {
     first_name: string;
     surname: string;
+    business_name: string | null;
   };
 };
 
@@ -44,74 +39,166 @@ export default function EditBookingFormPage({
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [autosaving, setAutosaving] = useState(false);
   const [doc, setDoc] = useState<ClientDoc | null>(null);
+  const lastSavedRef = useRef<string>("");
 
   useEffect(() => {
     async function loadDoc() {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("client_documents")
-        .select("*, clients(first_name, surname)")
+        .select("*, clients(first_name, surname, business_name)")
         .eq("id", id)
         .single();
 
-      if (data && !error) {
-        // Cast to our Intersection Type to safely access .clients
-        const fetchedData = data as FetchedDoc;
+      if (data) {
+        const fetched = data as FetchedDoc;
+        let preparedBy = "VA/Business Name";
+        let signatureName = "";
+        let businessName = "";
+        let contactEmail = "";
+        let contactPhone = "";
 
-        // Initialise with Library Template if content is empty
-        if (!fetchedData.content.legal_terms) {
-          const template = DOCUMENT_TEMPLATES.booking_form;
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-          fetchedData.content = {
-            ...fetchedData.content,
-            header_image: template.header_image,
-            client_name: `${fetchedData.clients.first_name} ${fetchedData.clients.surname}`,
-            va_name: "Your Name",
-            scope_of_work: "Detailed in Proposal",
-            pricing_summary: "£",
-            start_date: "",
-            further_agreements: "None",
-            legal_terms:
-              template.sections.legal_text ||
-              "Master terms not found in library.",
-          };
+        if (user) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("display_name, full_name")
+            .eq("id", user.id)
+            .maybeSingle();
+          const { data: business } = await supabase
+            .from("va_business_details")
+            .select("company_name, email, phone")
+            .eq("va_id", user.id)
+            .maybeSingle();
+
+          preparedBy =
+            business?.company_name ||
+            profile?.display_name ||
+            profile?.full_name ||
+            preparedBy;
+          signatureName = profile?.display_name || profile?.full_name || "";
+          businessName = business?.company_name || "";
+          contactEmail = business?.email || user.email || "";
+          contactPhone = business?.phone || "";
         }
-        setDoc(fetchedData);
+
+        const merged = mergeBookingContent(fetched.content, {
+          preparedBy,
+          signatureName,
+          businessName,
+          contactEmail,
+          contactPhone,
+        });
+
+        merged.prepared_for =
+          fetched.clients.business_name ||
+          `${fetched.clients.first_name} ${fetched.clients.surname}`;
+        merged.client_print_name =
+          merged.client_print_name ||
+          `${fetched.clients.first_name} ${fetched.clients.surname}`;
+        merged.client_business_name =
+          merged.client_business_name ||
+          fetched.clients.business_name ||
+          "";
+        merged.client_business_name_signature =
+          merged.client_business_name_signature || merged.client_business_name;
+
+        fetched.content = merged;
+        setDoc(fetched);
+        lastSavedRef.current = JSON.stringify({
+          content: merged,
+          status: fetched.status,
+        });
       }
+
       setLoading(false);
     }
     loadDoc();
   }, [id]);
 
-  const updateField = (field: keyof BookingContent, value: string) => {
+  const updateContent = (updates: Partial<BookingFormContent>) => {
     if (!doc) return;
-    setDoc({
-      ...doc,
-      content: { ...doc.content, [field]: value },
-    });
+    setDoc({ ...doc, content: { ...doc.content, ...updates } });
   };
 
-  const handleSave = async (isIssuing = false) => {
-    if (!doc) return;
-    setSaving(true);
+  const handleHeroUpload = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        updateContent({ hero_image_url: reader.result });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
-    const { error } = await supabase
-      .from("client_documents")
-      .update({
+  const persistDoc = useCallback(
+    async (options?: { issue?: boolean; silent?: boolean }) => {
+      if (!doc) return;
+      const shouldIssue = Boolean(options?.issue);
+      const silent = Boolean(options?.silent);
+
+      if (shouldIssue && !doc.content.use_standard_terms) {
+        if (!doc.content.custom_terms_url.trim()) {
+          alert("Please provide a custom terms link or enable standard terms.");
+          return;
+        }
+      }
+
+      if (silent) {
+        setAutosaving(true);
+      } else {
+        setSaving(true);
+      }
+
+      const payload = {
         content: doc.content,
-        status: isIssuing ? "issued" : "draft",
-        issued_at: isIssuing ? new Date().toISOString() : null,
-      })
-      .eq("id", id);
+        status: shouldIssue ? "issued" : doc.status,
+        issued_at: shouldIssue ? new Date().toISOString() : doc.issued_at,
+      };
 
-    setSaving(false);
-    if (!error) {
-      alert(isIssuing ? "Booking Form Issued!" : "Draft Saved.");
-      if (isIssuing) router.push(`/va/dashboard/crm/profile/${doc.client_id}`);
-    } else {
-      alert("Error: " + error.message);
-    }
-  };
+      const { error } = await supabase
+        .from("client_documents")
+        .update(payload)
+        .eq("id", id);
+
+      if (silent) {
+        setAutosaving(false);
+      } else {
+        setSaving(false);
+      }
+
+      if (!error) {
+        lastSavedRef.current = JSON.stringify({
+          content: doc.content,
+          status: shouldIssue ? "issued" : doc.status,
+        });
+        if (!silent) {
+          alert(shouldIssue ? "Booking form issued!" : "Draft saved.");
+          if (shouldIssue) router.push(`/va/dashboard/crm/profile/${doc.client_id}`);
+        }
+      }
+    },
+    [doc, id, router]
+  );
+
+  useEffect(() => {
+    if (!doc || loading || saving) return;
+    const snapshot = JSON.stringify({
+      content: doc.content,
+      status: doc.status,
+    });
+    if (snapshot === lastSavedRef.current) return;
+
+    const timer = setTimeout(() => {
+      persistDoc({ silent: true });
+    }, 1200);
+
+    return () => clearTimeout(timer);
+  }, [doc, loading, saving, persistDoc]);
 
   if (loading)
     return (
@@ -127,121 +214,134 @@ export default function EditBookingFormPage({
     );
 
   return (
-    <div className="p-6 max-w-4xl mx-auto text-black pb-40 font-sans">
-      {/* HEADER SECTION */}
-      <div className="flex justify-between items-end mb-10 pb-6 border-b border-gray-100">
+    <div className="p-6 max-w-5xl mx-auto text-black pb-40 font-sans">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between mb-10 pb-6 border-b border-gray-100">
         <div>
           <h1 className="text-3xl font-black tracking-tight uppercase">
             Booking Form Builder
           </h1>
-          <p className="text-[10px] font-black text-[#9d4edd] uppercase tracking-[0.2em] mt-2">
-            Contract for: {doc.content.client_name}
+          <p className="text-xs font-bold text-gray-400">
+            STATUS: {doc.status.toUpperCase()}
+            {autosaving && " · Autosaving..."}
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <button
-            onClick={() => handleSave(false)}
-            disabled={saving}
-            className="px-6 py-2 border-2 border-gray-200 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-gray-50 transition-all disabled:opacity-50"
+            onClick={() =>
+              window.open(`/va/dashboard/documents/preview/${id}`, "_blank")
+            }
+            className="px-6 py-2 border-2 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all flex items-center gap-2"
           >
-            {saving ? "..." : "Save Draft"}
+            <Eye className="h-4 w-4" />
+            Preview
           </button>
           <button
-            onClick={() => handleSave(true)}
+            onClick={() => persistDoc({ issue: false })}
             disabled={saving}
-            className="px-6 py-2 bg-[#9d4edd] text-white rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-[#7b2cbf] shadow-xl shadow-purple-100 transition-all disabled:opacity-50"
+            className="px-6 py-2 border-2 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
           >
-            {saving ? "..." : "Issue for Signature"}
+            {saving ? "Saving..." : "Save Draft"}
+          </button>
+          <button
+            onClick={() => persistDoc({ issue: true })}
+            disabled={saving}
+            className="px-6 py-2 bg-[#9d4edd] text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-[#7b2cbf] shadow-xl shadow-purple-100 transition-all"
+          >
+            Issue for Signature
           </button>
         </div>
       </div>
 
       <div className="space-y-8">
-        {/* BASIC DETAILS GRID */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-8 rounded-4xl border border-gray-100 shadow-sm">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block ml-1">
-              VA Legal Name (Signatory)
-            </label>
+        <section className="space-y-4">
+          <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">
+            Hero Section
+          </label>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-3">
+              <input
+                className="w-full p-4 bg-white border-2 border-gray-100 rounded-2xl outline-none focus:border-purple-100 text-sm"
+                placeholder="Hero image URL (optional)"
+                value={doc.content.hero_image_url || ""}
+                onChange={(e) =>
+                  updateContent({ hero_image_url: e.target.value })
+                }
+              />
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="inline-flex items-center gap-2 text-xs font-bold text-gray-500">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleHeroUpload(file);
+                    }}
+                  />
+                  <span className="px-4 py-2 border-2 border-gray-100 rounded-xl cursor-pointer hover:border-purple-200">
+                    Upload image
+                  </span>
+                </label>
+                {doc.content.hero_image_url && (
+                  <button
+                    type="button"
+                    onClick={() => updateContent({ hero_image_url: "" })}
+                    className="text-xs font-bold text-red-400 hover:text-red-500"
+                  >
+                    Remove image
+                  </button>
+                )}
+              </div>
+            </div>
             <input
-              className="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-4 focus:ring-purple-50 font-bold border-2 border-transparent focus:border-purple-100 transition-all"
-              value={doc.content.va_name || ""}
-              onChange={(e) => updateField("va_name", e.target.value)}
+              className="w-full p-4 bg-white border-2 border-gray-100 rounded-2xl outline-none focus:border-purple-100 text-sm"
+              placeholder="Title"
+              value={doc.content.hero_title || ""}
+              onChange={(e) => updateContent({ hero_title: e.target.value })}
             />
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block ml-1">
-              Proposed Start Date
-            </label>
             <input
-              type="date"
-              className="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-4 focus:ring-purple-50 border-2 border-transparent focus:border-purple-100 transition-all"
-              value={doc.content.start_date || ""}
-              onChange={(e) => updateField("start_date", e.target.value)}
+              className="w-full p-4 bg-white border-2 border-gray-100 rounded-2xl outline-none focus:border-purple-100 text-sm"
+              placeholder="Prepared for"
+              value={doc.content.prepared_for || ""}
+              onChange={(e) => updateContent({ prepared_for: e.target.value })}
             />
-          </div>
-        </div>
-
-        {/* WORK & PAYMENT SUMMARY */}
-        <div className="bg-white p-8 rounded-4xl border border-gray-100 shadow-sm space-y-6">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block ml-1">
-              Agreed Scope Summary
-            </label>
-            <textarea
-              className="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-4 focus:ring-purple-50 text-sm min-h-25 border-2 border-transparent focus:border-purple-100 transition-all"
-              value={doc.content.scope_of_work || ""}
-              onChange={(e) => updateField("scope_of_work", e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block ml-1">
-              Pricing & Payment Schedule
-            </label>
             <input
-              className="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-4 focus:ring-purple-50 font-bold text-[#9d4edd] border-2 border-transparent focus:border-purple-100 transition-all"
-              value={doc.content.pricing_summary || ""}
-              onChange={(e) => updateField("pricing_summary", e.target.value)}
+              className="w-full p-4 bg-white border-2 border-gray-100 rounded-2xl outline-none focus:border-purple-100 text-sm"
+              placeholder="Prepared by"
+              value={doc.content.prepared_by || ""}
+              onChange={(e) => updateContent({ prepared_by: e.target.value })}
+            />
+            <input
+              className="w-full p-4 bg-white border-2 border-gray-100 rounded-2xl outline-none focus:border-purple-100 text-sm"
+              placeholder="Date"
+              value={doc.content.prepared_date || ""}
+              onChange={(e) => updateContent({ prepared_date: e.target.value })}
             />
           </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block ml-1">
-              Further Agreements
-            </label>
-            <textarea
-              className="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-4 focus:ring-purple-50 text-sm border-2 border-transparent focus:border-purple-100 transition-all"
-              value={doc.content.further_agreements || ""}
-              onChange={(e) =>
-                updateField("further_agreements", e.target.value)
-              }
-            />
-          </div>
-        </div>
+        </section>
 
-        {/* MASTER TERMS (FROM LIBRARY) */}
-        <div className="space-y-4">
-          <div className="flex justify-between items-center px-2">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-              Master Terms of Service
-            </label>
-            <span className="text-[10px] font-bold text-red-400 uppercase bg-red-50 px-2 py-1 rounded">
-              Locked Template
-            </span>
-          </div>
-          <div className="w-full p-8 bg-gray-900 text-gray-400 rounded-[2.5rem] text-[11px] leading-relaxed h-80 overflow-y-auto font-mono border-4 border-gray-800 custom-scrollbar">
-            <p className="whitespace-pre-wrap">{doc.content.legal_terms}</p>
-          </div>
-        </div>
+        <section className="space-y-3">
+          <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">
+            Warm Welcome
+          </label>
+          <textarea
+            className="w-full p-6 bg-white border-2 border-gray-50 rounded-4xl outline-none focus:border-purple-100 min-h-25 leading-relaxed shadow-sm text-sm"
+            value={doc.content.warm_welcome_text || ""}
+            onChange={(e) =>
+              updateContent({ warm_welcome_text: e.target.value })
+            }
+          />
+        </section>
 
-        {/* SIGNATURE PLACEHOLDER */}
-        <div className="p-10 bg-purple-50 rounded-[2.5rem] border-2 border-dashed border-purple-100 text-center">
-          <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-2">
-            Digital Signature Area
-          </p>
-          <p className="text-sm text-purple-900/40 italic font-medium">
-            This section will become active for the client to sign once issued.
-          </p>
-        </div>
+        <BookingFormDocument
+          content={doc.content as BookingFormContent}
+          mode="va"
+          standardTerms={
+            DOCUMENT_TEMPLATES.booking_form.sections.legal_text ||
+            "Terms not available."
+          }
+          onUpdate={updateContent}
+        />
       </div>
     </div>
   );

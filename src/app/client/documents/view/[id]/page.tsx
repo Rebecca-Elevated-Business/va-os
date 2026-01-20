@@ -5,10 +5,16 @@ import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import ProposalDocument from "@/components/documents/ProposalDocument";
+import BookingFormDocument from "@/components/documents/BookingFormDocument";
 import {
   mergeProposalContent,
   type ProposalContent,
 } from "@/lib/proposalContent";
+import {
+  mergeBookingContent,
+  type BookingFormContent,
+} from "@/lib/bookingFormContent";
+import { DOCUMENT_TEMPLATES } from "@/lib/documentTemplates";
 
 type ClientDoc = {
   id: string;
@@ -66,9 +72,13 @@ export default function ClientDocumentView({
   const [doc, setDoc] = useState<ClientDoc | null>(null);
   const [loading, setLoading] = useState(true);
   const [responseMode, setResponseMode] = useState<
-    "accept" | "edit" | "sign" | null
+    "accept" | "edit" | "sign" | "message" | null
   >(null);
   const [comment, setComment] = useState("");
+  const [bookingContent, setBookingContent] =
+    useState<BookingFormContent | null>(null);
+  const [clientAgreed, setClientAgreed] = useState(false);
+  const [signatureError, setSignatureError] = useState("");
 
   useEffect(() => {
     async function loadDoc() {
@@ -82,6 +92,11 @@ export default function ClientDocumentView({
     }
     loadDoc();
   }, [id]);
+
+  useEffect(() => {
+    if (!doc || doc.type !== "booking_form") return;
+    setBookingContent(mergeBookingContent(doc.content as BookingFormContent));
+  }, [doc]);
 
   const handleSubmitResponse = async () => {
     if (!doc) return;
@@ -116,6 +131,122 @@ export default function ClientDocumentView({
     router.push("/client/dashboard");
   };
 
+  const requiredBookingFields: (keyof BookingFormContent)[] = [
+    "client_business_name",
+    "client_contact_name",
+    "client_job_title",
+    "client_postal_address",
+    "client_email",
+    "client_phone",
+    "va_business_name",
+    "va_contact_name",
+    "va_job_title",
+    "va_contact_details",
+    "timeline_key_dates",
+    "working_hours",
+    "communication_channels",
+    "fee",
+    "payment_terms",
+    "prepayment_expiration",
+    "additional_hourly_rate",
+    "out_of_hours_rate",
+    "urgent_work_rate",
+    "additional_payment_charges",
+    "late_payment_interest",
+    "purchase_order_number",
+    "data_privacy_link",
+    "insurance_cover",
+    "notice_period",
+    "special_terms",
+    "courts_jurisdiction",
+    "accept_by_date",
+    "client_signature_name",
+    "client_print_name",
+    "client_business_name_signature",
+  ];
+
+  const hasValue = (value: string) => value.trim().length > 0;
+
+  const isBookingReadyToSign = (content: BookingFormContent) => {
+    const missingFields = requiredBookingFields.filter(
+      (field) => !hasValue(String(content[field] || ""))
+    );
+    const missingServiceFields = content.services.some(
+      (service) => !hasValue(service.title) || !hasValue(service.details)
+    );
+
+    const missingTerms =
+      !content.use_standard_terms && !hasValue(content.custom_terms_url);
+
+    return (
+      missingFields.length === 0 && !missingServiceFields && !missingTerms
+    );
+  };
+
+  const handleSignBooking = async () => {
+    if (!doc || !bookingContent) return;
+    setSignatureError("");
+
+    if (!isBookingReadyToSign(bookingContent)) {
+      setSignatureError(
+        "All required fields must be completed before signing."
+      );
+      return;
+    }
+
+    if (!clientAgreed) {
+      setSignatureError("Please confirm you agree to the terms before signing.");
+      return;
+    }
+
+    const signedAt = new Date().toISOString();
+    const updatedContent = {
+      ...bookingContent,
+      client_signed_at: signedAt,
+    };
+
+    await supabase
+      .from("client_documents")
+      .update({
+        content: updatedContent,
+        status: "signed",
+        signed_at: signedAt,
+      })
+      .eq("id", doc.id);
+
+    await supabase.from("client_requests").insert([
+      {
+        client_id: doc.client_id,
+        type: "work",
+        status: "new",
+        message: "BOOKING FORM SIGNED: Client completed and signed the form.",
+      },
+    ]);
+
+    alert("Booking form signed and sent to your VA.");
+    router.push("/client/dashboard");
+  };
+
+  const handleSendBookingMessage = async () => {
+    if (!doc) return;
+    if (bookingContent) {
+      await supabase
+        .from("client_documents")
+        .update({ content: bookingContent })
+        .eq("id", doc.id);
+    }
+    await supabase.from("client_requests").insert([
+      {
+        client_id: doc.client_id,
+        type: "work",
+        status: "new",
+        message: `BOOKING FORM MESSAGE: ${comment || "Client question sent."}`,
+      },
+    ]);
+    alert("Message sent to your VA.");
+    router.push("/client/dashboard");
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -135,7 +266,10 @@ export default function ClientDocumentView({
     <div className="min-h-screen bg-gray-50 pb-20 text-black p-4 md:p-8 font-sans print:bg-white">
       <div className="max-w-4xl mx-auto bg-white shadow-2xl rounded-4xl overflow-hidden border border-gray-100 print:shadow-none print:border-none">
         {/* HEADER IMAGE */}
-        {doc.content.header_image && doc.type !== "upload" && doc.type !== "proposal" && (
+        {doc.content.header_image &&
+          doc.type !== "upload" &&
+          doc.type !== "proposal" &&
+          doc.type !== "booking_form" && (
           <div className="h-64 w-full relative">
             <Image
               src={doc.content.header_image}
@@ -153,7 +287,7 @@ export default function ClientDocumentView({
             doc.content.header_image ? "-mt-12" : ""
           } relative bg-white rounded-t-4xl`}
         >
-          {doc.type !== "proposal" && (
+          {doc.type !== "proposal" && doc.type !== "booking_form" && (
             <header>
               <div className="inline-block px-3 py-1 bg-purple-100 text-[#9d4edd] text-[10px] font-black uppercase tracking-widest rounded-full mb-4">
                 {doc.type.replace("_", " ")}
@@ -201,23 +335,66 @@ export default function ClientDocumentView({
               }
 
               case "booking_form":
+                if (!bookingContent) return null;
                 return (
                   <div className="space-y-10">
-                    <section className="text-gray-700 whitespace-pre-wrap">
-                      {doc.content.intro_text}
-                    </section>
-                    <section className="h-96 overflow-y-auto p-8 bg-gray-900 text-gray-400 rounded-3xl font-mono text-[11px] leading-relaxed border-4 border-gray-800">
-                      {doc.content.legal_text}
-                    </section>
-                    {doc.status !== "signed" ? (
+                    <div className="flex justify-end print:hidden">
                       <button
-                        onClick={() => setResponseMode("sign")}
-                        className="w-full bg-[#9d4edd] text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-xl"
+                        onClick={handlePrint}
+                        className="px-6 py-2 border-2 border-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
                       >
-                        Confirm & Sign Agreement
+                        Download / Print
                       </button>
+                    </div>
+                    <BookingFormDocument
+                      content={bookingContent}
+                      mode="client"
+                      standardTerms={
+                        DOCUMENT_TEMPLATES.booking_form.sections.legal_text ||
+                        "Terms not available."
+                      }
+                      onUpdate={(updates) =>
+                        setBookingContent((prev) =>
+                          prev ? { ...prev, ...updates } : prev
+                        )
+                      }
+                    />
+                    {doc.status !== "signed" ? (
+                      <div className="bg-gray-50 border border-gray-100 rounded-3xl p-6 space-y-4 print:hidden">
+                        <label className="flex items-center gap-2 text-sm text-gray-600">
+                          <input
+                            type="checkbox"
+                            checked={clientAgreed}
+                            onChange={(e) => setClientAgreed(e.target.checked)}
+                          />
+                          I agree to the terms outlined in this booking form.
+                        </label>
+                        {signatureError && (
+                          <p className="text-xs text-red-500 font-semibold">
+                            {signatureError}
+                          </p>
+                        )}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <button
+                            onClick={handleSignBooking}
+                            disabled={
+                              !isBookingReadyToSign(bookingContent) ||
+                              !clientAgreed
+                            }
+                            className="bg-[#9d4edd] text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl disabled:bg-gray-300"
+                          >
+                            Sign & Send
+                          </button>
+                          <button
+                            onClick={() => setResponseMode("message")}
+                            className="border-2 border-gray-200 text-gray-500 py-4 rounded-2xl font-bold uppercase tracking-widest text-xs"
+                          >
+                            Send Message
+                          </button>
+                        </div>
+                      </div>
                     ) : (
-                      <div className="p-6 bg-green-50 border border-green-100 rounded-2xl text-green-700 font-bold text-center">
+                      <div className="p-6 bg-green-50 border border-green-100 rounded-2xl text-green-700 font-bold text-center print:hidden">
                         ✓ This agreement was signed and finalized.
                       </div>
                     )}
@@ -301,14 +478,12 @@ export default function ClientDocumentView({
               <h3 className="text-xl font-black mb-4 tracking-tight">
                 {responseMode === "accept"
                   ? "Accept Proposal"
-                  : responseMode === "sign"
-                  ? "Digitally Sign Agreement"
+                  : responseMode === "message"
+                  ? "Send Message"
                   : "Request Changes"}
               </h3>
               <p className="text-sm text-gray-500 mb-4">
-                {responseMode === "sign"
-                  ? "By clicking 'Send Response', you are applying your digital signature to this document."
-                  : "Your message to your Virtual Assistant:"}
+                {"Your message to your Virtual Assistant:"}
               </p>
               <textarea
                 className="w-full border-2 border-gray-100 p-5 rounded-2xl bg-gray-50 focus:ring-4 focus:ring-purple-50 outline-none mb-6 transition-all"
@@ -316,17 +491,21 @@ export default function ClientDocumentView({
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 placeholder={
-                  responseMode === "sign"
-                    ? "Add a note (optional)..."
-                    : "Details here..."
+                  "Details here..."
                 }
               />
               <div className="flex items-center gap-6">
                 <button
-                  onClick={handleSubmitResponse}
+                  onClick={() => {
+                    if (responseMode === "message") {
+                      handleSendBookingMessage();
+                    } else {
+                      handleSubmitResponse();
+                    }
+                  }}
                   className="bg-gray-900 text-white px-10 py-3 rounded-xl font-black uppercase tracking-widest hover:bg-[#9d4edd] transition-colors"
                 >
-                  {responseMode === "sign" ? "Sign & Confirm" : "Send Response"}
+                  {responseMode === "message" ? "Send Message" : "Send Response"}
                 </button>
                 <button
                   onClick={() => setResponseMode(null)}
@@ -338,7 +517,7 @@ export default function ClientDocumentView({
             </div>
           )}
 
-          {doc.type !== "proposal" && (
+          {doc.type !== "proposal" && doc.type !== "booking_form" && (
             <footer className="pt-10 border-t border-gray-100">
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
                 Kind Regards,

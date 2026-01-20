@@ -3,7 +3,13 @@
 import { useEffect, useState, use } from "react";
 import { supabase } from "@/lib/supabase";
 import ProposalDocument from "@/components/documents/ProposalDocument";
+import BookingFormDocument from "@/components/documents/BookingFormDocument";
 import { mergeProposalContent, type ProposalContent } from "@/lib/proposalContent";
+import {
+  mergeBookingContent,
+  type BookingFormContent,
+} from "@/lib/bookingFormContent";
+import { DOCUMENT_TEMPLATES } from "@/lib/documentTemplates";
 
 type ClientDoc = {
   id: string;
@@ -45,15 +51,13 @@ export default function ProposalPreviewPage({
   if (!doc)
     return <div className="p-10 text-red-500 font-bold">Document not found.</div>;
 
-  if (doc.type !== "proposal") {
+  if (doc.type !== "proposal" && doc.type !== "booking_form") {
     return (
       <div className="p-10 text-gray-500 italic">
-        Preview is only available for proposals at the moment.
+        Preview is only available for proposals and booking forms at the moment.
       </div>
     );
   }
-
-  const content = mergeProposalContent(doc.content);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 text-black p-4 md:p-8 print:bg-white">
@@ -67,7 +71,18 @@ export default function ProposalPreviewPage({
           </button>
         </div>
 
-        <ProposalDocument content={content} />
+        {doc.type === "proposal" ? (
+          <ProposalDocument content={mergeProposalContent(doc.content)} />
+        ) : (
+          <BookingFormDocument
+            content={mergeBookingContent(doc.content as BookingFormContent)}
+            mode="preview"
+            standardTerms={
+              DOCUMENT_TEMPLATES.booking_form.sections.legal_text ||
+              "Terms not available."
+            }
+          />
+        )}
       </div>
     </div>
   );
