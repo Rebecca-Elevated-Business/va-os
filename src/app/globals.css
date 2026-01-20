@@ -6,12 +6,6 @@
   --brand-purple: #9d4edd;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-brand: var(--brand-purple);
-  --font-sans: var(--font-inter); /* Linked to layout.tsx */
-}
 
 body {
   background: var(--background);
@@ -41,8 +35,8 @@ h2 {
 h3 {
   font-size: 0.875rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #9ca3af;
+  text-transform: none;
+  letter-spacing: 0;
+  color: #333333;
   margin-bottom: 0.5rem;
 }
