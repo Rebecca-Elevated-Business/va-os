@@ -99,7 +99,7 @@ export default function VADashboard() {
       supabase
         .from("client_requests")
         .select(
-          "id, created_at, client_id, type, message, is_read, is_completed, clients(first_name, surname, business_name, va_id)"
+          "id, created_at, client_id, type, message, is_read, is_completed, clients(first_name, surname, business_name, va_id)",
         )
         .order("created_at", { ascending: false }),
       supabase
@@ -136,7 +136,7 @@ export default function VADashboard() {
         .lte("started_at", endIso);
       setTimeEntries((data as TimeEntry[]) || []);
     },
-    [userId]
+    [userId],
   );
 
   useEffect(() => {
@@ -159,7 +159,7 @@ export default function VADashboard() {
     const nextMidnight = new Date(
       now.getFullYear(),
       now.getMonth(),
-      now.getDate() + 1
+      now.getDate() + 1,
     );
     const timeout = nextMidnight.getTime() - now.getTime();
     const timer = setTimeout(() => {
@@ -203,23 +203,23 @@ export default function VADashboard() {
   }, [agendaDate, tasks]);
 
   const unreadCount = messages.filter(
-    (msg) => !msg.is_read && !msg.is_completed
+    (msg) => !msg.is_read && !msg.is_completed,
   ).length;
   const pendingApprovalCount = messages.filter(
-    (msg) => msg.type === "document" && !msg.is_completed
+    (msg) => msg.type === "document" && !msg.is_completed,
   ).length;
   const replyNeededCount = messages.filter(
-    (msg) => msg.type === "work" && !msg.is_completed
+    (msg) => msg.type === "work" && !msg.is_completed,
   ).length;
 
   const opportunityClients = useMemo(
     () => clients.filter((client) => client.status === selectedStatus),
-    [clients, selectedStatus]
+    [clients, selectedStatus],
   );
 
   const totalMinutesToday = useMemo(
     () => timeEntries.reduce((sum, entry) => sum + entry.duration_minutes, 0),
-    [timeEntries]
+    [timeEntries],
   );
 
   const saveNote = async () => {
@@ -232,7 +232,7 @@ export default function VADashboard() {
         content: note,
         updated_at: updatedAt,
       },
-      { onConflict: "va_id" }
+      { onConflict: "va_id" },
     );
     setSavingNote(false);
     if (!error) {
@@ -245,7 +245,7 @@ export default function VADashboard() {
     <main className="animate-in fade-in duration-500 text-[#333333]">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
         <h1>Dashboard</h1>
-        <p className="text-xs font-semibold text-[#333333]">
+        <p className="text-s font-semibold text-[#333333]">
           {formatDateLabel(todayDate)}
         </p>
       </div>
@@ -364,7 +364,9 @@ export default function VADashboard() {
               <span className="text-[#9d4edd]">{pendingApprovalCount}</span>
             </div>
             <div className="flex items-center justify-between text-sm font-semibold">
-              <span className="text-[#333333]">Client replies needing action</span>
+              <span className="text-[#333333]">
+                Client replies needing action
+              </span>
               <span className="text-[#9d4edd]">{replyNeededCount}</span>
             </div>
             <Link
@@ -426,9 +428,7 @@ export default function VADashboard() {
 
         <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-50">
-            <h3 className="text-base font-bold text-[#333333]">
-              Time Today
-            </h3>
+            <h3 className="text-base font-bold text-[#333333]">Time Today</h3>
             <p className="text-xs text-[#333333]">
               {formatDateLabel(todayDate)}
             </p>
