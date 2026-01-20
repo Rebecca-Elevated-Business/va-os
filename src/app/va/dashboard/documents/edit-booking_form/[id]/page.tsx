@@ -142,7 +142,7 @@ export default function EditBookingFormPage({
       const silent = Boolean(options?.silent);
 
       if (shouldIssue && !doc.content.use_standard_terms) {
-        if (!doc.content.custom_terms_url.trim()) {
+        if (!(doc.content.custom_terms_url || "").trim()) {
           alert("Please provide a custom terms link or enable standard terms.");
           return;
         }
