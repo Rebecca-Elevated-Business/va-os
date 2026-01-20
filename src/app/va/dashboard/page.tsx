@@ -255,7 +255,7 @@ export default function VADashboard() {
           <div className="px-6 py-4 border-b border-gray-50 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="text-base font-bold text-[#333333]">Agenda</h3>
-              <p className="text-xs text-[#333333]">
+              <p className="text-s text-[#333333]">
                 Overdue tasks appear first
               </p>
             </div>
