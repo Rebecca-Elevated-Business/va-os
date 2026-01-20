@@ -978,9 +978,23 @@ export default function ClientProfilePage({
                     )}
 
                     <button
-                      onClick={() =>
-                        router.push(`/va/dashboard/documents/edit/${doc.id}`)
-                      }
+                      onClick={() => {
+                        const routeSuffix =
+                          doc.type === "proposal"
+                            ? "proposal"
+                            : doc.type === "invoice"
+                            ? "invoice"
+                            : doc.type === "booking_form"
+                            ? "booking_form"
+                            : doc.type === "upload"
+                            ? "upload"
+                            : "";
+                        router.push(
+                          routeSuffix
+                            ? `/va/dashboard/documents/edit-${routeSuffix}/${doc.id}`
+                            : `/va/dashboard/documents/edit/${doc.id}`
+                        );
+                      }}
                       className="text-xs font-bold text-[#9d4edd] hover:underline"
                     >
                       {doc.status === "draft" ? "Edit & Issue" : "View"}

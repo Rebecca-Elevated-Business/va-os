@@ -121,9 +121,9 @@ export default function VADashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-[#fcfcfc] text-[#333333] font-sans">
+    <div className="flex min-h-screen bg-[#fcfcfc] text-[#333333] font-sans print:block print:bg-white">
       <aside
-        className={`bg-white border-r border-gray-200 flex flex-col fixed h-full z-30 transition-all duration-300 ease-in-out shadow-sm ${
+        className={`bg-white border-r border-gray-200 flex flex-col fixed h-full z-30 transition-all duration-300 ease-in-out shadow-sm print:hidden ${
           isCollapsed ? "w-20" : "w-64"
         }`}
       >
@@ -222,12 +222,12 @@ export default function VADashboardLayout({
       </aside>
 
       <main
-        className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${
+        className={`flex-1 flex flex-col min-w-0 transition-all duration-300 print:ml-0 ${
           isCollapsed ? "ml-20" : "ml-64"
         }`}
       >
         <DashboardHeader />
-        <div className="p-8">{children}</div>
+        <div className="p-8 print:p-0">{children}</div>
       </main>
     </div>
   );

@@ -118,8 +118,24 @@ export default function DashboardHeader() {
     if (result.type === "client")
       router.push(`/va/dashboard/crm/profile/${result.id}`);
     if (result.type === "task") router.push(`/va/dashboard/tasks`); // Deep link if needed later
-    if (result.type === "document")
-      router.push(`/va/dashboard/documents/edit/${result.id}`);
+    if (result.type === "document") {
+      const docType = result.subtitle?.replace(" ", "_");
+      const routeSuffix =
+        docType === "proposal"
+          ? "proposal"
+          : docType === "invoice"
+          ? "invoice"
+          : docType === "booking_form"
+          ? "booking_form"
+          : docType === "upload"
+          ? "upload"
+          : "";
+      router.push(
+        routeSuffix
+          ? `/va/dashboard/documents/edit-${routeSuffix}/${result.id}`
+          : `/va/dashboard/documents/edit/${result.id}`
+      );
+    }
   };
 
   // (Keep your existing getUser and handleSignOut logic here...)
@@ -157,7 +173,7 @@ export default function DashboardHeader() {
   };
 
   return (
-    <header className="h-20 bg-white border-b border-gray-100 flex items-center justify-between px-8 sticky top-0 z-20">
+    <header className="h-20 bg-white border-b border-gray-100 flex items-center justify-between px-8 sticky top-0 z-20 print:hidden">
       {/* 1. SEARCH BAR WITH DROPDOWN */}
       <div className="relative w-full max-w-md group" ref={searchRef}>
         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
