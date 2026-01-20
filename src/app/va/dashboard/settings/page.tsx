@@ -25,8 +25,6 @@ export default function SettingsPage() {
     linkedin_url: "",
     instagram_url: "",
     logo_url: "",
-    logo_max_width: "",
-    logo_max_height: "",
   });
   const [savingBusiness, setSavingBusiness] = useState(false);
   const [businessMessage, setBusinessMessage] = useState("");
@@ -70,12 +68,6 @@ export default function SettingsPage() {
             linkedin_url: businessData.linkedin_url || "",
             instagram_url: businessData.instagram_url || "",
             logo_url: businessData.logo_url || "",
-            logo_max_width: businessData.logo_max_width
-              ? String(businessData.logo_max_width)
-              : "",
-            logo_max_height: businessData.logo_max_height
-              ? String(businessData.logo_max_height)
-              : "",
           });
         }
       }
@@ -91,12 +83,6 @@ export default function SettingsPage() {
     { id: "profile", label: "My Profile", icon: User },
     { id: "business", label: "Business Details", icon: Building2 },
   ];
-
-  const parseOptionalNumber = (value: string) => {
-    if (!value.trim()) return null;
-    const parsed = Number(value);
-    return Number.isNaN(parsed) ? null : parsed;
-  };
 
   const handleProfileSave = async () => {
     if (!userId) return;
@@ -142,8 +128,6 @@ export default function SettingsPage() {
       linkedin_url: business.linkedin_url || null,
       instagram_url: business.instagram_url || null,
       logo_url: business.logo_url || null,
-      logo_max_width: parseOptionalNumber(business.logo_max_width),
-      logo_max_height: parseOptionalNumber(business.logo_max_height),
     };
     const { error } = await supabase
       .from("va_business_details")
@@ -246,16 +230,6 @@ export default function SettingsPage() {
                 <div className="grid grid-cols-1 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                      Legal Name (Locked)
-                    </label>
-                    <input
-                      className="w-full p-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-purple-100 focus:bg-white transition-all font-bold"
-                      value={profile.legal_name}
-                      readOnly
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
                       Name Shown to Clients
                     </label>
                     <input
@@ -271,6 +245,16 @@ export default function SettingsPage() {
                     />
                   </div>
                   <div className="space-y-2">
+                    <label className="text-[10px] font-black text-gray-400 tracking-widest ml-1">
+                      Name on Account
+                    </label>
+                    <input
+                      className="w-full p-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-purple-100 focus:bg-white transition-all font-bold"
+                      value={profile.legal_name}
+                      readOnly
+                    />
+                  </div>
+                  <div className="space-y-2">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
                       Email Address
                     </label>
@@ -281,7 +265,7 @@ export default function SettingsPage() {
                     />
                     <p className="text-xs text-gray-400 ml-1">
                       Please email admin@elevatedbusiness.co.uk to update your
-                      email address.
+                      name on account and/or email address.
                     </p>
                   </div>
                 </div>
@@ -316,9 +300,6 @@ export default function SettingsPage() {
               <div className="space-y-8 animate-in slide-in-from-bottom-2 duration-300">
                 <div>
                   <h2 className="text-xl font-black mb-1">Business Details</h2>
-                  <p className="text-sm text-gray-400 font-medium">
-                    Optional branding and contact details for your business.
-                  </p>
                 </div>
 
                 <div className="grid grid-cols-1 gap-6">
@@ -435,24 +416,6 @@ export default function SettingsPage() {
                 <div className="grid grid-cols-1 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                      Logo URL
-                    </label>
-                    <input
-                      className="w-full p-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-purple-100 focus:bg-white transition-all font-bold"
-                      value={business.logo_url}
-                      onChange={(event) =>
-                        setBusiness((prev) => ({
-                          ...prev,
-                          logo_url: event.target.value,
-                        }))
-                      }
-                    />
-                    <p className="text-xs text-gray-400 ml-1">
-                      Used in document headers when branding is enabled.
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
                       Upload Logo
                     </label>
                     <input
@@ -470,38 +433,9 @@ export default function SettingsPage() {
                         {logoMessage}
                       </p>
                     )}
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                        Logo Max Width (px)
-                      </label>
-                      <input
-                        className="w-full p-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-purple-100 focus:bg-white transition-all font-bold"
-                        value={business.logo_max_width}
-                        onChange={(event) =>
-                          setBusiness((prev) => ({
-                            ...prev,
-                            logo_max_width: event.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                        Logo Max Height (px)
-                      </label>
-                      <input
-                        className="w-full p-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-purple-100 focus:bg-white transition-all font-bold"
-                        value={business.logo_max_height}
-                        onChange={(event) =>
-                          setBusiness((prev) => ({
-                            ...prev,
-                            logo_max_height: event.target.value,
-                          }))
-                        }
-                      />
-                    </div>
+                    <p className="text-xs text-gray-400 ml-1">
+                      Recommended logo size: 300px wide by 80px high.
+                    </p>
                   </div>
                 </div>
 
