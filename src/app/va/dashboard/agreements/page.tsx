@@ -48,30 +48,28 @@ export default function SOPLibraryPage() {
 
   return (
     <div className="text-black">
-      <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 mb-8">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">
-              Service Agreement Library
-            </h1>
-            <p className="text-gray-500 max-w-2xl">
-              Deploy polished service agreements in minutes. Templates help set
-              clear scope, authority, and delivery standards for each client.
-            </p>
-          </div>
-          <div className="w-full max-w-md">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">
-              Search Templates
-            </label>
-            <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-purple-100">
-              <Search className="h-4 w-4 text-[#333333]" aria-hidden />
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search agreements, categories..."
-                className="w-full bg-transparent text-sm text-gray-700 outline-none"
-              />
-            </div>
+      <div className="mb-8 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">
+            Service Agreement Library
+          </h1>
+          <p className="text-gray-500 max-w-2xl">
+            Deploy polished service agreements in minutes. Templates help set
+            clear scope, authority, and delivery standards for each client.
+          </p>
+        </div>
+        <div className="w-full max-w-md">
+          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">
+            Search Templates
+          </label>
+          <div className="flex items-center gap-2 bg-white border border-[#333333] rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-[#9d4edd]/20">
+            <Search className="h-4 w-4 text-[#9d4edd]" aria-hidden />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search agreements, categories..."
+              className="w-full bg-transparent text-sm text-gray-700 outline-none"
+            />
           </div>
         </div>
       </div>
