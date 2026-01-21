@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useEffect, useState, useCallback } from "react";
 import DashboardHeader from "./DashboardHeader";
+import ImpersonationBanner from "@/components/ImpersonationBanner";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -226,6 +227,7 @@ export default function VADashboardLayout({
           isCollapsed ? "ml-20" : "ml-64"
         }`}
       >
+        <ImpersonationBanner />
         <DashboardHeader />
         <div className="p-8 print:p-0">{children}</div>
       </main>
