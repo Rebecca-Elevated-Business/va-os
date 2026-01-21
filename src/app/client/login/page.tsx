@@ -9,12 +9,14 @@ export default function ClientLoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setResetMessage(null);
 
     // 1. Sign in the user
     const { data, error: authError } = await supabase.auth.signInWithPassword({
@@ -45,6 +47,29 @@ export default function ClientLoginPage() {
 
     // 3. Success! Redirect to the Client dashboard
     router.push("/client/dashboard");
+  };
+
+  const handlePasswordReset = async () => {
+    setResetMessage(null);
+    if (!email) {
+      setResetMessage("Enter your email address first.");
+      return;
+    }
+
+    const origin = window.location.origin;
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+      email,
+      {
+        redirectTo: `${origin}/client/reset-password`,
+      }
+    );
+
+    if (resetError) {
+      setResetMessage(resetError.message);
+      return;
+    }
+
+    setResetMessage("Password reset email sent. Check your inbox.");
   };
 
   return (
@@ -99,13 +124,17 @@ export default function ClientLoginPage() {
             {loading ? "Logging in..." : "Sign In"}
           </button>
           <div className="text-left">
-            <a
-              href="#"
+            <button
+              type="button"
+              onClick={handlePasswordReset}
               className="text-xs text-red-400 hover:underline underline-offset-2"
             >
               Forgot password?
-            </a>
+            </button>
           </div>
+          {resetMessage && (
+            <p className="text-xs text-gray-500">{resetMessage}</p>
+          )}
         </form>
       </div>
       <p className="mt-4 text-xs text-[#333333] text-center">

@@ -9,12 +9,14 @@ export default function VALoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setResetMessage(null);
 
     // 1. Sign in
     const { data, error: authError } = await supabase.auth.signInWithPassword({
@@ -79,6 +81,29 @@ export default function VALoginPage() {
     }
   };
 
+  const handlePasswordReset = async () => {
+    setResetMessage(null);
+    if (!email) {
+      setResetMessage("Enter your email address first.");
+      return;
+    }
+
+    const origin = window.location.origin;
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+      email,
+      {
+        redirectTo: `${origin}/va/reset-password`,
+      }
+    );
+
+    if (resetError) {
+      setResetMessage(resetError.message);
+      return;
+    }
+
+    setResetMessage("Password reset email sent. Check your inbox.");
+  };
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-gray-50">
       <div className="w-full max-w-sm p-8 bg-white rounded-xl shadow-lg border border-gray-100">
@@ -132,13 +157,17 @@ export default function VALoginPage() {
             {loading ? "Verifying Role..." : "Sign In"}
           </button>
           <div className="text-left">
-            <a
-              href="#"
+            <button
+              type="button"
+              onClick={handlePasswordReset}
               className="text-xs text-red-400 hover:underline underline-offset-2"
             >
               Forgot password?
-            </a>
+            </button>
           </div>
+          {resetMessage && (
+            <p className="text-xs text-gray-500">{resetMessage}</p>
+          )}
         </form>
       </div>
       <p className="mt-4 text-xs text-[#333333] text-center">
