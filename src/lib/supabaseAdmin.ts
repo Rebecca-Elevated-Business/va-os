@@ -1,8 +1,68 @@
 import { createClient } from "@supabase/supabase-js";
 
-let cachedAdminClient: ReturnType<typeof createClient> | null = null;
+type AdminDatabase = {
+  public: {
+    Tables: {
+      profiles: {
+        Row: {
+          id: string;
+          full_name: string | null;
+          role: string | null;
+          status: string | null;
+        };
+      };
+      impersonation_sessions: {
+        Row: {
+          id: string;
+          admin_id: string;
+          target_user_id: string;
+          target_role: string;
+          reason: string | null;
+          created_at: string;
+          expires_at: string;
+          ended_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          admin_id: string;
+          target_user_id: string;
+          target_role: string;
+          reason?: string | null;
+          created_at?: string;
+          expires_at?: string;
+          ended_at?: string | null;
+        };
+        Update: {
+          ended_at?: string | null;
+        };
+      };
+      admin_audit_log: {
+        Row: {
+          id: string;
+          actor_id: string;
+          impersonated_user_id: string | null;
+          action: string;
+          metadata: Record<string, unknown> | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          actor_id: string;
+          impersonated_user_id?: string | null;
+          action: string;
+          metadata?: Record<string, unknown> | null;
+          created_at?: string;
+        };
+      };
+    };
+  };
+};
 
-export function getSupabaseAdmin() {
+type SupabaseAdminClient = ReturnType<typeof createClient<AdminDatabase>>;
+
+let cachedAdminClient: SupabaseAdminClient | null = null;
+
+export function getSupabaseAdmin(): SupabaseAdminClient {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -13,12 +73,16 @@ export function getSupabaseAdmin() {
   }
 
   if (!cachedAdminClient) {
-    cachedAdminClient = createClient(supabaseUrl, supabaseServiceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+    cachedAdminClient = createClient<AdminDatabase>(
+      supabaseUrl,
+      supabaseServiceRoleKey,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    );
   }
 
   return cachedAdminClient;
