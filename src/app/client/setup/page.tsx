@@ -40,9 +40,27 @@ function SetupForm() {
 
     if (data.user) {
       // 2. Create Profile
-      await supabase
-        .from("profiles")
-        .insert([{ id: data.user.id, role: "client", status: "active" }]);
+      const { data: clientProfile } = await supabase
+        .from("clients")
+        .select("first_name, surname")
+        .eq("id", clientId)
+        .single();
+
+      const firstName = clientProfile?.first_name || null;
+      const lastName = clientProfile?.surname || null;
+      const fullName =
+        firstName || lastName ? `${firstName || ""} ${lastName || ""}`.trim() : null;
+
+      await supabase.from("profiles").insert([
+        {
+          id: data.user.id,
+          role: "client",
+          status: "active",
+          first_name: firstName,
+          last_name: lastName,
+          full_name: fullName,
+        },
+      ]);
 
       // 3. Link CRM Record (THE CRITICAL STEP)
       const { error: updateError } = await supabase

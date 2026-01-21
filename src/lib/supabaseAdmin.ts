@@ -7,18 +7,53 @@ type AdminDatabase = {
         Row: {
           id: string;
           full_name: string | null;
+          first_name: string | null;
+          last_name: string | null;
           role: string | null;
           status: string | null;
         };
         Insert: {
           id: string;
           full_name?: string | null;
+          first_name?: string | null;
+          last_name?: string | null;
           role?: string | null;
           status?: string | null;
         };
         Update: {
           full_name?: string | null;
+          first_name?: string | null;
+          last_name?: string | null;
           role?: string | null;
+          status?: string | null;
+        };
+        Relationships: [];
+      };
+      clients: {
+        Row: {
+          id: string;
+          va_id: string | null;
+          first_name: string | null;
+          surname: string | null;
+          email: string | null;
+          auth_user_id: string | null;
+          status: string | null;
+        };
+        Insert: {
+          id?: string;
+          va_id?: string | null;
+          first_name?: string | null;
+          surname?: string | null;
+          email?: string | null;
+          auth_user_id?: string | null;
+          status?: string | null;
+        };
+        Update: {
+          va_id?: string | null;
+          first_name?: string | null;
+          surname?: string | null;
+          email?: string | null;
+          auth_user_id?: string | null;
           status?: string | null;
         };
         Relationships: [];

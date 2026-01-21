@@ -10,7 +10,8 @@ export default function OnboardVAPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [loading, setLoading] = useState(false);
   const [authorized, setAuthorized] = useState(false);
   const [message, setMessage] = useState<{
@@ -66,12 +67,15 @@ export default function OnboardVAPage() {
     }
 
     if (data.user) {
+      const fullName = `${firstName} ${lastName}`.trim();
       // 2. Create the Profile Entry
       // We use the ID from the freshly created auth user
       const { error: profileError } = await supabase.from("profiles").insert([
         {
           id: data.user.id,
-          full_name: fullName,
+          first_name: firstName,
+          last_name: lastName,
+          full_name: fullName || null,
           role: "va",
           status: "active",
         },
@@ -87,11 +91,12 @@ export default function OnboardVAPage() {
       } else {
         setMessage({
           type: "success",
-          text: `Success! ${fullName} is now a registered VA.`,
+          text: `Success! ${fullName || "The VA"} is now registered.`,
         });
         setEmail("");
         setPassword("");
-        setFullName("");
+        setFirstName("");
+        setLastName("");
       }
     }
     setLoading(false);
@@ -121,14 +126,24 @@ export default function OnboardVAPage() {
         </p>
 
         <form onSubmit={handleOnboard} className="space-y-5">
-          <input
-            type="text"
-            placeholder="Full Name"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#9d4edd] outline-none text-black"
-            required
-          />
+          <div className="grid grid-cols-2 gap-4">
+            <input
+              type="text"
+              placeholder="First Name"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#9d4edd] outline-none text-black"
+              required
+            />
+            <input
+              type="text"
+              placeholder="Last Name"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#9d4edd] outline-none text-black"
+              required
+            />
+          </div>
           <input
             type="email"
             placeholder="Email Address"

@@ -9,6 +9,8 @@ type UserProfile = {
   id?: string;
   email?: string;
   full_name?: string;
+  first_name?: string;
+  last_name?: string;
 };
 
 type SearchResult = {
@@ -163,8 +165,13 @@ export default function DashboardHeader() {
 
   const getInitials = () => {
     if (!user) return "VA";
-    if (user.full_name) {
-      const names = user.full_name.split(" ");
+    const assembledName =
+      user.first_name || user.last_name
+        ? `${user.first_name || ""} ${user.last_name || ""}`.trim()
+        : user.full_name;
+
+    if (assembledName) {
+      const names = assembledName.split(" ");
       if (names.length >= 2)
         return `${names[0][0]}${names[1][0]}`.toUpperCase();
       return names[0].substring(0, 2).toUpperCase();

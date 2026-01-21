@@ -25,7 +25,8 @@ async function getAdminUserFromRequest(
     .eq("id", data.user.id)
     .single();
 
-  if (profileError || !profile?.role || !ADMIN_ROLES.has(profile.role)) {
+  const role = (profile as { role?: string | null } | null)?.role;
+  if (profileError || !role || !ADMIN_ROLES.has(role)) {
     return { error: "Not authorized." };
   }
 
@@ -55,7 +56,7 @@ export async function GET(request: Request) {
 
   const { data: profileData, error: profileError } = await supabaseAdmin
     .from("profiles")
-    .select("id, full_name, role, status");
+    .select("id, first_name, last_name, full_name, role, status");
 
   if (profileError) {
     return NextResponse.json(
@@ -81,6 +82,8 @@ export async function GET(request: Request) {
       return {
         id: user.id,
         email: user.email,
+        first_name: profile?.first_name || null,
+        last_name: profile?.last_name || null,
         full_name: profile?.full_name || null,
         role: profile?.role || "unknown",
         status: profile?.status || "unknown",
@@ -94,5 +97,24 @@ export async function GET(request: Request) {
     return (a.role || "").localeCompare(b.role || "");
   });
 
-  return NextResponse.json({ users });
+  const { data: clientData, error: clientError } = await supabaseAdmin
+    .from("clients")
+    .select("id, va_id, first_name, surname, email, auth_user_id, status");
+
+  if (clientError) {
+    return NextResponse.json({ error: clientError.message }, { status: 500 });
+  }
+
+  const clients =
+    clientData?.map((client) => ({
+      id: client.id,
+      va_id: client.va_id,
+      first_name: client.first_name,
+      last_name: client.surname,
+      email: client.email,
+      auth_user_id: client.auth_user_id,
+      status: client.status,
+    })) || [];
+
+  return NextResponse.json({ users, clients });
 }
