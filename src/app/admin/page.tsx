@@ -94,8 +94,8 @@ export default function AdminHomePage() {
     loadUsers();
   }, [router]);
 
-  const handleImpersonate = async (user: AdminUser) => {
-    setImpersonatingId(user.id);
+  const handleImpersonate = async (authUserId: string, email: string) => {
+    setImpersonatingId(authUserId);
     setError(null);
 
     const {
@@ -107,7 +107,7 @@ export default function AdminHomePage() {
       return;
     }
 
-    if (!user.email) {
+    if (!email) {
       setError("Target user email not available.");
       setImpersonatingId(null);
       return;
@@ -129,8 +129,8 @@ export default function AdminHomePage() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        targetUserId: user.id,
-        targetEmail: user.email,
+        targetUserId: authUserId,
+        targetEmail: email,
         reason: "Support session",
       }),
     });
@@ -147,7 +147,7 @@ export default function AdminHomePage() {
       JSON.stringify({
         sessionId: payload.sessionId,
         targetRole: payload.targetRole,
-        targetEmail: user.email,
+        targetEmail: email,
         startedAt: new Date().toISOString(),
       }),
     );
@@ -155,8 +155,6 @@ export default function AdminHomePage() {
     setRedirectUrl(payload.actionLink);
   };
 
-  const isVA = (role: string | null) => role === "va";
-  const isClient = (role: string | null) => role === "client";
   const searchValue = searchQuery.trim().toLowerCase();
   const statusOptions = Array.from(
     new Set(users.map((user) => user.status).filter(Boolean)),
@@ -198,9 +196,7 @@ export default function AdminHomePage() {
 
   const normalizedUsers = users.map(withNameFallback);
   const filteredUsers = normalizedUsers.filter((user) => {
-    const matchesTab =
-      activeTab === "va" ? user.role === "va" : user.role === "client";
-    if (!matchesTab) return false;
+    if (user.role !== "va") return false;
 
     if (roleFilter !== "all" && user.role !== roleFilter) return false;
     if (statusFilter !== "all" && user.status !== statusFilter) return false;
@@ -215,6 +211,24 @@ export default function AdminHomePage() {
     ];
     return fields.some((field) => field?.toLowerCase().includes(searchValue));
   });
+
+  const filteredClients = clients.filter((client) => {
+    if (roleFilter !== "all" && roleFilter !== "client") return false;
+    if (statusFilter !== "all" && client.status !== statusFilter) return false;
+    if (!searchValue) return true;
+
+    const fields = [
+      client.first_name,
+      client.last_name,
+      client.email,
+      client.status,
+    ];
+    return fields.some((field) => field?.toLowerCase().includes(searchValue));
+  });
+
+  const clientStatusOptions = Array.from(
+    new Set(clients.map((client) => client.status).filter(Boolean)),
+  ) as string[];
 
   const toggleVaClients = (vaId: string) => {
     setExpandedVaIds((prev) =>
@@ -296,11 +310,13 @@ export default function AdminHomePage() {
             className="rounded-full border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-600 shadow-sm outline-none focus:border-[#9d4edd] focus:ring-2 focus:ring-purple-100"
           >
             <option value="all">All status</option>
-            {statusOptions.map((status) => (
-              <option key={status} value={status}>
-                {status}
-              </option>
-            ))}
+            {(activeTab === "client" ? clientStatusOptions : statusOptions).map(
+              (status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ),
+            )}
           </select>
         </div>
 
@@ -327,89 +343,157 @@ export default function AdminHomePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredUsers.map((user) => {
-                  const vaClients = isVA(user.role)
-                    ? clientsByVA.get(user.id) || []
-                    : [];
+                {activeTab === "va" &&
+                  filteredUsers.map((user) => {
+                    const vaClients = clientsByVA.get(user.id) || [];
 
-                  return (
-                    <Fragment key={user.id}>
-                      <tr className="hover:bg-gray-50">
-                        <td className="px-6 py-4 text-gray-800 font-medium">
-                          {user.first_name || "—"}
-                        </td>
-                        <td className="px-6 py-4 text-gray-600">
-                          {user.last_name || "—"}
-                        </td>
-                        <td className="px-6 py-4 text-gray-600">
-                          {user.email || "—"}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold">
-                            {user.role || "unknown"}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-gray-600">
-                          {user.status || "unknown"}
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {(isVA(user.role) || isClient(user.role)) && (
-                              <button
-                                onClick={() => handleImpersonate(user)}
-                                disabled={impersonatingId === user.id}
-                                className="px-4 py-2 text-xs font-semibold rounded-full bg-[#9d4edd] text-white hover:bg-[#7b2cbf] transition-colors disabled:opacity-60"
-                              >
-                                {impersonatingId === user.id
-                                  ? "Starting..."
-                                  : `View as ${isVA(user.role) ? "VA" : "Client"}`}
-                              </button>
-                            )}
-                            {isVA(user.role) && (
+                    return (
+                      <Fragment key={user.id}>
+                        <tr className="hover:bg-gray-50">
+                          <td className="px-6 py-4 text-gray-800 font-medium">
+                            {user.first_name || "—"}
+                          </td>
+                          <td className="px-6 py-4 text-gray-600">
+                            {user.last_name || "—"}
+                          </td>
+                          <td className="px-6 py-4 text-gray-600">
+                            {user.email || "—"}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold">
+                              {user.role || "unknown"}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-gray-600">
+                            {user.status || "unknown"}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              {user.email && (
+                                <button
+                                  onClick={() =>
+                                    handleImpersonate(user.id, user.email || "")
+                                  }
+                                  disabled={impersonatingId === user.id}
+                                  className="px-4 py-2 text-xs font-semibold rounded-full bg-[#9d4edd] text-white hover:bg-[#7b2cbf] transition-colors disabled:opacity-60"
+                                >
+                                  {impersonatingId === user.id
+                                    ? "Starting..."
+                                    : "View as VA"}
+                                </button>
+                              )}
                               <button
                                 onClick={() => toggleVaClients(user.id)}
                                 className="px-3 py-2 text-xs font-semibold rounded-full border border-gray-200 text-gray-600 hover:border-[#9d4edd] hover:text-[#7b2cbf] transition-colors"
                               >
                                 Clients ({vaClients.length})
                               </button>
-                            )}
-                            {!isVA(user.role) && !isClient(user.role) && (
-                              <span className="text-xs text-gray-400">—</span>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                      {isVA(user.role) && expandedVaIds.includes(user.id) && (
-                        <tr className="bg-gray-50">
-                          <td
-                            colSpan={6}
-                            className="px-6 py-4 text-xs text-gray-600"
-                          >
-                            {vaClients.length === 0 && (
-                              <span className="text-gray-400">
-                                No clients linked to this VA.
-                              </span>
-                            )}
-                            {vaClients.length > 0 && (
-                              <div className="flex flex-wrap gap-2">
-                                {vaClients.map((client) => (
-                                  <span
-                                    key={client.id}
-                                    className="rounded-full bg-white border border-gray-200 px-3 py-1"
-                                  >
-                                    {client.first_name || "Client"}{" "}
-                                    {client.last_name || ""}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
+                            </div>
                           </td>
                         </tr>
-                      )}
-                    </Fragment>
-                  );
-                })}
-                {!loading && filteredUsers.length === 0 && (
+                        {expandedVaIds.includes(user.id) && (
+                          <tr className="bg-gray-50">
+                            <td
+                              colSpan={6}
+                              className="px-6 py-4 text-xs text-gray-600"
+                            >
+                              {vaClients.length === 0 && (
+                                <span className="text-gray-400">
+                                  No clients linked to this VA.
+                                </span>
+                              )}
+                              {vaClients.length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                  {vaClients.map((client) => {
+                                    const canImpersonate =
+                                      Boolean(client.auth_user_id) &&
+                                      Boolean(client.email);
+                                    return (
+                                      <button
+                                        key={client.id}
+                                        type="button"
+                                        disabled={!canImpersonate}
+                                        onClick={() => {
+                                          if (!client.auth_user_id || !client.email) {
+                                            return;
+                                          }
+                                          handleImpersonate(
+                                            client.auth_user_id,
+                                            client.email,
+                                          );
+                                        }}
+                                        className={`rounded-full border px-3 py-1 transition-colors ${
+                                          canImpersonate
+                                            ? "bg-white border-gray-200 hover:border-[#9d4edd] hover:text-[#7b2cbf]"
+                                            : "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                                        }`}
+                                      >
+                                        {client.first_name || "Client"}{" "}
+                                        {client.last_name || ""}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })}
+                {activeTab === "client" &&
+                  filteredClients.map((client) => {
+                    const canImpersonate =
+                      Boolean(client.auth_user_id) && Boolean(client.email);
+                    const rowKey = client.auth_user_id || client.id;
+                    return (
+                      <tr key={rowKey} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 text-gray-800 font-medium">
+                          {client.first_name || "—"}
+                        </td>
+                        <td className="px-6 py-4 text-gray-600">
+                          {client.last_name || "—"}
+                        </td>
+                        <td className="px-6 py-4 text-gray-600">
+                          {client.email || "—"}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold">
+                            client
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-gray-600">
+                          {client.status || "unknown"}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button
+                            onClick={() => {
+                              if (!client.auth_user_id || !client.email) return;
+                              handleImpersonate(
+                                client.auth_user_id,
+                                client.email,
+                              );
+                            }}
+                            disabled={!canImpersonate || impersonatingId === rowKey}
+                            className={`px-4 py-2 text-xs font-semibold rounded-full transition-colors ${
+                              canImpersonate
+                                ? "bg-[#9d4edd] text-white hover:bg-[#7b2cbf]"
+                                : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                            }`}
+                          >
+                            {impersonatingId === rowKey
+                              ? "Starting..."
+                              : canImpersonate
+                              ? "View as Client"
+                              : "No portal access"}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                {!loading &&
+                  ((activeTab === "va" && filteredUsers.length === 0) ||
+                    (activeTab === "client" && filteredClients.length === 0)) && (
                   <tr>
                     <td
                       colSpan={6}
