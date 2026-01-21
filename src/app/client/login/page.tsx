@@ -48,12 +48,14 @@ export default function ClientLoginPage() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-purple-50">
+    <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-[#fcfcfc]">
       <div className="w-full max-w-sm p-8 bg-white rounded-xl shadow-lg border border-purple-100">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Client Portal</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Welcome to your Client Portal
+          </h1>
           <p className="text-[#9d4edd] font-semibold text-sm">
-            VA Operating System
+            Managed by your Virtual Assistant
           </p>
         </div>
 
@@ -82,6 +84,14 @@ export default function ClientLoginPage() {
               required
             />
           </div>
+          <div className="text-left">
+            <a
+              href="#"
+              className="text-xs text-red-400 hover:underline underline-offset-2"
+            >
+              Forgot password?
+            </a>
+          </div>
 
           {error && (
             <p className="text-red-500 text-sm bg-red-50 p-2 rounded">
@@ -94,7 +104,7 @@ export default function ClientLoginPage() {
             disabled={loading}
             className="w-full py-3 px-4 rounded-lg text-white font-bold bg-[#9d4edd] hover:bg-[#7b2cbf] transition-all shadow-md disabled:opacity-50"
           >
-            {loading ? "Logging in..." : "Access My Files"}
+            {loading ? "Logging in..." : "Sign In"}
           </button>
         </form>
       </div>
