@@ -21,16 +21,43 @@ export default function ClientResetPasswordPage() {
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
       if (!mounted) return;
-      setHasSession(Boolean(data.session));
+      const hasSessionValue = Boolean(data.session);
+      setHasSession(hasSessionValue);
+
+      if (hasSessionValue) {
+        const { data: userData } = await supabase.auth.getUser();
+        const userId = userData.user?.id;
+        if (!userId) return;
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", userId)
+          .single();
+        const role = (profile as { role?: string | null } | null)?.role;
+        if (role === "va") {
+          router.replace("/va/reset-password");
+        }
+      }
     };
 
     checkSession();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         if (!mounted) return;
         if (event === "PASSWORD_RECOVERY" || session) {
           setHasSession(true);
+          const userId = session?.user?.id;
+          if (!userId) return;
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", userId)
+            .single();
+          const role = (profile as { role?: string | null } | null)?.role;
+          if (role === "va") {
+            router.replace("/va/reset-password");
+          }
         }
       }
     );
@@ -83,6 +110,14 @@ export default function ClientResetPasswordPage() {
           <p className="text-[#9d4edd] font-semibold text-sm">
             Managed by your Virtual Assistant
           </p>
+          <div className="mt-3">
+            <a
+              href="/client/login"
+              className="text-xs text-gray-500 hover:text-gray-700 hover:underline underline-offset-2"
+            >
+              Back to Client login
+            </a>
+          </div>
         </div>
 
         {hasSession === null && (
