@@ -25,7 +25,8 @@ async function getAdminUserFromRequest(
     .eq("id", data.user.id)
     .single();
 
-  if (profileError || !profile?.role || !ADMIN_ROLES.has(profile.role)) {
+  const adminRole = (profile as { role?: string | null } | null)?.role;
+  if (profileError || !adminRole || !ADMIN_ROLES.has(adminRole)) {
     return { error: "Not authorized." };
   }
 

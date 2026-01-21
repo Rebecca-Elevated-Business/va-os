@@ -21,6 +21,7 @@ type AdminDatabase = {
           role?: string | null;
           status?: string | null;
         };
+        Relationships: [];
       };
       impersonation_sessions: {
         Row: {
@@ -46,6 +47,7 @@ type AdminDatabase = {
         Update: {
           ended_at?: string | null;
         };
+        Relationships: [];
       };
       admin_audit_log: {
         Row: {
@@ -64,6 +66,14 @@ type AdminDatabase = {
           metadata?: Record<string, unknown> | null;
           created_at?: string;
         };
+        Update: {
+          actor_id?: string;
+          impersonated_user_id?: string | null;
+          action?: string;
+          metadata?: Record<string, unknown> | null;
+          created_at?: string;
+        };
+        Relationships: [];
       };
     };
     Views: Record<string, never>;

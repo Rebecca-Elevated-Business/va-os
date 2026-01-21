@@ -25,7 +25,8 @@ async function getAdminUserFromRequest(
     .eq("id", data.user.id)
     .single();
 
-  if (profileError || !profile?.role || !ADMIN_ROLES.has(profile.role)) {
+  const adminRole = (profile as { role?: string | null } | null)?.role;
+  if (profileError || !adminRole || !ADMIN_ROLES.has(adminRole)) {
     return { error: "Not authorized." };
   }
 
@@ -71,7 +72,8 @@ export async function POST(request: Request) {
     .eq("id", targetUserId)
     .single();
 
-  if (targetProfileError || !targetProfile?.role) {
+  const targetRole = (targetProfile as { role?: string | null } | null)?.role;
+  if (targetProfileError || !targetRole) {
     return NextResponse.json(
       { error: "Target profile not found." },
       { status: 404 }
@@ -80,7 +82,7 @@ export async function POST(request: Request) {
 
   const origin = new URL(request.url).origin;
   const redirectTo =
-    targetProfile.role === "va"
+    targetRole === "va"
       ? `${origin}/va/dashboard?impersonation=1`
       : `${origin}/client/dashboard?impersonation=1`;
 
@@ -107,7 +109,7 @@ export async function POST(request: Request) {
         {
           admin_id: user.id,
           target_user_id: targetUserId,
-          target_role: targetProfile.role,
+          target_role: targetRole,
           reason,
         },
       ])
@@ -127,7 +129,7 @@ export async function POST(request: Request) {
       impersonated_user_id: targetUserId,
       action: "impersonation_started",
       metadata: {
-        target_role: targetProfile.role,
+        target_role: targetRole,
         reason,
       },
     },
@@ -136,6 +138,6 @@ export async function POST(request: Request) {
   return NextResponse.json({
     sessionId: impersonationSession.id,
     actionLink: linkData.properties.action_link,
-    targetRole: targetProfile.role,
+    targetRole,
   });
 }
