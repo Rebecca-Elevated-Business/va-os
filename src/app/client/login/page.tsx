@@ -84,14 +84,6 @@ export default function ClientLoginPage() {
               required
             />
           </div>
-          <div className="text-left">
-            <a
-              href="#"
-              className="text-xs text-red-400 hover:underline underline-offset-2"
-            >
-              Forgot password?
-            </a>
-          </div>
 
           {error && (
             <p className="text-red-500 text-sm bg-red-50 p-2 rounded">
@@ -106,8 +98,27 @@ export default function ClientLoginPage() {
           >
             {loading ? "Logging in..." : "Sign In"}
           </button>
+          <div className="text-left">
+            <a
+              href="#"
+              className="text-xs text-red-400 hover:underline underline-offset-2"
+            >
+              Forgot password?
+            </a>
+          </div>
         </form>
       </div>
+      <p className="mt-4 text-xs text-[#333333] text-center">
+        Do you need a Virtual Assistant?{" "}
+        <a
+          href="https://elevatedbusiness.co.uk"
+          target="_blank"
+          rel="noreferrer"
+          className="hover:underline underline-offset-2"
+        >
+          Click here
+        </a>
+      </p>
     </main>
   );
 }
