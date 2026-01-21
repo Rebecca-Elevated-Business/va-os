@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { Pencil } from "lucide-react";
+import { Pencil, X } from "lucide-react";
 import { Task } from "./tasks/types";
 
 type InboxMessage = {
@@ -66,6 +66,7 @@ const formatUkDate = (value: string) =>
 
 export default function VADashboard() {
   const [userId, setUserId] = useState<string | null>(null);
+  const [showWelcome, setShowWelcome] = useState(false);
   const [agendaDate, setAgendaDate] = useState(getTodayDateString());
   const [todayDate, setTodayDate] = useState(getTodayDateString());
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -77,6 +78,7 @@ export default function VADashboard() {
   const [noteUpdatedAt, setNoteUpdatedAt] = useState<string | null>(null);
   const [savingNote, setSavingNote] = useState(false);
   const [isEditingNote, setIsEditingNote] = useState(false);
+  const welcomeVideoUrl = "/welcome-video.mp4";
 
   const fetchDashboardData = useCallback(async () => {
     const {
@@ -84,6 +86,15 @@ export default function VADashboard() {
     } = await supabase.auth.getUser();
     if (!user) return;
     setUserId(user.id);
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("welcome_seen")
+      .eq("id", user.id)
+      .single();
+
+    if (!profileError && profile && profile.welcome_seen === false) {
+      setShowWelcome(true);
+    }
 
     const [taskRes, clientRes, messageRes, noteRes] = await Promise.all([
       supabase
@@ -170,6 +181,13 @@ export default function VADashboard() {
     return () => clearTimeout(timer);
   }, [todayDate]);
 
+  useEffect(() => {
+    document.body.style.overflow = showWelcome ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [showWelcome]);
+
   const overdueTasks = useMemo(() => {
     return tasks
       .filter((task) => {
@@ -241,8 +259,57 @@ export default function VADashboard() {
     }
   };
 
+  const dismissWelcome = async () => {
+    if (!userId) return;
+    await supabase
+      .from("profiles")
+      .update({ welcome_seen: true })
+      .eq("id", userId);
+    setShowWelcome(false);
+  };
+
   return (
     <main className="animate-in fade-in duration-500 text-[#333333]">
+      {showWelcome && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="relative w-full max-w-3xl rounded-2xl bg-white shadow-xl">
+            <button
+              type="button"
+              onClick={dismissWelcome}
+              className="absolute right-4 top-4 rounded-full bg-white/90 p-2 text-gray-500 shadow-sm transition hover:text-gray-800"
+              aria-label="Close welcome video"
+            >
+              <X size={18} />
+            </button>
+            <div className="px-6 pt-6">
+              <h2 className="text-xl font-bold text-[#333333]">
+                Welcome to your dashboard
+              </h2>
+              <p className="mt-2 text-sm text-gray-500">
+                Quick intro to help you get started.
+              </p>
+            </div>
+            <div className="p-6">
+              <div className="aspect-video w-full overflow-hidden rounded-xl bg-gray-100">
+                <video
+                  src={welcomeVideoUrl}
+                  controls
+                  className="h-full w-full"
+                />
+              </div>
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={dismissWelcome}
+                  className="rounded-lg bg-[#9d4edd] px-4 py-2 text-xs font-bold uppercase tracking-widest text-white transition hover:bg-[#7b2cbf]"
+                >
+                  Continue
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
         <h1>Dashboard</h1>
         <p className="text-s font-semibold text-[#333333]">
