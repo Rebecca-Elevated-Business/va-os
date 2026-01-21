@@ -49,7 +49,7 @@ export default function VALoginPage() {
           if (profile?.role !== "va") {
             await supabase.auth.signOut();
             throw new Error(
-              `Access denied. System found role: "${profile?.role}". You must be a VA.`
+              `Access denied. System found role: "${profile?.role}". You must be a VA.`,
             );
           }
 
@@ -93,7 +93,7 @@ export default function VALoginPage() {
       email,
       {
         redirectTo: `${origin}/va/reset-password`,
-      }
+      },
     );
 
     if (resetError) {
@@ -171,7 +171,13 @@ export default function VALoginPage() {
         </form>
       </div>
       <p className="mt-4 text-xs text-[#333333] text-center">
-        Are you a VA that would like access to the system? Please click here
+        Are you a VA that would like access to the system?{" "}
+        <a
+          href="http://elevatedbusiness.co.uk/va-os"
+          className="hover:underline underline-offset-2"
+        >
+          Please click here
+        </a>
       </p>
     </main>
   );
