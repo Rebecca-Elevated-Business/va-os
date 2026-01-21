@@ -1,17 +1,51 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
+
+const ADMIN_ROLES = new Set(["admin", "super_admin"]);
 
 export default function OnboardVAPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [authorized, setAuthorized] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
+
+  useEffect(() => {
+    const checkAccess = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        router.push("/admin/login");
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", session.user.id)
+        .single();
+
+      const role = (profile as { role?: string | null } | null)?.role;
+      if (profileError || !role || !ADMIN_ROLES.has(role)) {
+        router.push("/admin/login");
+        return;
+      }
+
+      setAuthorized(true);
+    };
+
+    checkAccess();
+  }, [router]);
 
   const handleOnboard = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +96,21 @@ export default function OnboardVAPage() {
     }
     setLoading(false);
   };
+
+  if (!authorized) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#fcfcfc] font-sans">
+        <div className="text-center animate-pulse">
+          <p className="text-xl font-black text-[#9d4edd] uppercase tracking-tighter">
+            VA-OS
+          </p>
+          <p className="text-xs font-bold text-gray-400 mt-2 uppercase tracking-widest">
+            Verifying access...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-gray-50 text-black">

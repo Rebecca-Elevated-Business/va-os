@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 type AdminUser = {
   id: string;
@@ -141,11 +142,19 @@ export default function AdminHomePage() {
   return (
     <main className="min-h-screen bg-[#fcfcfc] text-[#333333] p-8">
       <div className="max-w-6xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Admin Console</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Manage accounts and start support impersonation sessions.
-          </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Admin Console</h1>
+            <p className="text-sm text-gray-500 mt-1">
+              Manage accounts and start support impersonation sessions.
+            </p>
+          </div>
+          <Link
+            href="/admin/onboard-va"
+            className="inline-flex items-center justify-center rounded-full bg-[#9d4edd] px-5 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#7b2cbf]"
+          >
+            Add VA
+          </Link>
         </div>
 
         {error && (
