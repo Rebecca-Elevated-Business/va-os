@@ -20,6 +20,13 @@ export default function AdminHomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [impersonatingId, setImpersonatingId] = useState<string | null>(null);
+  const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (redirectUrl) {
+      window.location.assign(redirectUrl);
+    }
+  }, [redirectUrl]);
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -125,7 +132,7 @@ export default function AdminHomePage() {
       })
     );
 
-    window.location.href = payload.actionLink;
+    setRedirectUrl(payload.actionLink);
   };
 
   const isVA = (role: string | null) => role === "va";
