@@ -311,18 +311,20 @@ export default function VADashboard() {
         </div>
       )}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
-        <h1>Dashboard</h1>
-        <p className="text-s font-semibold text-[#333333]">
+        <h1 className="mb-0 text-2xl font-semibold tracking-tight text-gray-900">
+          Dashboard
+        </h1>
+        <p className="text-sm font-medium text-gray-600">
           {formatDateLabel(todayDate)}
         </p>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden xl:col-span-2">
-          <div className="px-6 py-4 border-b border-gray-50 flex flex-wrap items-center justify-between gap-3">
+        <section className="bg-white rounded-2xl shadow-[0_1px_10px_rgba(15,23,42,0.06)] border border-gray-50 overflow-hidden xl:col-span-2">
+          <div className="px-6 py-4 border-b border-gray-100/70 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h3 className="text-base font-bold text-[#333333]">Agenda</h3>
-              <p className="text-s text-[#333333]">
+              <h3 className="text-sm font-semibold text-gray-900">Agenda</h3>
+              <p className="text-xs text-gray-500">
                 Overdue tasks appear first
               </p>
             </div>
@@ -330,10 +332,10 @@ export default function VADashboard() {
               type="date"
               value={agendaDate}
               onChange={(event) => setAgendaDate(event.target.value)}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-[#333333] focus:ring-2 focus:ring-[#9d4edd] outline-none"
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:ring-2 focus:ring-[#9d4edd] outline-none"
             />
           </div>
-          <div className="p-6 space-y-6 min-h-80">
+          <div className="p-6 space-y-5 min-h-80">
             {overdueTasks.length === 0 && dayTasks.length === 0 ? (
               <div className="text-sm text-gray-400 italic text-center py-10">
                 Nothing scheduled for this day yet.
@@ -342,19 +344,19 @@ export default function VADashboard() {
               <>
                 {overdueTasks.length > 0 && (
                   <div>
-                    <p className="text-xs font-semibold text-[#333333] mb-3">
+                    <p className="text-xs font-semibold text-gray-700 mb-2.5">
                       Overdue
                     </p>
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {overdueTasks.map((task) => (
                         <Link
                           key={task.id}
                           href={`/va/dashboard/tasks?taskId=${task.id}`}
-                          className="block rounded-xl border border-red-100 bg-red-50/40 px-4 py-3 hover:border-red-200 transition-colors"
+                          className="block rounded-xl border border-rose-100/70 bg-rose-50/30 px-4 py-2.5 hover:border-rose-200/80 transition-colors"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div>
-                              <p className="text-sm font-semibold">
+                              <p className="text-sm font-semibold text-gray-900">
                                 {task.task_name}
                               </p>
                               <p className="text-xs text-gray-400">
@@ -363,7 +365,7 @@ export default function VADashboard() {
                                   "Internal"}
                               </p>
                             </div>
-                            <span className="text-[10px] font-semibold text-red-500">
+                            <span className="text-[10px] font-semibold text-rose-500">
                               Due {formatUkDate(task.due_date || "")}
                             </span>
                           </div>
@@ -375,19 +377,19 @@ export default function VADashboard() {
 
                 {dayTasks.length > 0 && (
                   <div>
-                    <p className="text-xs font-semibold text-[#333333] mb-3">
+                    <p className="text-xs font-semibold text-gray-700 mb-2.5">
                       {formatDateLabel(agendaDate)}
                     </p>
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {dayTasks.map((task) => (
                         <Link
                           key={task.id}
                           href={`/va/dashboard/tasks?taskId=${task.id}`}
-                          className="block rounded-xl border border-gray-100 bg-white px-4 py-3 hover:border-[#9d4edd]/40 transition-colors"
+                          className="block rounded-xl border border-gray-100 bg-white px-4 py-2.5 hover:border-gray-200 transition-colors"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div>
-                              <p className="text-sm font-semibold">
+                              <p className="text-sm font-semibold text-gray-900">
                                 {task.task_name}
                               </p>
                               <p className="text-xs text-gray-400">
@@ -412,33 +414,33 @@ export default function VADashboard() {
           </div>
         </section>
 
-        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-50">
-            <h3 className="text-base font-bold text-[#333333]">
+        <section className="bg-white rounded-2xl shadow-[0_1px_10px_rgba(15,23,42,0.06)] border border-gray-50 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100/70">
+            <h3 className="text-sm font-semibold text-gray-900">
               Priority Inbox
             </h3>
-            <p className="text-xs text-[#333333]">
+            <p className="text-xs text-gray-500">
               Unread, approvals, and action-needed
             </p>
           </div>
-          <div className="p-6 space-y-4">
-            <div className="flex items-center justify-between text-sm font-semibold">
-              <span className="text-[#333333]">Unread messages</span>
-              <span className="text-[#9d4edd]">{unreadCount}</span>
+          <div className="p-6 space-y-3">
+            <div className="flex items-center justify-between text-sm font-semibold text-gray-800">
+              <span>Unread messages</span>
+              <span className="text-gray-700">{unreadCount}</span>
             </div>
-            <div className="flex items-center justify-between text-sm font-semibold">
-              <span className="text-[#333333]">Pending approvals</span>
-              <span className="text-[#9d4edd]">{pendingApprovalCount}</span>
+            <div className="flex items-center justify-between text-sm font-semibold text-gray-800">
+              <span>Pending approvals</span>
+              <span className="text-gray-700">{pendingApprovalCount}</span>
             </div>
-            <div className="flex items-center justify-between text-sm font-semibold">
-              <span className="text-[#333333]">
+            <div className="flex items-center justify-between text-sm font-semibold text-gray-800">
+              <span>
                 Client replies needing action
               </span>
-              <span className="text-[#9d4edd]">{replyNeededCount}</span>
+              <span className="text-gray-700">{replyNeededCount}</span>
             </div>
             <Link
               href="/va/dashboard/inbox"
-              className="inline-flex items-center justify-center w-full mt-4 text-xs font-bold uppercase tracking-widest text-[#9d4edd] border border-[#9d4edd] rounded-lg py-2 hover:bg-[#9d4edd] hover:text-white transition-colors"
+              className="inline-flex items-center justify-center w-full mt-4 text-xs font-bold uppercase tracking-widest text-gray-600 border border-gray-200 rounded-lg py-2 hover:border-gray-300 hover:bg-gray-50 transition-colors"
             >
               Open Inbox
             </Link>
@@ -447,13 +449,13 @@ export default function VADashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-50 flex items-center justify-between gap-3">
+        <section className="bg-white rounded-2xl shadow-[0_1px_10px_rgba(15,23,42,0.06)] border border-gray-50 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100/70 flex items-center justify-between gap-3">
             <div>
-              <h3 className="text-base font-bold text-[#333333]">
+              <h3 className="text-sm font-semibold text-gray-900">
                 Opportunity Status
               </h3>
-              <p className="text-xs text-[#333333]">
+              <p className="text-xs text-gray-500">
                 Clients at this pipeline stage
               </p>
             </div>
@@ -469,7 +471,7 @@ export default function VADashboard() {
               ))}
             </select>
           </div>
-          <div className="p-6 space-y-3 min-h-55">
+          <div className="p-6 space-y-2 min-h-55">
             {opportunityClients.length === 0 ? (
               <div className="text-sm text-gray-400 italic text-center py-10">
                 No clients in this status.
@@ -479,12 +481,12 @@ export default function VADashboard() {
                 <Link
                   key={client.id}
                   href={`/va/dashboard/crm/profile/${client.id}`}
-                  className="block rounded-xl border border-gray-100 px-4 py-3 hover:border-[#9d4edd]/40 transition-colors"
+                  className="block rounded-xl border border-gray-100 px-4 py-2.5 hover:border-gray-200 transition-colors"
                 >
-                  <p className="text-sm font-semibold">
+                  <p className="text-sm font-semibold text-gray-900">
                     {client.first_name} {client.surname}
                   </p>
-                  <p className="text-xs text-[#333333]">
+                  <p className="text-xs text-gray-500">
                     {client.business_name || "No business name"}
                   </p>
                 </Link>
@@ -493,35 +495,35 @@ export default function VADashboard() {
           </div>
         </section>
 
-        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-50">
-            <h3 className="text-base font-bold text-[#333333]">Time Today</h3>
-            <p className="text-xs text-[#333333]">
+        <section className="bg-white rounded-2xl shadow-[0_1px_10px_rgba(15,23,42,0.06)] border border-gray-50 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100/70">
+            <h3 className="text-sm font-semibold text-gray-900">Time Today</h3>
+            <p className="text-xs text-gray-500">
               {formatDateLabel(todayDate)}
             </p>
           </div>
           <div className="p-6 space-y-4 min-h-55 flex flex-col">
-            <div className="text-4xl font-black tracking-tight">
+            <div className="text-4xl font-black tracking-tight text-gray-900">
               {formatDuration(totalMinutesToday)}
             </div>
-            <p className="text-xs text-[#333333]">
+            <p className="text-xs text-gray-500">
               Based on entries logged in Time Tracking.
             </p>
             <Link
               href="/va/dashboard/time-tracking"
-              className="mt-auto inline-flex items-center justify-center w-full text-xs font-bold uppercase tracking-widest text-[#9d4edd] border border-[#9d4edd] rounded-lg py-2 hover:bg-[#9d4edd] hover:text-white transition-colors"
+              className="mt-auto inline-flex items-center justify-center w-full text-xs font-bold uppercase tracking-widest text-gray-600 border border-gray-200 rounded-lg py-2 hover:border-gray-300 hover:bg-gray-50 transition-colors"
             >
               Open Time Tracking
             </Link>
           </div>
         </section>
 
-        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-50">
-            <h3 className="text-base font-bold text-[#333333]">
+        <section className="bg-white rounded-2xl shadow-[0_1px_10px_rgba(15,23,42,0.06)] border border-gray-50 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100/70">
+            <h3 className="text-sm font-semibold text-gray-900">
               Quick Add Notes
             </h3>
-            <p className="text-xs text-[#333333]">
+            <p className="text-xs text-gray-500">
               Brain dump sticky note for later
             </p>
           </div>
@@ -531,7 +533,7 @@ export default function VADashboard() {
               onChange={(event) => setNote(event.target.value)}
               placeholder="Jot anything down..."
               readOnly={!isEditingNote}
-              className={`flex-1 w-full rounded-xl border p-4 text-sm text-[#333333] outline-none resize-none transition-colors ${
+              className={`flex-1 w-full rounded-xl border p-4 text-sm text-gray-800 outline-none resize-none transition-colors ${
                 isEditingNote
                   ? "border-gray-200 focus:ring-2 focus:ring-[#9d4edd]"
                   : "border-gray-100 bg-gray-50 text-gray-500"
