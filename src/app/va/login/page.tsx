@@ -87,14 +87,14 @@ export default function VALoginPage() {
             VA Operating System
           </h1>
           <p className="text-[#9d4edd] font-semibold text-sm">
-            Professional Portal
+            Welcome to your Virtual Assistant Operating System
           </p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              VA Email
+              Email Address
             </label>
             <input
               type="email"
@@ -116,6 +116,14 @@ export default function VALoginPage() {
               required
             />
           </div>
+          <div className="text-left">
+            <a
+              href="#"
+              className="text-xs text-red-400 hover:underline underline-offset-2"
+            >
+              Forgot password?
+            </a>
+          </div>
 
           {error && (
             <p className="text-red-500 text-sm bg-red-50 p-2 rounded">
@@ -128,7 +136,7 @@ export default function VALoginPage() {
             disabled={loading}
             className="w-full py-3 px-4 rounded-lg text-white font-bold bg-[#9d4edd] hover:bg-[#7b2cbf] transition-all shadow-md disabled:opacity-50"
           >
-            {loading ? "Verifying Role..." : "Login to System"}
+            {loading ? "Verifying Role..." : "Sign In"}
           </button>
         </form>
       </div>
