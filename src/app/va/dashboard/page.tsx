@@ -433,9 +433,7 @@ export default function VADashboard() {
               <span className="text-gray-700">{pendingApprovalCount}</span>
             </div>
             <div className="flex items-center justify-between text-sm font-semibold text-gray-800">
-              <span>
-                Client replies needing action
-              </span>
+              <span>Client replies needing action</span>
               <span className="text-gray-700">{replyNeededCount}</span>
             </div>
             <Link
@@ -503,7 +501,7 @@ export default function VADashboard() {
             </p>
           </div>
           <div className="p-6 space-y-4 min-h-55 flex flex-col">
-            <div className="text-4xl font-black tracking-tight text-gray-900">
+            <div className="text-4xl font-semibold text-gray-900">
               {formatDuration(totalMinutesToday)}
             </div>
             <p className="text-xs text-gray-500">
