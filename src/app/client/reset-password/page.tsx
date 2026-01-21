@@ -86,20 +86,37 @@ export default function ClientResetPasswordPage() {
     }
 
     setLoading(true);
-    const { error } = await supabase.auth.updateUser({ password });
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        setMessage({
+          type: "error",
+          text: "Reset link is invalid or has expired.",
+        });
+        return;
+      }
 
-    if (error) {
-      setMessage({ type: "error", text: error.message });
+      const { error } = await supabase.auth.updateUser({ password });
+
+      if (error) {
+        setMessage({ type: "error", text: error.message });
+        return;
+      }
+
+      setMessage({
+        type: "success",
+        text: "Password updated. Redirecting to login...",
+      });
+      await supabase.auth.signOut();
+      setTimeout(() => router.push("/client/login"), 1200);
+    } catch (err) {
+      setMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "Failed to reset password.",
+      });
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setMessage({
-      type: "success",
-      text: "Password updated. Redirecting to login...",
-    });
-    await supabase.auth.signOut();
-    setTimeout(() => router.push("/client/login"), 1200);
   };
 
   return (
