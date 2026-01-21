@@ -21,43 +21,16 @@ export default function VAResetPasswordPage() {
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
       if (!mounted) return;
-      const hasSessionValue = Boolean(data.session);
-      setHasSession(hasSessionValue);
-
-      if (hasSessionValue) {
-        const { data: userData } = await supabase.auth.getUser();
-        const userId = userData.user?.id;
-        if (!userId) return;
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", userId)
-          .single();
-        const role = (profile as { role?: string | null } | null)?.role;
-        if (role === "client") {
-          router.replace("/client/reset-password");
-        }
-      }
+      setHasSession(Boolean(data.session));
     };
 
     checkSession();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         if (!mounted) return;
         if (event === "PASSWORD_RECOVERY" || session) {
           setHasSession(true);
-          const userId = session?.user?.id;
-          if (!userId) return;
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("role")
-            .eq("id", userId)
-            .single();
-          const role = (profile as { role?: string | null } | null)?.role;
-          if (role === "client") {
-            router.replace("/client/reset-password");
-          }
         }
       }
     );
