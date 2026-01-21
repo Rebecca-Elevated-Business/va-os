@@ -10,6 +10,17 @@ type AdminDatabase = {
           role: string | null;
           status: string | null;
         };
+        Insert: {
+          id: string;
+          full_name?: string | null;
+          role?: string | null;
+          status?: string | null;
+        };
+        Update: {
+          full_name?: string | null;
+          role?: string | null;
+          status?: string | null;
+        };
       };
       impersonation_sessions: {
         Row: {
@@ -55,6 +66,8 @@ type AdminDatabase = {
         };
       };
     };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
   };
 };
 
