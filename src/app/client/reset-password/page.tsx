@@ -66,7 +66,7 @@ export default function ClientResetPasswordPage() {
       mounted = false;
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [router]);
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
