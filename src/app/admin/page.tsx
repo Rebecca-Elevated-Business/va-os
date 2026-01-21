@@ -41,6 +41,13 @@ export default function AdminHomePage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [expandedVaIds, setExpandedVaIds] = useState<string[]>([]);
 
+  const handleAdminSignOut = async () => {
+    await supabase.auth.signOut();
+    localStorage.removeItem("vaos_admin_session");
+    localStorage.removeItem("vaos_impersonation_context");
+    router.push("/admin/login");
+  };
+
   useEffect(() => {
     if (redirectUrl) {
       window.location.assign(redirectUrl);
@@ -246,12 +253,21 @@ export default function AdminHomePage() {
               Manage accounts and start support impersonation sessions.
             </p>
           </div>
-          <Link
-            href="/admin/onboard-va"
-            className="inline-flex items-center justify-center rounded-full bg-[#9d4edd] px-5 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#7b2cbf]"
-          >
-            Add VA
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/admin/onboard-va"
+              className="inline-flex items-center justify-center rounded-full bg-[#9d4edd] px-5 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#7b2cbf]"
+            >
+              Add VA
+            </Link>
+            <button
+              type="button"
+              onClick={handleAdminSignOut}
+              className="inline-flex items-center justify-center rounded-full border border-red-200 px-5 py-2 text-xs font-semibold text-red-500 shadow-sm transition-colors hover:border-red-300 hover:text-red-600"
+            >
+              Sign Out
+            </button>
+          </div>
         </div>
 
         {error && (
