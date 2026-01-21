@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 const ADMIN_ROLES = new Set(["admin", "super_admin"]);
 
-async function getAdminUserFromRequest(request: Request) {
+async function getAdminUserFromRequest(
+  request: Request,
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>
+) {
   const authHeader = request.headers.get("authorization") || "";
   const token = authHeader.replace("Bearer ", "").trim();
 
@@ -30,7 +33,22 @@ async function getAdminUserFromRequest(request: Request) {
 }
 
 export async function GET(request: Request) {
-  const { error } = await getAdminUserFromRequest(request);
+  let supabaseAdmin;
+  try {
+    supabaseAdmin = getSupabaseAdmin();
+  } catch (err) {
+    return NextResponse.json(
+      {
+        error:
+          err instanceof Error
+            ? err.message
+            : "Missing Supabase service role configuration.",
+      },
+      { status: 500 }
+    );
+  }
+
+  const { error } = await getAdminUserFromRequest(request, supabaseAdmin);
   if (error) {
     return NextResponse.json({ error }, { status: 403 });
   }
