@@ -168,7 +168,7 @@ export default function ClientProfilePage({
       const end = new Date().getTime(); // Use new Date() object instead of Date.now()
       const currentSessionMinutes = Math.max(
         1,
-        Math.round((end - start) / 60000)
+        Math.round((end - start) / 60000),
       );
       const endTime = new Date().toISOString();
 
@@ -278,7 +278,7 @@ export default function ClientProfilePage({
   const revokeAgreement = async (agreementId: string) => {
     if (
       !confirm(
-        "Revoke this agreement? It will return to draft mode and hide from the client."
+        "Revoke this agreement? It will return to draft mode and hide from the client.",
       )
     )
       return;
@@ -289,8 +289,8 @@ export default function ClientProfilePage({
     if (!error) {
       setClientAgreements(
         clientAgreements.map((ag) =>
-          ag.id === agreementId ? { ...ag, status: "draft" } : ag
-        )
+          ag.id === agreementId ? { ...ag, status: "draft" } : ag,
+        ),
       );
     }
   };
@@ -307,7 +307,7 @@ export default function ClientProfilePage({
   const revokeDocument = async (docId: string) => {
     if (
       !confirm(
-        "Revoke this document? It will disappear from the client portal and return to draft."
+        "Revoke this document? It will disappear from the client portal and return to draft.",
       )
     )
       return;
@@ -318,8 +318,8 @@ export default function ClientProfilePage({
     if (!error) {
       setClientDocuments(
         clientDocuments.map((d) =>
-          d.id === docId ? { ...d, status: "draft" } : d
-        )
+          d.id === docId ? { ...d, status: "draft" } : d,
+        ),
       );
     }
   };
@@ -352,7 +352,7 @@ export default function ClientProfilePage({
     if (!client) return;
     const baseUrl = window.location.origin;
     const link = `${baseUrl}/client/setup?email=${encodeURIComponent(
-      client.email || ""
+      client.email || "",
     )}&id=${id}`;
     const { error } = await supabase
       .from("clients")
@@ -378,7 +378,7 @@ export default function ClientProfilePage({
     if (!client) return;
     const baseUrl = window.location.origin;
     const link = `${baseUrl}/client/setup?email=${encodeURIComponent(
-      client.email || ""
+      client.email || "",
     )}&id=${id}`;
     const { error } = await supabase
       .from("clients")
@@ -455,7 +455,7 @@ export default function ClientProfilePage({
     );
 
   const visibleTasks = tasks.filter((t) =>
-    showCompleted ? true : !t.is_completed
+    showCompleted ? true : !t.is_completed,
   );
   const portalInviteLink = client.portal_invite_link?.trim() || "";
   const portalAccessEnabled = client.portal_access_enabled ?? client.has_access;
@@ -538,9 +538,7 @@ export default function ClientProfilePage({
             </button>
           </div>
           <div className="mt-6 border-t border-gray-100 pt-4">
-            <p className="text-xs font-bold text-gray-400 mb-2">
-              Danger Zone
-            </p>
+            <p className="text-xs font-bold text-gray-400 mb-2">Danger Zone</p>
             <p className="text-sm text-gray-600 mb-3">
               Revoke portal access immediately for this client.
             </p>
@@ -624,11 +622,13 @@ export default function ClientProfilePage({
                   setClient({ ...client, status: e.target.value })
                 }
               >
-                {["Enquiry", "Provisional", "Won", "Lost", "Paused"].map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
+                {["Enquiry", "Provisional", "Won", "Lost", "Paused"].map(
+                  (s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ),
+                )}
               </select>
             </div>
             <button
@@ -654,7 +654,9 @@ export default function ClientProfilePage({
                 <button
                   type="button"
                   onClick={deleteClient}
-                  disabled={deleteConfirmInput.trim() !== "DELETE" || deleteClientBusy}
+                  disabled={
+                    deleteConfirmInput.trim() !== "DELETE" || deleteClientBusy
+                  }
                   className="text-red-600 border border-red-200 px-4 py-2 rounded-lg font-bold disabled:opacity-50"
                 >
                   Delete Client
@@ -665,19 +667,19 @@ export default function ClientProfilePage({
         ) : (
           <div className="flex flex-wrap gap-x-12 gap-y-4 text-sm">
             <div>
-              <span className="block text-gray-400 text-xs uppercase font-bold mb-1">
+              <span className="block text-gray-400 text-xs font-bold mb-1">
                 Email
               </span>
               {client.email || "-"}
             </div>
             <div>
-              <span className="block text-gray-400 text-xs uppercase font-bold mb-1">
+              <span className="block text-gray-400 text-xs case font-bold mb-1">
                 Phone
               </span>
               {client.phone || "-"}
             </div>
             <div>
-              <span className="block text-gray-400 text-xs uppercase font-bold mb-1">
+              <span className="block text-gray-400 text-xs case font-bold mb-1">
                 Status
               </span>
               <span
@@ -691,13 +693,13 @@ export default function ClientProfilePage({
               </span>
             </div>
             <div>
-              <span className="block text-gray-400 text-xs uppercase font-bold mb-1">
+              <span className="block text-gray-400 text-xs case font-bold mb-1">
                 Work Type
               </span>
               {client.work_type}
             </div>
             <div>
-              <span className="block text-gray-400 text-xs uppercase font-bold mb-1">
+              <span className="block text-gray-400 text-xs case font-bold mb-1">
                 Price Quote
               </span>
               {client.price_quoted || "-"}
@@ -735,19 +737,19 @@ export default function ClientProfilePage({
           <table className="w-full text-left">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-4 py-3 text-xs font-bold text-gray-400 uppercase w-12 text-center">
+                <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-12 text-center">
                   Done
                 </th>
-                <th className="px-4 py-3 text-xs font-bold text-gray-400 uppercase">
+                <th className="px-4 py-3 text-xs font-bold text-gray-400 case">
                   Task
                 </th>
-                <th className="px-4 py-3 text-xs font-bold text-gray-400 uppercase w-32">
+                <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-32">
                   Start Date
                 </th>
-                <th className="px-4 py-3 text-xs font-bold text-gray-400 uppercase w-24 text-center">
+                <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-24 text-center">
                   Timer
                 </th>
-                <th className="px-4 py-3 text-xs font-bold text-gray-400 uppercase w-24 text-right">
+                <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-24 text-right">
                   Time
                 </th>
               </tr>
@@ -824,13 +826,13 @@ export default function ClientProfilePage({
                             <div className="flex gap-3 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button
                                 onClick={() => startEditing(task)}
-                                className="text-[10px] font-bold text-gray-400 hover:text-[#9d4edd] uppercase tracking-wider"
+                                className="text-[10px] font-bold text-gray-400 hover:text-[#9d4edd] case tracking-wider"
                               >
                                 Edit
                               </button>
                               <button
                                 onClick={() => deleteTask(task.id)}
-                                className="text-[10px] font-bold text-gray-400 hover:text-red-500 uppercase tracking-wider"
+                                className="text-[10px] font-bold text-gray-400 hover:text-red-500 case tracking-wider"
                               >
                                 Delete
                               </button>
@@ -850,7 +852,7 @@ export default function ClientProfilePage({
                           />
                         ) : task.scheduled_start ? (
                           new Date(task.scheduled_start).toLocaleDateString(
-                            "en-GB"
+                            "en-GB",
                           )
                         ) : task.due_date ? (
                           new Date(task.due_date).toLocaleDateString("en-GB")
@@ -912,7 +914,7 @@ export default function ClientProfilePage({
       <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
           <h2 className="text-xl font-bold text-gray-800">
-            Documents & Service Agreements
+            Documents & Workflows
           </h2>
           <div className="flex gap-3">
             <button
@@ -939,89 +941,93 @@ export default function ClientProfilePage({
                 clientDocuments.map((doc) => {
                   const DocIcon = documentIcon(doc.type);
                   return (
-                <tr
-                  key={doc.id}
-                  className="hover:bg-purple-50/30 transition-colors"
-                >
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <DocIcon size={18} className="text-[#333333]" />
-                      <div>
-                        <div className="font-bold text-black">{doc.title}</div>
-                        <div className="text-[10px] text-gray-400 uppercase tracking-widest">
-                          {doc.type.replace("_", " ")}
+                    <tr
+                      key={doc.id}
+                      className="hover:bg-purple-50/30 transition-colors"
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <DocIcon size={18} className="text-[#333333]" />
+                          <div>
+                            <div className="font-bold text-black">
+                              {doc.title}
+                            </div>
+                            <div className="text-[10px] text-gray-400 case tracking-widest">
+                              {doc.type.replace("_", " ")}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={`w-3 h-3 rounded-full ${
-                          doc.status === "draft" ? "bg-red-500" : "bg-green-500"
-                        }`}
-                      />
-                      <span className="text-[10px] font-black uppercase text-gray-600">
-                        {doc.status}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-right flex justify-end gap-4 items-center">
-                    {/* REVOKE LINK: Only shows if NOT a draft */}
-                    {doc.status !== "draft" && (
-                      <button
-                        onClick={() => revokeDocument(doc.id)}
-                        className="text-[10px] font-bold text-orange-500 hover:underline uppercase"
-                      >
-                        Revoke
-                      </button>
-                    )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`w-3 h-3 rounded-full ${
+                              doc.status === "draft"
+                                ? "bg-red-500"
+                                : "bg-green-500"
+                            }`}
+                          />
+                          <span className="text-[10px] font-black case text-gray-600">
+                            {doc.status}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-right flex justify-end gap-4 items-center">
+                        {/* REVOKE LINK: Only shows if NOT a draft */}
+                        {doc.status !== "draft" && (
+                          <button
+                            onClick={() => revokeDocument(doc.id)}
+                            className="text-[10px] font-bold text-orange-500 hover:underline case"
+                          >
+                            Revoke
+                          </button>
+                        )}
 
-                    <button
-                      onClick={() => {
-                        const routeSuffix =
-                          doc.type === "proposal"
-                            ? "proposal"
-                            : doc.type === "invoice"
-                            ? "invoice"
-                            : doc.type === "booking_form"
-                            ? "booking_form"
-                            : doc.type === "upload"
-                            ? "upload"
-                            : "";
-                        router.push(
-                          routeSuffix
-                            ? `/va/dashboard/documents/edit-${routeSuffix}/${doc.id}`
-                            : `/va/dashboard/documents/edit/${doc.id}`
-                        );
-                      }}
-                      className="text-xs font-bold text-[#9d4edd] hover:underline"
-                    >
-                      {doc.status === "draft" ? "Edit & Issue" : "View"}
-                    </button>
+                        <button
+                          onClick={() => {
+                            const routeSuffix =
+                              doc.type === "proposal"
+                                ? "proposal"
+                                : doc.type === "invoice"
+                                  ? "invoice"
+                                  : doc.type === "booking_form"
+                                    ? "booking_form"
+                                    : doc.type === "upload"
+                                      ? "upload"
+                                      : "";
+                            router.push(
+                              routeSuffix
+                                ? `/va/dashboard/documents/edit-${routeSuffix}/${doc.id}`
+                                : `/va/dashboard/documents/edit/${doc.id}`,
+                            );
+                          }}
+                          className="text-xs font-bold text-[#9d4edd] hover:underline"
+                        >
+                          {doc.status === "draft" ? "Edit & Issue" : "View"}
+                        </button>
 
-                    {/* RUBBISH BIN ICON */}
-                    <button
-                      onClick={() => deleteDocument(doc.id)}
-                      className="text-gray-300 hover:text-red-500 transition-colors"
-                      title="Delete Document"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                      </svg>
-                    </button>
-                  </td>
-                </tr>
+                        {/* RUBBISH BIN ICON */}
+                        <button
+                          onClick={() => deleteDocument(doc.id)}
+                          className="text-gray-300 hover:text-red-500 transition-colors"
+                          title="Delete Document"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
                   );
                 })}
               {hasAgreements &&
@@ -1035,7 +1041,7 @@ export default function ClientProfilePage({
                       <div className="text-xs text-gray-500">
                         Updated:{" "}
                         {new Date(ag.last_updated_at).toLocaleDateString(
-                          "en-GB"
+                          "en-GB",
                         )}
                       </div>
                     </td>
@@ -1047,16 +1053,16 @@ export default function ClientProfilePage({
                             ag.status === "draft"
                               ? "bg-red-500"
                               : ag.status === "pending_client"
-                              ? "bg-yellow-400"
-                              : "bg-green-500"
+                                ? "bg-yellow-400"
+                                : "bg-green-500"
                           }`}
                         />
-                        <span className="text-[10px] font-black uppercase tracking-tighter text-gray-600">
+                        <span className="text-[10px] font-black case tracking-tighter text-gray-600">
                           {ag.status === "draft"
                             ? "Draft"
                             : ag.status === "pending_client"
-                            ? "Issued - Pending"
-                            : "Authorised"}
+                              ? "Issued - Pending"
+                              : "Authorised"}
                         </span>
                       </div>
                     </td>
@@ -1065,7 +1071,7 @@ export default function ClientProfilePage({
                       {ag.status !== "draft" && (
                         <button
                           onClick={() => revokeAgreement(ag.id)}
-                          className="text-[10px] font-bold text-orange-500 hover:underline uppercase"
+                          className="text-[10px] font-bold text-orange-500 hover:underline case"
                         >
                           Revoke
                         </button>
@@ -1073,7 +1079,7 @@ export default function ClientProfilePage({
                       <button
                         onClick={() =>
                           router.push(
-                            `/va/dashboard/workflows/portal-view/${ag.id}`
+                            `/va/dashboard/workflows/portal-view/${ag.id}`,
                           )
                         }
                         className="text-xs font-bold text-[#9d4edd] hover:underline"
