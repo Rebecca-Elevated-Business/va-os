@@ -202,10 +202,10 @@ export default function SettingsPage() {
               <button
                 key={section.id}
                 onClick={() => setActiveSection(section.id)}
-                className={`w-full flex items-center gap-3 px-6 py-3 rounded-2xl font-bold text-sm transition-all ${
+                className={`w-full flex items-center gap-3 px-5 py-3 rounded-2xl font-semibold text-sm transition-all ${
                   activeSection === section.id
-                    ? "bg-[#9d4edd] text-white shadow-lg shadow-purple-100"
-                    : "text-gray-400 hover:bg-white hover:text-[#333333]"
+                    ? "bg-[#f3e8ff] text-[#5b21b6] shadow-sm"
+                    : "text-gray-500 hover:bg-white hover:text-[#333333]"
                 }`}
               >
                 <Icon size={18} />
@@ -220,50 +220,54 @@ export default function SettingsPage() {
           <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100 min-h-125">
             {activeSection === "profile" && (
               <div className="space-y-8 animate-in slide-in-from-bottom-2 duration-300">
-                <div>
-                  <h2 className="text-xl font-black mb-1">Public Profile</h2>
-                  <p className="text-sm text-gray-400 font-medium">
+                <div className="border-b border-gray-100 pb-4">
+                  <h2 className="text-xl font-black text-gray-800 mb-1">
+                    Public Profile
+                  </h2>
+                  <p className="text-sm text-gray-500 font-medium">
                     Manage how your name appears to clients.
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                      Name Shown to Clients
-                    </label>
-                    <input
-                      className="w-full p-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-purple-100 focus:bg-white transition-all font-bold"
-                      value={profile.display_name}
-                      onChange={(event) => {
-                        setProfile((prev) => ({
-                          ...prev,
-                          display_name: event.target.value,
-                        }));
-                        setProfileMessage("");
-                      }}
-                    />
+                  <div className="space-y-5">
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-gray-500 tracking-wide ml-1">
+                        Name shown to clients
+                      </label>
+                      <input
+                        className="w-full p-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-purple-100 focus:bg-white transition-all font-semibold text-gray-800"
+                        value={profile.display_name}
+                        onChange={(event) => {
+                          setProfile((prev) => ({
+                            ...prev,
+                            display_name: event.target.value,
+                          }));
+                          setProfileMessage("");
+                        }}
+                      />
+                    </div>
+                    <div className="space-y-2 pt-4 border-t border-gray-100">
+                      <label className="text-xs font-semibold text-gray-500 tracking-wide ml-1">
+                        Name on account
+                      </label>
+                      <input
+                        className="w-full p-4 bg-gray-100/80 border border-gray-100 rounded-2xl outline-none font-semibold text-gray-600 cursor-not-allowed"
+                        value={profile.legal_name}
+                        readOnly
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400 tracking-widest ml-1">
-                      Name on Account
+                    <label className="text-xs font-semibold text-gray-500 tracking-wide ml-1">
+                      Email address
                     </label>
                     <input
-                      className="w-full p-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-purple-100 focus:bg-white transition-all font-bold"
-                      value={profile.legal_name}
-                      readOnly
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                      Email Address
-                    </label>
-                    <input
-                      className="w-full p-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none text-gray-400 font-medium"
+                      className="w-full p-4 bg-gray-100/80 border border-gray-100 rounded-2xl outline-none text-gray-500 font-medium cursor-not-allowed"
                       value={profile.email}
                       disabled
                     />
-                    <p className="text-xs text-gray-400 ml-1">
+                    <p className="text-xs text-gray-500 ml-1">
                       Please email admin@elevatedbusiness.co.uk to update your
                       name on account and/or email address.
                     </p>
@@ -275,20 +279,22 @@ export default function SettingsPage() {
                     type="button"
                     onClick={handleProfileSave}
                     disabled={savingProfile}
-                    className="bg-[#9d4edd] text-white px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-md hover:bg-[#7b2cbf] transition-all disabled:bg-gray-300"
+                    className="bg-[#9d4edd] text-white px-8 py-3 rounded-xl font-semibold text-sm shadow-md hover:bg-[#7b2cbf] transition-all disabled:bg-gray-300"
                   >
-                    {savingProfile ? "Saving..." : "Update Profile"}
+                    {savingProfile ? "Saving..." : "Update profile"}
                   </button>
                   <button
                     type="button"
                     onClick={handleSendReset}
                     disabled={sendingReset}
-                    className="border border-gray-200 text-gray-500 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:border-gray-300 hover:text-[#333333] transition-all disabled:text-gray-300"
+                    className="bg-gray-50 border border-gray-200 text-gray-500 px-6 py-3 rounded-xl font-semibold text-sm hover:border-gray-300 hover:text-[#333333] hover:bg-gray-100 transition-all disabled:text-gray-300"
                   >
-                    {sendingReset ? "Sending..." : "Send Password Reset Email"}
+                    {sendingReset
+                      ? "Sending..."
+                      : "Send password reset email"}
                   </button>
                   {profileMessage && (
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-gray-500">
                       {profileMessage}
                     </span>
                   )}
@@ -302,13 +308,13 @@ export default function SettingsPage() {
                   <h2 className="text-xl font-black mb-1">Business Details</h2>
                 </div>
 
-                <div className="grid grid-cols-1 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                      Company Name
+                    <label className="text-xs font-semibold text-gray-500 tracking-wide ml-1">
+                      Company name
                     </label>
                     <input
-                      className="w-full p-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-purple-100 focus:bg-white transition-all font-bold"
+                      className="w-full p-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-purple-100 focus:bg-white transition-all font-semibold text-gray-800"
                       value={business.company_name}
                       onChange={(event) =>
                         setBusiness((prev) => ({
@@ -319,11 +325,11 @@ export default function SettingsPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                      Website URL
+                    <label className="text-xs font-semibold text-gray-500 tracking-wide ml-1">
+                      Website url
                     </label>
                     <input
-                      className="w-full p-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-purple-100 focus:bg-white transition-all font-bold"
+                      className="w-full p-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-purple-100 focus:bg-white transition-all font-semibold text-gray-800"
                       value={business.website_url}
                       onChange={(event) =>
                         setBusiness((prev) => ({
@@ -334,11 +340,11 @@ export default function SettingsPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                      Phone Number
+                    <label className="text-xs font-semibold text-gray-500 tracking-wide ml-1">
+                      Phone number
                     </label>
                     <input
-                      className="w-full p-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-purple-100 focus:bg-white transition-all font-bold"
+                      className="w-full p-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-purple-100 focus:bg-white transition-all font-semibold text-gray-800"
                       value={business.phone}
                       onChange={(event) =>
                         setBusiness((prev) => ({
@@ -349,11 +355,11 @@ export default function SettingsPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                      Business Email
+                    <label className="text-xs font-semibold text-gray-500 tracking-wide ml-1">
+                      Business email
                     </label>
                     <input
-                      className="w-full p-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-purple-100 focus:bg-white transition-all font-bold"
+                      className="w-full p-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-purple-100 focus:bg-white transition-all font-semibold text-gray-800"
                       value={business.email}
                       onChange={(event) =>
                         setBusiness((prev) => ({
@@ -365,58 +371,60 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                      Facebook URL
-                    </label>
-                    <input
-                      className="w-full p-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-purple-100 focus:bg-white transition-all font-bold"
-                      value={business.facebook_url}
-                      onChange={(event) =>
-                        setBusiness((prev) => ({
-                          ...prev,
-                          facebook_url: event.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                      LinkedIn URL
-                    </label>
-                    <input
-                      className="w-full p-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-purple-100 focus:bg-white transition-all font-bold"
-                      value={business.linkedin_url}
-                      onChange={(event) =>
-                        setBusiness((prev) => ({
-                          ...prev,
-                          linkedin_url: event.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                      Instagram URL
-                    </label>
-                    <input
-                      className="w-full p-4 bg-gray-50 border-2 border-transparent rounded-2xl outline-none focus:border-purple-100 focus:bg-white transition-all font-bold"
-                      value={business.instagram_url}
-                      onChange={(event) =>
-                        setBusiness((prev) => ({
-                          ...prev,
-                          instagram_url: event.target.value,
-                        }))
-                      }
-                    />
+                <div className="bg-gray-50/70 border border-gray-100 rounded-2xl p-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-gray-400 tracking-wide ml-1">
+                        Facebook url
+                      </label>
+                      <input
+                        className="w-full p-4 bg-white border-2 border-transparent rounded-2xl outline-none focus:border-purple-100 focus:bg-white transition-all font-semibold text-gray-800"
+                        value={business.facebook_url}
+                        onChange={(event) =>
+                          setBusiness((prev) => ({
+                            ...prev,
+                            facebook_url: event.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-gray-400 tracking-wide ml-1">
+                        LinkedIn url
+                      </label>
+                      <input
+                        className="w-full p-4 bg-white border-2 border-transparent rounded-2xl outline-none focus:border-purple-100 focus:bg-white transition-all font-semibold text-gray-800"
+                        value={business.linkedin_url}
+                        onChange={(event) =>
+                          setBusiness((prev) => ({
+                            ...prev,
+                            linkedin_url: event.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-gray-400 tracking-wide ml-1">
+                        Instagram url
+                      </label>
+                      <input
+                        className="w-full p-4 bg-white border-2 border-transparent rounded-2xl outline-none focus:border-purple-100 focus:bg-white transition-all font-semibold text-gray-800"
+                        value={business.instagram_url}
+                        onChange={(event) =>
+                          setBusiness((prev) => ({
+                            ...prev,
+                            instagram_url: event.target.value,
+                          }))
+                        }
+                      />
+                    </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
-                      Upload Logo
+                  <div className="space-y-2 bg-gray-50/70 border border-gray-100 rounded-2xl p-5">
+                    <label className="text-xs font-semibold text-gray-500 tracking-wide ml-1">
+                      Upload logo
                     </label>
                     <input
                       type="file"
@@ -426,14 +434,14 @@ export default function SettingsPage() {
                         const file = event.target.files?.[0];
                         if (file) handleLogoUpload(file);
                       }}
-                      className="w-full text-sm text-gray-400 file:mr-4 file:rounded-xl file:border-0 file:bg-gray-100 file:px-4 file:py-3 file:text-xs file:font-bold file:uppercase file:tracking-widest file:text-gray-500 hover:file:bg-gray-200"
+                      className="w-full text-sm text-gray-500 file:mr-4 file:rounded-xl file:border-0 file:bg-gray-100 file:px-4 file:py-3 file:text-xs file:font-semibold file:text-gray-600 hover:file:bg-gray-200"
                     />
                     {logoMessage && (
-                      <p className="text-xs text-gray-400 ml-1">
+                      <p className="text-xs text-gray-500 ml-1">
                         {logoMessage}
                       </p>
                     )}
-                    <p className="text-xs text-gray-400 ml-1">
+                    <p className="text-xs text-gray-500 ml-1">
                       Recommended logo size: 300px wide by 80px high.
                     </p>
                   </div>
@@ -444,12 +452,12 @@ export default function SettingsPage() {
                     type="button"
                     onClick={handleBusinessSave}
                     disabled={savingBusiness}
-                    className="bg-[#9d4edd] text-white px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-md hover:bg-[#7b2cbf] transition-all disabled:bg-gray-300"
+                    className="bg-[#9d4edd] text-white px-8 py-3 rounded-xl font-semibold text-sm shadow-md hover:bg-[#7b2cbf] transition-all disabled:bg-gray-300"
                   >
-                    {savingBusiness ? "Saving..." : "Save Business Details"}
+                    {savingBusiness ? "Saving..." : "Save business details"}
                   </button>
                   {businessMessage && (
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-gray-500">
                       {businessMessage}
                     </span>
                   )}
