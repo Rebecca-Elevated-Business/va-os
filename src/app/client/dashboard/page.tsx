@@ -295,11 +295,11 @@ export default function ClientDashboard() {
                   </div>
                   <button
                     className="bg-[#9d4edd] text-white px-6 py-3 rounded-xl font-bold text-xs shadow-md hover:bg-[#7b2cbf] transition-all uppercase tracking-wider"
-                    onClick={() =>
-                      router.push(
-                        `/va/dashboard/agreements/portal-view/${ag.id}`
-                      )
-                    }
+                      onClick={() =>
+                        router.push(
+                          `/va/dashboard/workflows/portal-view/${ag.id}`
+                        )
+                      }
                   >
                     {ag.status === "pending_client"
                       ? "Review & Sign"

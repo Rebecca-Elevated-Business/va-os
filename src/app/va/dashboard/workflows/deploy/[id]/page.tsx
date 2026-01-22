@@ -7,7 +7,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import AgreementEditor, {
   Agreement,
   AgreementStructure,
-} from "@/app/va/dashboard/agreements/AgreementEditor";
+} from "@/app/va/dashboard/workflows/AgreementEditor";
 
 type Client = {
   id: string;
@@ -96,7 +96,7 @@ export default function DeployAgreementPage({
           client_id: selectedClient.id,
           va_id: userData.user?.id,
           template_id: template.id,
-          title: `${template.title} Agreement`,
+          title: template.title,
           custom_structure: template.default_structure, // This is the clone
           status: "draft",
         },
@@ -173,7 +173,7 @@ export default function DeployAgreementPage({
     const saved = await persistAgreement(false);
     if (!saved) return;
     window.open(
-      `/va/dashboard/agreements/portal-view/${agreement.id}`,
+      `/va/dashboard/workflows/portal-view/${agreement.id}`,
       "_blank",
       "noopener,noreferrer"
     );
@@ -187,16 +187,16 @@ export default function DeployAgreementPage({
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
-              Service Agreement Template
+              Workflow Template
             </p>
             <h1 className="text-2xl font-bold">{template.title}</h1>
             <p className="text-sm text-gray-500 mt-2">
-              Internal guidance for your VA team, plus the client-facing
-              agreement builder.
+              Internal guidance for yourself, plus the client-facing workflow
+              builder.
             </p>
           </div>
           <button
-            onClick={() => router.push("/va/dashboard/agreements")}
+            onClick={() => router.push("/va/dashboard/workflows")}
             className="text-xs font-bold text-gray-400 hover:text-black uppercase tracking-widest"
           >
             Back to Library
@@ -222,7 +222,7 @@ export default function DeployAgreementPage({
                 : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
             }`}
           >
-            Client Agreement
+            Client Workflow
           </button>
         </div>
       </div>
@@ -283,7 +283,7 @@ export default function DeployAgreementPage({
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
               <h2 className="text-lg font-bold mb-2">Create Client Draft</h2>
               <p className="text-gray-500 mb-6 text-sm">
-                Select a client to create a draft of the agreement based on this
+                Select a client to create a draft of the workflow based on this
                 template.
               </p>
 
@@ -356,7 +356,7 @@ export default function DeployAgreementPage({
                   onClick={handleDeploy}
                   className="w-full bg-[#9d4edd] text-white py-3 rounded-lg font-bold shadow-md hover:bg-[#7b2cbf] disabled:opacity-50 transition-all"
                 >
-                  {deploying ? "Creating..." : "Create Draft Agreement"}
+                  {deploying ? "Creating..." : "Create Draft Workflow"}
                 </button>
               </div>
             </div>
@@ -367,7 +367,7 @@ export default function DeployAgreementPage({
               <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
                 <div>
                   <p className="text-xs text-gray-400 uppercase tracking-widest font-bold">
-                    Draft Agreement
+                    Draft Workflow
                   </p>
                   <p className="text-lg font-bold text-gray-900">
                     {agreement.title}

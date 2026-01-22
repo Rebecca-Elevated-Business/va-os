@@ -157,7 +157,7 @@ export default function AgreementEditor({
 
       {showFooterNote && (
         <div className="mt-8 text-center text-gray-400 text-xs italic">
-          Changes saved here update the agreement structure. To fill in client
+          Changes saved here update the workflow structure. To fill in client
           details yourself, you can access the document via the Client List.
         </div>
       )}

@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import AgreementEditor, {
   Agreement,
-} from "@/app/va/dashboard/agreements/AgreementEditor";
+} from "@/app/va/dashboard/workflows/AgreementEditor";
 
 export default function EditAgreementPage({
   params,
@@ -83,7 +83,7 @@ export default function EditAgreementPage({
         </div>
         <div className="flex gap-3">
           <button
-            onClick={() => router.push("/va/dashboard/agreements/")}
+            onClick={() => router.push("/va/dashboard/workflows/")}
             className="px-4 py-2 text-sm font-semibold text-gray-500 hover:text-black"
           >
             Back to Library

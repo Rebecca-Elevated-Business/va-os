@@ -100,8 +100,8 @@ export default function VADashboardLayout({
     { name: "CRM", href: "/va/dashboard/crm", icon: Users },
     { name: "Documents", href: "/va/dashboard/documents", icon: FileText },
     {
-      name: "Service Agreements",
-      href: "/va/dashboard/agreements",
+      name: "Workflows",
+      href: "/va/dashboard/workflows",
       icon: ShieldCheck,
     },
   ];

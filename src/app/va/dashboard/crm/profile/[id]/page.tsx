@@ -924,10 +924,10 @@ export default function ClientProfilePage({
               + New Document
             </button>
             <button
-              onClick={() => router.push("/va/dashboard/agreements")}
+              onClick={() => router.push("/va/dashboard/workflows")}
               className="text-sm bg-[#9d4edd] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#7b2cbf] transition-all shadow-sm"
             >
-              + New Agreement
+              + New Workflow
             </button>
           </div>
         </div>
@@ -1073,7 +1073,7 @@ export default function ClientProfilePage({
                       <button
                         onClick={() =>
                           router.push(
-                            `/va/dashboard/agreements/portal-view/${ag.id}`
+                            `/va/dashboard/workflows/portal-view/${ag.id}`
                           )
                         }
                         className="text-xs font-bold text-[#9d4edd] hover:underline"

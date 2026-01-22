@@ -51,7 +51,7 @@ export default function PlaybookViewPage({
         </div>
         <button
           onClick={() =>
-            router.push(`/va/dashboard/agreements/deploy/${template.id}`)
+            router.push(`/va/dashboard/workflows/deploy/${template.id}`)
           }
           className="bg-[#9d4edd] text-white px-6 py-2 rounded-lg font-bold shadow-md hover:bg-[#7b2cbf] transition-all"
         >
@@ -77,7 +77,7 @@ export default function PlaybookViewPage({
         </p>
         <button
           onClick={() =>
-            router.push(`/va/dashboard/agreements/deploy/${template.id}`)
+            router.push(`/va/dashboard/workflows/deploy/${template.id}`)
           }
           className="text-[#9d4edd] font-bold hover:underline"
         >

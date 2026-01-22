@@ -50,12 +50,11 @@ export default function SOPLibraryPage() {
     <div className="text-black">
       <div className="mb-8 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2">
-            Service Agreement Library
-          </h1>
+          <h1 className="text-3xl font-bold mb-2">Client Workflow Library</h1>
           <p className="text-gray-500 max-w-2xl">
-            Deploy polished service agreements in minutes. Templates help set
-            clear scope, authority, and delivery standards for each client.
+            Deploy polished Client Workflow Agreements in minutes. Templates
+            help set clear scope, authority, and delivery standards for each
+            client.
           </p>
         </div>
         <div className="w-full max-w-md">
@@ -67,7 +66,7 @@ export default function SOPLibraryPage() {
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search agreements, categories..."
+              placeholder="Search workflows"
               className="w-full bg-transparent text-sm text-gray-700 outline-none"
             />
           </div>
@@ -100,6 +99,22 @@ export default function SOPLibraryPage() {
               </p>
             </button>
           ))}
+          <div className="text-left bg-white border border-dashed border-gray-200 rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <div className="h-12 w-12 rounded-2xl bg-gray-50 flex items-center justify-center text-[#333333]">
+                <FileText className="h-6 w-6" />
+              </div>
+              <span className="text-[10px] font-black text-[#333333] uppercase tracking-widest">
+                Placeholder
+              </span>
+            </div>
+            <h3 className="font-bold text-sm text-[#333333] uppercase tracking-tight">
+              Request a Workflow
+            </h3>
+            <p className="text-[11px] text-gray-500 mt-3 leading-relaxed line-clamp-2">
+              Placeholder text.
+            </p>
+          </div>
         </div>
       )}
 
@@ -127,13 +142,12 @@ export default function SOPLibraryPage() {
             <div className="p-6 grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
               <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
                 <h2 className="text-lg font-bold mb-4 uppercase text-[#333333] tracking-tight">
-                  Agreement Summary
+                  Workflow Summary
                 </h2>
                 <p className="text-gray-700 leading-relaxed mb-6">
-                  This service agreement template defines scope, response
-                  standards, and delivery responsibilities for the selected
-                  client. Customize the clauses during deployment to match each
-                  engagement.
+                  This workflow template defines scope, response standards, and
+                  delivery responsibilities for the selected client. Customize
+                  the clauses during deployment to match each engagement.
                 </p>
                 <ul className="space-y-3 text-sm text-gray-600">
                   <li className="flex items-center gap-2">
@@ -154,8 +168,8 @@ export default function SOPLibraryPage() {
                     What you will set up
                   </p>
                   <p className="text-sm text-gray-600 mt-2">
-                    Configure agreement details, assign the client, and deploy
-                    the final version to their portal.
+                    Configure the workflow details, assign the client, and
+                    deploy the final version to their portal.
                   </p>
                 </div>
                 <div className="flex items-center justify-between">
@@ -168,7 +182,7 @@ export default function SOPLibraryPage() {
                   <button
                     onClick={() =>
                       router.push(
-                        `/va/dashboard/agreements/deploy/${selectedTemplate.id}`
+                        `/va/dashboard/workflows/deploy/${selectedTemplate.id}`
                       )
                     }
                     className="bg-[#9d4edd] text-white px-6 py-3 rounded-xl font-bold shadow-md hover:bg-[#7b2cbf] transition-all"
