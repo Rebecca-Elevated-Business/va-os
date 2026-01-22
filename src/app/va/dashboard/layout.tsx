@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Timer,
+  BookOpen,
 } from "lucide-react";
 
 export default function VADashboardLayout({
@@ -104,6 +105,7 @@ export default function VADashboardLayout({
       href: "/va/dashboard/workflows",
       icon: ShieldCheck,
     },
+    { name: "Tutorials", href: "/va/dashboard/tutorials", icon: BookOpen },
   ];
 
   if (!authorized) {
