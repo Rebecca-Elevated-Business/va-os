@@ -438,7 +438,7 @@ export default function VADashboard() {
             </div>
             <Link
               href="/va/dashboard/inbox"
-              className="inline-flex items-center justify-center w-full mt-4 text-xs font-bold uppercase tracking-widest text-gray-600 border border-gray-200 rounded-lg py-2 hover:border-gray-300 hover:bg-gray-50 transition-colors"
+              className="inline-flex items-center justify-center w-full mt-4 text-xs font-bold tracking-widest text-gray-600 border border-gray-200 rounded-lg py-2 hover:border-gray-300 hover:bg-gray-50 transition-colors"
             >
               Open Inbox
             </Link>
@@ -509,7 +509,7 @@ export default function VADashboard() {
             </p>
             <Link
               href="/va/dashboard/time-tracking"
-              className="mt-auto inline-flex items-center justify-center w-full text-xs font-bold uppercase tracking-widest text-gray-600 border border-gray-200 rounded-lg py-2 hover:border-gray-300 hover:bg-gray-50 transition-colors"
+              className="mt-auto inline-flex items-center justify-center w-full text-xs font-bold tracking-widest text-gray-600 border border-gray-200 rounded-lg py-2 hover:border-gray-300 hover:bg-gray-50 transition-colors"
             >
               Open Time Tracking
             </Link>
@@ -554,7 +554,7 @@ export default function VADashboard() {
               <button
                 onClick={saveNote}
                 disabled={savingNote || !isEditingNote}
-                className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors ${
+                className={`px-4 py-2 rounded-lg text-xs font-bold tracking-widest transition-colors ${
                   savingNote || !isEditingNote
                     ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                     : "bg-[#9d4edd] text-white hover:bg-[#7b2cbf]"
