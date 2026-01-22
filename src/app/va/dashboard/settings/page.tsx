@@ -220,13 +220,10 @@ export default function SettingsPage() {
           <div className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-gray-100 min-h-125">
             {activeSection === "profile" && (
               <div className="space-y-8 animate-in slide-in-from-bottom-2 duration-300">
-                <div className="border-b border-gray-100 pb-4">
+                <div className="pb-2">
                   <h2 className="text-xl font-black text-gray-800 mb-1">
                     Public Profile
                   </h2>
-                  <p className="text-sm text-gray-500 font-medium">
-                    Manage how your name appears to clients.
-                  </p>
                 </div>
 
                 <div className="grid grid-cols-1 gap-6">
@@ -374,9 +371,9 @@ export default function SettingsPage() {
                 <div className="bg-gray-50/70 border border-gray-100 rounded-2xl p-5">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-400 tracking-wide ml-1">
-                        Facebook url
-                      </label>
+                    <label className="text-xs font-semibold text-gray-500 tracking-wide ml-1">
+                      Facebook url
+                    </label>
                       <input
                         className="w-full p-4 bg-white border-2 border-transparent rounded-2xl outline-none focus:border-purple-100 focus:bg-white transition-all font-semibold text-gray-800"
                         value={business.facebook_url}
@@ -389,9 +386,9 @@ export default function SettingsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-400 tracking-wide ml-1">
-                        LinkedIn url
-                      </label>
+                    <label className="text-xs font-semibold text-gray-500 tracking-wide ml-1">
+                      LinkedIn url
+                    </label>
                       <input
                         className="w-full p-4 bg-white border-2 border-transparent rounded-2xl outline-none focus:border-purple-100 focus:bg-white transition-all font-semibold text-gray-800"
                         value={business.linkedin_url}
@@ -404,9 +401,9 @@ export default function SettingsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-400 tracking-wide ml-1">
-                        Instagram url
-                      </label>
+                    <label className="text-xs font-semibold text-gray-500 tracking-wide ml-1">
+                      Instagram url
+                    </label>
                       <input
                         className="w-full p-4 bg-white border-2 border-transparent rounded-2xl outline-none focus:border-purple-100 focus:bg-white transition-all font-semibold text-gray-800"
                         value={business.instagram_url}
@@ -423,9 +420,14 @@ export default function SettingsPage() {
 
                 <div className="grid grid-cols-1 gap-6">
                   <div className="space-y-2 bg-gray-50/70 border border-gray-100 rounded-2xl p-5">
-                    <label className="text-xs font-semibold text-gray-500 tracking-wide ml-1">
-                      Upload logo
-                    </label>
+                    <div className="flex flex-wrap items-baseline gap-2 ml-1">
+                      <label className="text-xs font-semibold text-gray-500 tracking-wide">
+                        Upload logo
+                      </label>
+                      <span className="text-xs text-gray-400">
+                        Feature coming soon: Add your logo to client documents
+                      </span>
+                    </div>
                     <input
                       type="file"
                       accept="image/*"
