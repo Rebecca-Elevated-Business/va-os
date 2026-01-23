@@ -96,13 +96,6 @@ export default function TutorialTopicPage({
     };
   }, [topic]);
 
-  useEffect(() => {
-    if (!topic) return;
-    if (!activeVideoId && topic.videos.length > 0) {
-      setActiveVideoId(topic.videos[0].id);
-    }
-  }, [activeVideoId, topic]);
-
   const toggleCompletion = async (videoId: string) => {
     if (!topic || !userId) return;
     const nextValue = !completion[videoId];
