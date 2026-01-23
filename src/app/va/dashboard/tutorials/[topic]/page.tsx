@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -9,12 +10,10 @@ import { tutorialTopicsBySlug } from "../data";
 type CompletionMap = Record<string, boolean>;
 type UrlMap = Record<string, string>;
 
-export default function TutorialTopicPage({
-  params,
-}: {
-  params: { topic: string };
-}) {
-  const topic = tutorialTopicsBySlug.get(params.topic);
+export default function TutorialTopicPage() {
+  const params = useParams<{ topic?: string }>();
+  const topicSlug = params?.topic || "";
+  const topic = tutorialTopicsBySlug.get(topicSlug);
   const [userId, setUserId] = useState<string | null>(null);
   const [videoUrls, setVideoUrls] = useState<UrlMap>({});
   const [completion, setCompletion] = useState<CompletionMap>({});
