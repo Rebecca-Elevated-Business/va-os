@@ -268,14 +268,20 @@ export default function VADashboard() {
     setShowWelcome(false);
   };
 
+  const confirmDismissWelcome = async () => {
+    if (window.confirm("Are you sure you want to end the video now?")) {
+      await dismissWelcome();
+    }
+  };
+
   return (
     <main className="animate-in fade-in duration-500 text-[#333333]">
       {showWelcome && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-200/80 p-4">
           <div className="relative w-full max-w-3xl rounded-2xl bg-white shadow-xl">
             <button
               type="button"
-              onClick={dismissWelcome}
+              onClick={confirmDismissWelcome}
               className="absolute right-4 top-4 rounded-full bg-white/90 p-2 text-gray-500 shadow-sm transition hover:text-gray-800"
               aria-label="Close welcome video"
             >
