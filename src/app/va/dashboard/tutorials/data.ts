@@ -19,9 +19,13 @@ export const tutorialTopics: TutorialTopic[] = [
     description: "A short orientation to VA-OS.",
     videos: [
       {
-        id: "overview",
-        title: "Overview",
+        id: "welcome-video",
+        title: "Welcome video",
         objectPath: "Welcome Video.mp4",
+      },
+      {
+        id: "navigation",
+        title: "Navigation",
       },
     ],
   },

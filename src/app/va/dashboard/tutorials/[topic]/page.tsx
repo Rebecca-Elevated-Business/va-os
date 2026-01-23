@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { CheckCircle, Circle, ArrowLeft } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { tutorialTopicsBySlug } from "../data";
 
@@ -20,6 +20,14 @@ export default function TutorialTopicPage({
   const [completion, setCompletion] = useState<CompletionMap>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
+
+  const activeVideo = useMemo(() => {
+    if (!topic) return null;
+    const fallback = topic.videos[0]?.id || null;
+    const selectedId = activeVideoId || fallback;
+    return topic.videos.find((video) => video.id === selectedId) || null;
+  }, [activeVideoId, topic]);
 
   useEffect(() => {
     if (!topic) return;
@@ -79,6 +87,9 @@ export default function TutorialTopicPage({
       });
       setVideoUrls(nextUrls);
       setLoading(false);
+      if (!activeVideoId && topic.videos.length > 0) {
+        setActiveVideoId(topic.videos[0].id);
+      }
     };
 
     loadTopicData();
@@ -137,7 +148,7 @@ export default function TutorialTopicPage({
           className="text-sm font-semibold text-gray-500 hover:text-gray-700 inline-flex items-center gap-2"
         >
           <ArrowLeft size={14} />
-          Tutorials
+          Return to all training content
         </Link>
         <h1 className="text-3xl font-black tracking-tight text-[#333333]">
           {topic.title}
@@ -153,57 +164,80 @@ export default function TutorialTopicPage({
         </div>
       )}
 
-      <section className="space-y-6">
-        {topic.videos.map((video) => {
-          const isCompleted = completion[video.id] || false;
-          const videoUrl = videoUrls[video.id];
+      <section className="grid gap-6 lg:grid-cols-[280px_1fr]">
+        <aside className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+            <h2 className="text-sm font-semibold text-[#333333]">
+              Course contents
+            </h2>
+            <span className="text-xs font-semibold text-gray-400">
+              {topic.videos.length} lesson{topic.videos.length === 1 ? "" : "s"}
+            </span>
+          </div>
+          <ul className="divide-y divide-gray-100">
+            {topic.videos.map((video, index) => {
+              const isActive = activeVideo?.id === video.id;
+              return (
+                <li key={video.id}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveVideoId(video.id)}
+                    className={`w-full text-left px-5 py-4 flex items-center gap-3 transition ${
+                      isActive
+                        ? "bg-[#f6f0fb] text-[#5a189a]"
+                        : "hover:bg-gray-50 text-[#333333]"
+                    }`}
+                  >
+                    <span className="text-xs font-semibold text-gray-400 w-6">
+                      {index + 1}
+                    </span>
+                    <span className="text-sm font-semibold">{video.title}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </aside>
 
-          return (
-            <article
-              key={video.id}
-              className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm space-y-4"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-lg font-semibold text-[#333333]">
-                  {video.title}
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => toggleCompletion(video.id)}
-                  className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 transition hover:border-gray-300 hover:text-gray-800"
-                >
-                  {isCompleted ? (
-                    <>
-                      <CheckCircle size={14} className="text-emerald-500" />
-                      Completed
-                    </>
-                  ) : (
-                    <>
-                      <Circle size={14} className="text-gray-400" />
-                      Mark complete
-                    </>
-                  )}
-                </button>
-              </div>
-
-              <div className="aspect-video w-full overflow-hidden rounded-xl bg-gray-100">
-                {video.objectPath ? (
-                  videoUrl ? (
-                    <video src={videoUrl} controls className="h-full w-full" />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-sm text-gray-500">
-                      {loading ? "Loading video..." : "Video unavailable."}
-                    </div>
-                  )
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm space-y-4">
+            <h2 className="text-lg font-semibold text-[#333333]">
+              {activeVideo?.title || "Select a lesson"}
+            </h2>
+            <div className="aspect-video w-full overflow-hidden rounded-xl bg-gray-100">
+              {activeVideo?.objectPath ? (
+                videoUrls[activeVideo.id] ? (
+                  <video
+                    src={videoUrls[activeVideo.id]}
+                    controls
+                    className="h-full w-full"
+                  />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-sm text-gray-500">
-                    Video coming soon.
+                    {loading ? "Loading video..." : "Video unavailable."}
                   </div>
-                )}
-              </div>
-            </article>
-          );
-        })}
+                )
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-sm text-gray-500">
+                  Video coming soon.
+                </div>
+              )}
+            </div>
+            {activeVideo && (
+              <button
+                type="button"
+                onClick={() => toggleCompletion(activeVideo.id)}
+                className={`w-full rounded-xl border px-4 py-3 text-sm font-semibold transition ${
+                  completion[activeVideo.id]
+                    ? "border-[#9d4edd] bg-[#9d4edd] text-white hover:bg-[#7b2cbf]"
+                    : "border-[#9d4edd] bg-white text-[#9d4edd] hover:bg-[#f6f0fb]"
+                }`}
+              >
+                {completion[activeVideo.id] ? "Uncomplete?" : "Mark as complete"}
+              </button>
+            )}
+          </div>
+        </div>
       </section>
     </div>
   );
