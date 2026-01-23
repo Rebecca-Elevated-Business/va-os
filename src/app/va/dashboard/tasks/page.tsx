@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, type DragEvent } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  type DragEvent,
+} from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { addMinutes, format } from "date-fns";
@@ -57,8 +63,7 @@ const DEFAULT_STATUS_ORDER = ["completed", "in_progress", "up_next", "todo"];
 
 const STATUS_PILL_CLASS =
   "text-[10px] font-semibold text-gray-600 border border-gray-200 bg-white";
-const CATEGORY_CHIP_CLASS =
-  "border border-gray-200 text-gray-500 bg-white";
+const CATEGORY_CHIP_CLASS = "border border-gray-200 text-gray-500 bg-white";
 
 // 2. CATEGORY CONFIG (Neutral chips)
 const CATEGORY_CONFIG: Record<string, CategoryOption> = {
@@ -106,15 +111,15 @@ export default function TaskCentrePage() {
   const columnsRef = useRef<HTMLDivElement>(null);
 
   const [statusOrder, setStatusOrder] = useState<string[]>(
-    normalizeStatusOrder(DEFAULT_STATUS_ORDER)
+    normalizeStatusOrder(DEFAULT_STATUS_ORDER),
   );
-  const [collapsedStatus, setCollapsedStatus] = useState<Record<string, boolean>>(
-    DEFAULT_COLLAPSED
-  );
+  const [collapsedStatus, setCollapsedStatus] =
+    useState<Record<string, boolean>>(DEFAULT_COLLAPSED);
   const [columnVisibility, setColumnVisibility] =
     useState<ColumnVisibility>(DEFAULT_COLUMNS);
   const [draggingStatus, setDraggingStatus] = useState<string | null>(null);
   const [dragOverStatus, setDragOverStatus] = useState<string | null>(null);
+  const prefsLoadedRef = useRef<string | null>(null);
 
   // Actions & Modals
   const [isAdding, setIsAdding] = useState(false);
@@ -139,13 +144,65 @@ export default function TaskCentrePage() {
     if (!user) return;
     setUserId(user.id);
 
+    if (prefsLoadedRef.current !== user.id) {
+      const key = `task-centre:list-preferences:${user.id}`;
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw) as {
+            statusOrder?: string[];
+            collapsedStatus?: Record<string, boolean>;
+            columnVisibility?: Partial<ColumnVisibility>;
+          };
+          if (parsed.statusOrder) {
+            setStatusOrder(normalizeStatusOrder(parsed.statusOrder));
+          }
+          if (parsed.collapsedStatus) {
+            setCollapsedStatus({
+              ...DEFAULT_COLLAPSED,
+              ...parsed.collapsedStatus,
+            });
+          }
+          if (parsed.columnVisibility) {
+            setColumnVisibility({
+              ...DEFAULT_COLUMNS,
+              ...parsed.columnVisibility,
+            });
+          }
+        } catch (error) {
+          console.warn("Failed to load list view preferences", error);
+        }
+      }
+      prefsLoadedRef.current = user.id;
+    }
+
     // Fetch Tasks
     const { data: taskData } = await supabase
       .from("tasks")
       .select("*, clients(business_name, surname)")
       .eq("va_id", user.id);
 
-    if (taskData) setTasks(taskData as Task[]);
+    if (taskData) {
+      setTasks(taskData as Task[]);
+      const taskId = searchParams.get("taskId");
+      if (
+        taskId &&
+        !deepLinkHandled.current &&
+        Array.isArray(taskData) &&
+        taskData.length > 0
+      ) {
+        const target = taskData.find((task) => task.id === taskId);
+        if (target) {
+          setView("list");
+          setIsColumnsOpen(false);
+          setSelectedTask(target as Task);
+          setIsAdding(true);
+          setModalPrefill(null);
+          setActionMenuId(null);
+          deepLinkHandled.current = true;
+        }
+      }
+    }
 
     // Fetch Clients
     const { data: clientData } = await supabase
@@ -155,7 +212,7 @@ export default function TaskCentrePage() {
 
     if (clientData) setClients(clientData);
     setLoading(false);
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     // 1. Wrap fetchData to prevent cascading render error
@@ -170,7 +227,7 @@ export default function TaskCentrePage() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "tasks" },
-        fetchData
+        fetchData,
       )
       .subscribe();
 
@@ -229,35 +286,6 @@ export default function TaskCentrePage() {
   }, []);
 
   useEffect(() => {
-    if (view !== "list") setIsColumnsOpen(false);
-  }, [view]);
-
-  useEffect(() => {
-    if (!userId) return;
-    const key = `task-centre:list-preferences:${userId}`;
-    const raw = localStorage.getItem(key);
-    if (!raw) return;
-    try {
-      const parsed = JSON.parse(raw) as {
-        statusOrder?: string[];
-        collapsedStatus?: Record<string, boolean>;
-        columnVisibility?: Partial<ColumnVisibility>;
-      };
-      if (parsed.statusOrder) {
-        setStatusOrder(normalizeStatusOrder(parsed.statusOrder));
-      }
-      if (parsed.collapsedStatus) {
-        setCollapsedStatus({ ...DEFAULT_COLLAPSED, ...parsed.collapsedStatus });
-      }
-      if (parsed.columnVisibility) {
-        setColumnVisibility({ ...DEFAULT_COLUMNS, ...parsed.columnVisibility });
-      }
-    } catch (error) {
-      console.warn("Failed to load list view preferences", error);
-    }
-  }, [userId]);
-
-  useEffect(() => {
     if (!userId) return;
     const key = `task-centre:list-preferences:${userId}`;
     const payload = {
@@ -281,7 +309,7 @@ export default function TaskCentrePage() {
 
   const patchTask = (taskId: string, updates: Partial<Task>) => {
     setTasks((prev) =>
-      prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t))
+      prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t)),
     );
   };
 
@@ -291,19 +319,6 @@ export default function TaskCentrePage() {
     setModalPrefill(null);
     setActionMenuId(null); // Close the inline menu
   };
-
-  useEffect(() => {
-    const taskId = searchParams.get("taskId");
-    if (!taskId || deepLinkHandled.current || tasks.length === 0) return;
-    const target = tasks.find((task) => task.id === taskId);
-    if (!target) return;
-    setView("list");
-    setSelectedTask(target);
-    setIsAdding(true);
-    setModalPrefill(null);
-    setActionMenuId(null);
-    deepLinkHandled.current = true;
-  }, [searchParams, tasks]);
 
   const updateTaskStatus = async (taskId: string, newStatus: string) => {
     await supabase.from("tasks").update({ status: newStatus }).eq("id", taskId);
@@ -334,8 +349,8 @@ export default function TaskCentrePage() {
       const sessionMins = Math.max(
         1,
         Math.round(
-          (new Date().getTime() - new Date(task.start_time).getTime()) / 60000
-        )
+          (new Date().getTime() - new Date(task.start_time).getTime()) / 60000,
+        ),
       );
       await supabase
         .from("tasks")
@@ -406,7 +421,7 @@ export default function TaskCentrePage() {
         .sort(
           (a, b) =>
             new Date(b.due_date || 0).getTime() -
-            new Date(a.due_date || 0).getTime()
+            new Date(a.due_date || 0).getTime(),
         ),
     }))
     .filter((group) => group.items.length > 0);
@@ -465,6 +480,13 @@ export default function TaskCentrePage() {
     setDragOverStatus(null);
   };
 
+  const handleViewChange = (nextView: "list" | "calendar" | "kanban") => {
+    setView(nextView);
+    if (nextView !== "list") {
+      setIsColumnsOpen(false);
+    }
+  };
+
   if (loading)
     return (
       <div className="p-10 italic text-gray-400">Loading Task Centre...</div>
@@ -491,7 +513,7 @@ export default function TaskCentrePage() {
                 <button
                   key={v.id}
                   onClick={() =>
-                    setView(v.id as "list" | "calendar" | "kanban")
+                    handleViewChange(v.id as "list" | "calendar" | "kanban")
                   }
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
                     view === v.id
@@ -535,12 +557,14 @@ export default function TaskCentrePage() {
                             setFilterStatus((prev) =>
                               prev.includes(s.id)
                                 ? prev.filter((x) => x !== s.id)
-                                : [...prev, s.id]
+                                : [...prev, s.id],
                             )
                           }
                           className="w-4 h-4 rounded border-gray-300 text-[#9d4edd] focus:ring-[#9d4edd]"
                         />
-                        <span className={`px-3 py-1 rounded-full ${STATUS_PILL_CLASS}`}>
+                        <span
+                          className={`px-3 py-1 rounded-full ${STATUS_PILL_CLASS}`}
+                        >
                           {s.label}
                         </span>
                       </div>
@@ -673,7 +697,7 @@ export default function TaskCentrePage() {
                         </button>
                         <button
                           onClick={() => handleToggleStatus(group.status)}
-                          className="flex-1 text-left text-xs font-semibold text-gray-700"
+                          className="flex-1 text-left text-sm font-semibold text-gray-700"
                         >
                           {statusConfig.label}{" "}
                           <span className="text-gray-400">
@@ -738,7 +762,7 @@ export default function TaskCentrePage() {
                                 {columnVisibility.startDate && (
                                   <div className="text-right text-xs font-medium text-gray-600">
                                     {formatDateCell(
-                                      task.scheduled_start || task.due_date
+                                      task.scheduled_start || task.due_date,
                                     )}
                                   </div>
                                 )}
@@ -784,7 +808,7 @@ export default function TaskCentrePage() {
                                       setActionMenuId(
                                         actionMenuId === task.id
                                           ? null
-                                          : task.id
+                                          : task.id,
                                       );
                                     }}
                                     className="text-[#333333] transition-colors"
@@ -819,7 +843,7 @@ export default function TaskCentrePage() {
                                               event.stopPropagation();
                                               updateTaskStatus(
                                                 task.id,
-                                                status.id
+                                                status.id,
                                               );
                                             }}
                                             className={`w-full text-left px-4 py-2 text-xs font-semibold hover:bg-gray-50 ${
@@ -830,7 +854,7 @@ export default function TaskCentrePage() {
                                           >
                                             {status.label}
                                           </button>
-                                        )
+                                        ),
                                       )}
                                       <button
                                         onClick={(event) => {
