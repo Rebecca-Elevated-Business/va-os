@@ -105,7 +105,6 @@ export default function VADashboardLayout({
       href: "/va/dashboard/workflows",
       icon: ShieldCheck,
     },
-    { name: "Tutorials", href: "/va/dashboard/tutorials", icon: BookOpen },
   ];
 
   if (!authorized) {
@@ -201,6 +200,26 @@ export default function VADashboardLayout({
               )}
             </button>
           </div>
+
+          <Link
+            href="/va/dashboard/tutorials"
+            title={isCollapsed ? "Tutorials" : ""}
+            className={`flex items-center gap-3 px-4 py-2 rounded-xl font-semibold transition-all duration-200 ${
+              pathname === "/va/dashboard/tutorials"
+                ? "bg-[#9d4edd] text-white"
+                : "text-[#555555] hover:bg-gray-50"
+            }`}
+          >
+            <BookOpen
+              size={18}
+              className={
+                pathname === "/va/dashboard/tutorials"
+                  ? "text-white"
+                  : "text-gray-400"
+              }
+            />
+            {!isCollapsed && <span className="text-[13.5px]">Tutorials</span>}
+          </Link>
 
           <Link
             href="/va/dashboard/settings"
