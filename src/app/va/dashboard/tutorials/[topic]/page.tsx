@@ -87,9 +87,6 @@ export default function TutorialTopicPage({
       });
       setVideoUrls(nextUrls);
       setLoading(false);
-      if (!activeVideoId && topic.videos.length > 0) {
-        setActiveVideoId(topic.videos[0].id);
-      }
     };
 
     loadTopicData();
@@ -98,6 +95,13 @@ export default function TutorialTopicPage({
       isMounted = false;
     };
   }, [topic]);
+
+  useEffect(() => {
+    if (!topic) return;
+    if (!activeVideoId && topic.videos.length > 0) {
+      setActiveVideoId(topic.videos[0].id);
+    }
+  }, [activeVideoId, topic]);
 
   const toggleCompletion = async (videoId: string) => {
     if (!topic || !userId) return;
