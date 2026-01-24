@@ -32,6 +32,7 @@ import TaskModal from "./TaskModal";
 type CategoryOption = {
   id: string;
   label: string;
+  chipClassName: string;
 };
 
 type ColumnVisibility = {
@@ -63,21 +64,22 @@ const DEFAULT_STATUS_ORDER = ["completed", "in_progress", "up_next", "todo"];
 
 const STATUS_PILL_CLASS =
   "text-[10px] font-semibold text-gray-600 border border-gray-200 bg-white";
-const CATEGORY_CHIP_CLASS = "border border-gray-200 text-gray-500 bg-white";
-
-// 2. CATEGORY CONFIG (Neutral chips)
+// 2. CATEGORY CONFIG
 const CATEGORY_CONFIG: Record<string, CategoryOption> = {
   client: {
     id: "client",
     label: "Client",
+    chipClassName: "border border-[#D5E4F7] text-gray-700 bg-[#E8F1FB]",
   },
   business: {
     id: "business",
     label: "Business",
+    chipClassName: "border border-[#D9EBDD] text-gray-700 bg-[#EAF6EF]",
   },
   personal: {
     id: "personal",
     label: "Personal",
+    chipClassName: "border border-[#F5E2A8] text-gray-700 bg-[#FFF3CC]",
   },
 };
 
@@ -752,7 +754,7 @@ export default function TaskCentrePage() {
                                       </span>
                                     )}
                                     <span
-                                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${CATEGORY_CHIP_CLASS}`}
+                                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${catConfig.chipClassName}`}
                                     >
                                       {catConfig.label}
                                     </span>

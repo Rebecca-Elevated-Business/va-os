@@ -42,17 +42,17 @@ const CATEGORY_CONFIG: Record<string, CategoryOption> = {
   client: {
     id: "client",
     label: "Client",
-    color: "bg-emerald-50 text-emerald-700 border-emerald-100",
+    color: "bg-[#E8F1FB] text-gray-700 border-[#D5E4F7]",
   },
   business: {
     id: "business",
     label: "Business",
-    color: "bg-orange-50 text-orange-800 border-orange-100",
+    color: "bg-[#EAF6EF] text-gray-700 border-[#D9EBDD]",
   },
   personal: {
     id: "personal",
     label: "Personal",
-    color: "bg-fuchsia-50 text-fuchsia-800 border-fuchsia-100",
+    color: "bg-[#FFF3CC] text-gray-700 border-[#F5E2A8]",
   },
 };
 
