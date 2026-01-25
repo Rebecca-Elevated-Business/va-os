@@ -77,6 +77,7 @@ export default function CalendarView({
   for (let day = monthGridStart; day <= monthGridEnd; day = addDays(day, 1)) {
     monthDays.push(day);
   }
+  const monthWeekCount = Math.ceil(monthDays.length / 7);
   const weekDayLabels = Array.from({ length: 7 }, (_, i) =>
     format(addDays(monthGridStart, i), "EEE"),
   );
@@ -247,7 +248,9 @@ export default function CalendarView({
           </div>
           <div
             className="grid grid-cols-7 gap-px bg-gray-100 flex-1 min-h-0"
-            style={{ gridTemplateRows: "repeat(6, minmax(0, 1fr))" }}
+            style={{
+              gridTemplateRows: `repeat(${monthWeekCount}, minmax(0, 1fr))`,
+            }}
           >
             {monthDays.map((day) => {
               const isCurrentMonth = isSameMonth(day, currentDate);
@@ -255,7 +258,7 @@ export default function CalendarView({
               return (
                 <div
                   key={day.toISOString()}
-                  className="bg-white p-2 border-r border-b border-gray-50 last:border-r-0"
+                  className="bg-white p-2 border-r border-b border-gray-50 last:border-r-0 h-full"
                   onClick={() => onAddTask(format(day, "yyyy-MM-dd"))}
                 >
                   <div
