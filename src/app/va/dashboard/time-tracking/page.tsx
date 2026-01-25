@@ -585,6 +585,7 @@ export default function TimeTrackingPage() {
         }}
         clients={clients}
         task={editingTask}
+        variant="side"
         onSaved={(task) => upsertTask(task)}
         onFallbackRefresh={fetchData}
       />

@@ -262,14 +262,33 @@ export default function TaskModal({
       <div
         className={`bg-white w-full max-w-lg p-8 shadow-2xl ${
           isSide
-            ? "h-full md:h-[calc(100%-3rem)] md:my-6 md:mr-6 md:rounded-[2.5rem] overflow-y-auto animate-in fade-in duration-200"
+            ? "h-full md:h-[calc(100%-2rem)] md:my-4 md:mr-4 md:rounded-[2.5rem] overflow-y-auto animate-in fade-in duration-200"
             : "rounded-[2.5rem] animate-in zoom-in duration-200"
         }`}
         onClick={isSide ? (event) => event.stopPropagation() : undefined}
       >
-        <h2 className="text-xl font-black mb-6 text-[#333333]">
-          {task ? "Edit Task" : "New Task"}
-        </h2>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+          <h2 className="text-xl font-black text-[#333333]">
+            {task ? "Edit Task" : "New Task"}
+          </h2>
+          <div className="w-full sm:w-44">
+            <label className="sr-only" htmlFor="task-status-select">
+              Status
+            </label>
+            <select
+              id="task-status-select"
+              className="w-full bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd] capitalize"
+              value={formStatus}
+              onChange={(e) => setFormStatus(e.target.value)}
+            >
+              {Object.values(STATUS_CONFIG).map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
 
         <div className="space-y-5">
           <div>
@@ -419,26 +438,6 @@ export default function TaskModal({
                 />
               </div>
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-2 ml-1">
-                Status
-              </label>
-              <select
-                className="w-full bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd] capitalize"
-                value={formStatus}
-                onChange={(e) => setFormStatus(e.target.value)}
-              >
-                {Object.values(STATUS_CONFIG).map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div />
           </div>
 
           <div className="flex gap-3 pt-4">

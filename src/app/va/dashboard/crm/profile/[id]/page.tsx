@@ -906,6 +906,7 @@ export default function ClientProfilePage({
         ]}
         lockClient
         prefill={{ clientId: client.id, category: "client" }}
+        variant="side"
         onSaved={() => refreshData()}
         onFallbackRefresh={refreshData}
       />
