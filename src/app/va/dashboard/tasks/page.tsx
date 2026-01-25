@@ -580,12 +580,14 @@ export default function TaskCentrePage() {
           ? `Client: ${selectedClientLabel}`
           : "Type: Client"
         : `Type: ${filterType.charAt(0).toUpperCase()}${filterType.slice(1)}`;
-  const filteredClients = clients.filter((client) => {
-    const name = `${client.business_name || ""} ${client.surname || ""}`
-      .trim()
-      .toLowerCase();
-    return name.includes(clientSearch.toLowerCase().trim());
-  });
+  const filteredClients = clientSearch.trim()
+    ? clients.filter((client) => {
+        const name = `${client.business_name || ""} ${client.surname || ""}`
+          .trim()
+          .toLowerCase();
+        return name.includes(clientSearch.toLowerCase().trim());
+      })
+    : [];
 
   if (loading)
     return (
@@ -1082,7 +1084,7 @@ export default function TaskCentrePage() {
               </div>
               <button
                 onClick={() => setIsClientModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600 text-sm"
+                className="text-[#333333] hover:text-[#333333]/80 text-sm"
                 aria-label="Close"
               >
                 ✕
@@ -1114,27 +1116,31 @@ export default function TaskCentrePage() {
               )}
 
               {!selectedClientId && (
-                <div className="max-h-56 overflow-y-auto rounded-xl border border-gray-100 bg-white">
-                  {filteredClients.map((client) => {
-                    const label = `${client.business_name || ""} ${
-                      client.surname || ""
-                    }`.trim();
-                    return (
-                      <button
-                        key={client.id}
-                        onClick={() => setSelectedClientId(client.id)}
-                        className="w-full text-left px-3 py-2 text-xs font-semibold text-[#333333] hover:bg-gray-50 transition-colors"
-                      >
-                        {label || "Unnamed Client"}
-                      </button>
-                    );
-                  })}
-                  {filteredClients.length === 0 && (
+                <>
+                  {filteredClients.length > 0 && (
+                    <div className="max-h-56 overflow-y-auto rounded-xl border border-gray-100 bg-white">
+                      {filteredClients.map((client) => {
+                        const label = `${client.business_name || ""} ${
+                          client.surname || ""
+                        }`.trim();
+                        return (
+                          <button
+                            key={client.id}
+                            onClick={() => setSelectedClientId(client.id)}
+                            className="w-full text-left px-3 py-2 text-xs font-semibold text-[#333333] hover:bg-gray-50 transition-colors"
+                          >
+                            {label || "Unnamed Client"}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {clientSearch.trim() && filteredClients.length === 0 && (
                     <div className="px-3 py-4 text-xs text-gray-400">
                       No clients found.
                     </div>
                   )}
-                </div>
+                </>
               )}
             </div>
 
