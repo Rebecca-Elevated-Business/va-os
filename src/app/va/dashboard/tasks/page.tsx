@@ -414,16 +414,44 @@ export default function TaskCentrePage() {
   };
 
   // --- GROUPING LOGIC ---
+  const draftTaskId = "draft-task";
+  const isCreatingNew = isAdding && !selectedTask;
+  const draftStatus = modalPrefill?.status || "todo";
+  const draftTask: Task | null = isCreatingNew
+    ? {
+        id: draftTaskId,
+        va_id: userId || "",
+        client_id: null,
+        task_name: "",
+        status: draftStatus,
+        due_date: null,
+        scheduled_start: null,
+        scheduled_end: null,
+        total_minutes: 0,
+        is_running: false,
+        start_time: null,
+        end_time: null,
+        category: "personal",
+      }
+    : null;
+  const listTasks = draftTask ? [draftTask, ...tasks] : tasks;
+  const activeTaskId =
+    selectedTask?.id || (isCreatingNew ? draftTaskId : null);
   const orderedStatuses = normalizeStatusOrder(statusOrder);
   const groupedTasks = orderedStatuses
     .map((status) => ({
       status,
-      items: tasks
+      items: listTasks
         .filter((t) => t.status === status && filterStatus.includes(status))
         .sort(
-          (a, b) =>
-            new Date(b.due_date || 0).getTime() -
-            new Date(a.due_date || 0).getTime(),
+          (a, b) => {
+            if (a.id === draftTaskId) return -1;
+            if (b.id === draftTaskId) return 1;
+            return (
+              new Date(b.due_date || 0).getTime() -
+              new Date(a.due_date || 0).getTime()
+            );
+          },
         ),
     }))
     .filter((group) => group.items.length > 0);
@@ -495,7 +523,11 @@ export default function TaskCentrePage() {
     );
 
   return (
-    <div className="min-h-screen text-[#333333] pb-20 font-sans">
+    <div
+      className={`min-h-screen text-[#333333] pb-20 font-sans ${
+        isAdding ? "md:pr-115" : ""
+      }`}
+    >
       <header className="mb-8">
         <h1>Task Centre</h1>
       </header>
@@ -627,6 +659,7 @@ export default function TaskCentrePage() {
               setSelectedTask(null);
               setModalPrefill(null);
               setIsAdding(true);
+              setActionMenuId(null);
             }}
             className="bg-[#9d4edd] text-white px-5 py-2.5 rounded-xl font-bold text-xs tracking-widest shadow-lg shadow-purple-100 hover:bg-[#7b2cbf] transition-all flex items-center gap-2"
           >
@@ -727,12 +760,20 @@ export default function TaskCentrePage() {
                             const catConfig =
                               CATEGORY_CONFIG[catKey] ||
                               CATEGORY_CONFIG["personal"];
+                            const isDraft = task.id === draftTaskId;
 
                             return (
                               <div
                                 key={task.id}
-                                onClick={() => openEditModal(task)}
-                                className="grid items-center gap-x-4 px-4 py-3 hover:bg-gray-50/70 transition-colors cursor-pointer"
+                                onClick={() => {
+                                  if (isDraft) return;
+                                  openEditModal(task);
+                                }}
+                                className={`grid items-center gap-x-4 px-4 py-3 transition-colors cursor-pointer ${
+                                  activeTaskId === task.id
+                                    ? "bg-purple-50/70 ring-1 ring-purple-100"
+                                    : "hover:bg-gray-50/70"
+                                }`}
                                 style={{ gridTemplateColumns: columnTemplate }}
                               >
                                 <div className="min-w-0">
@@ -744,7 +785,13 @@ export default function TaskCentrePage() {
                                           : ""
                                       }`}
                                     >
-                                      {task.task_name}
+                                      {task.id === draftTaskId ? (
+                                        <span className="italic text-gray-400">
+                                          New task
+                                        </span>
+                                      ) : (
+                                        task.task_name
+                                      )}
                                     </span>
                                   </div>
                                   <div className="mt-1 flex items-center gap-2">
@@ -777,97 +824,114 @@ export default function TaskCentrePage() {
 
                                 {columnVisibility.timer && (
                                   <div className="flex justify-center">
-                                    <button
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        toggleTimer(task);
-                                      }}
-                                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-sm ${
-                                        task.is_running
-                                          ? "bg-red-50 text-red-500 border border-red-100 animate-pulse"
-                                          : "bg-green-50 text-green-600 border border-green-100 hover:bg-green-100"
-                                      }`}
-                                    >
-                                      {task.is_running ? (
-                                        <Square size={10} fill="currentColor" />
-                                      ) : (
-                                        <Play size={12} fill="currentColor" />
-                                      )}
-                                    </button>
+                                    {isDraft ? (
+                                      <span className="text-xs text-gray-300">
+                                        -
+                                      </span>
+                                    ) : (
+                                      <button
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+                                          toggleTimer(task);
+                                        }}
+                                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-sm ${
+                                          task.is_running
+                                            ? "bg-red-50 text-red-500 border border-red-100 animate-pulse"
+                                            : "bg-green-50 text-green-600 border border-green-100 hover:bg-green-100"
+                                        }`}
+                                      >
+                                        {task.is_running ? (
+                                          <Square
+                                            size={10}
+                                            fill="currentColor"
+                                          />
+                                        ) : (
+                                          <Play size={12} fill="currentColor" />
+                                        )}
+                                      </button>
+                                    )}
                                   </div>
                                 )}
 
                                 {columnVisibility.timeCount && (
                                   <div className="text-right font-mono text-xs text-[#333333]">
-                                    {formatTime(task)}
+                                    {isDraft ? "-" : formatTime(task)}
                                   </div>
                                 )}
 
                                 <div className="relative action-menu-trigger flex justify-end">
-                                  <button
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      setActionMenuId(
-                                        actionMenuId === task.id
-                                          ? null
-                                          : task.id,
-                                      );
-                                    }}
-                                    className="text-[#333333] transition-colors"
-                                  >
-                                    <MoreHorizontal size={18} />
-                                  </button>
-
-                                  {actionMenuId === task.id && (
-                                    <div
-                                      className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-1"
-                                      onClick={(event) =>
-                                        event.stopPropagation()
-                                      }
-                                    >
+                                  {isDraft ? (
+                                    <span className="text-xs text-gray-300">
+                                      -
+                                    </span>
+                                  ) : (
+                                    <>
                                       <button
                                         onClick={(event) => {
                                           event.stopPropagation();
-                                          openEditModal(task);
+                                          setActionMenuId(
+                                            actionMenuId === task.id
+                                              ? null
+                                              : task.id,
+                                          );
                                         }}
-                                        className="w-full text-left px-4 py-3 text-xs font-bold text-[#333333] hover:bg-gray-50 flex items-center gap-2"
+                                        className="text-[#333333] transition-colors"
                                       >
-                                        <Edit2 size={12} /> Edit
+                                        <MoreHorizontal size={18} />
                                       </button>
-                                      <div className="px-4 pt-3 pb-2 text-[9px] font-semibold text-gray-400 uppercase tracking-widest border-t border-gray-100">
-                                        Move to
-                                      </div>
-                                      {Object.values(STATUS_CONFIG).map(
-                                        (status) => (
+
+                                      {actionMenuId === task.id && (
+                                        <div
+                                          className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-1"
+                                          onClick={(event) =>
+                                            event.stopPropagation()
+                                          }
+                                        >
                                           <button
-                                            key={status.id}
                                             onClick={(event) => {
                                               event.stopPropagation();
-                                              updateTaskStatus(
-                                                task.id,
-                                                status.id,
-                                              );
+                                              openEditModal(task);
                                             }}
-                                            className={`w-full text-left px-4 py-2 text-xs font-semibold hover:bg-gray-50 ${
-                                              task.status === status.id
-                                                ? "text-[#333333]"
-                                                : "text-gray-600"
-                                            }`}
+                                            className="w-full text-left px-4 py-3 text-xs font-bold text-[#333333] hover:bg-gray-50 flex items-center gap-2"
                                           >
-                                            {status.label}
+                                            <Edit2 size={12} /> Edit
                                           </button>
-                                        ),
+                                          <div className="px-4 pt-3 pb-2 text-[9px] font-semibold text-gray-400 uppercase tracking-widest border-t border-gray-100">
+                                            Move to
+                                          </div>
+                                          {Object.values(STATUS_CONFIG).map(
+                                            (status) => (
+                                              <button
+                                                key={status.id}
+                                                onClick={(event) => {
+                                                  event.stopPropagation();
+                                                  updateTaskStatus(
+                                                    task.id,
+                                                    status.id,
+                                                  );
+                                                }}
+                                                className={`w-full text-left px-4 py-2 text-xs font-semibold hover:bg-gray-50 ${
+                                                  task.status === status.id
+                                                    ? "text-[#333333]"
+                                                    : "text-gray-600"
+                                                }`}
+                                              >
+                                                {status.label}
+                                              </button>
+                                            ),
+                                          )}
+                                          <button
+                                            onClick={(event) => {
+                                              event.stopPropagation();
+                                              deleteTask(task.id);
+                                            }}
+                                            className="w-full text-left px-4 py-3 text-xs font-bold text-red-500 hover:bg-red-50 flex items-center gap-2 border-t border-gray-50"
+                                          >
+                                            <Trash2 size={12} /> Delete
+                                          </button>
+                                        </div>
                                       )}
-                                      <button
-                                        onClick={(event) => {
-                                          event.stopPropagation();
-                                          deleteTask(task.id);
-                                        }}
-                                        className="w-full text-left px-4 py-3 text-xs font-bold text-red-500 hover:bg-red-50 flex items-center gap-2 border-t border-gray-50"
-                                      >
-                                        <Trash2 size={12} /> Delete
-                                      </button>
-                                    </div>
+                                    </>
                                   )}
                                 </div>
                               </div>
@@ -899,6 +963,7 @@ export default function TaskCentrePage() {
         clients={clients}
         task={selectedTask}
         prefill={modalPrefill}
+        variant="side"
         onSaved={(task) => upsertTask(task)}
         onFallbackRefresh={fetchData}
       />

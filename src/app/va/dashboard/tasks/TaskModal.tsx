@@ -28,6 +28,7 @@ type TaskModalProps = {
   task?: Task | null;
   lockClient?: boolean;
   prefill?: TaskModalPrefill | null;
+  variant?: "modal" | "side";
   onSaved?: (task: Task) => void;
   onFallbackRefresh?: () => void | Promise<void>;
 };
@@ -63,9 +64,11 @@ export default function TaskModal({
   task,
   lockClient = false,
   prefill,
+  variant = "modal",
   onSaved,
   onFallbackRefresh,
 }: TaskModalProps) {
+  const isSide = variant === "side";
   const initialState = useMemo(() => {
     if (task) {
       const start = task.scheduled_start
@@ -248,8 +251,22 @@ export default function TaskModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-100 flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in duration-200">
+    <div
+      className={`fixed inset-0 z-100 flex p-4 ${
+        isSide
+          ? "justify-end bg-black/20 md:bg-transparent"
+          : "items-center justify-center bg-black/40 backdrop-blur-sm"
+      }`}
+      onClick={isSide ? onClose : undefined}
+    >
+      <div
+        className={`bg-white w-full max-w-lg p-8 shadow-2xl ${
+          isSide
+            ? "h-full md:h-[calc(100%-3rem)] md:my-6 md:mr-6 md:rounded-[2.5rem] overflow-y-auto animate-in fade-in duration-200"
+            : "rounded-[2.5rem] animate-in zoom-in duration-200"
+        }`}
+        onClick={isSide ? (event) => event.stopPropagation() : undefined}
+      >
         <h2 className="text-xl font-black mb-6 text-[#333333]">
           {task ? "Edit Task" : "New Task"}
         </h2>
