@@ -54,6 +54,7 @@ type SavedReportRow = {
   total_seconds: number;
   entry_count: number;
   created_at: string;
+  is_archived?: boolean | null;
   clients: {
     business_name: string | null;
     surname: string | null;
@@ -113,7 +114,23 @@ export default function TimeReportsPage() {
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [savingReport, setSavingReport] = useState(false);
   const [savedReports, setSavedReports] = useState<SavedReportRow[]>([]);
+  const [archivedReports, setArchivedReports] = useState<SavedReportRow[]>([]);
   const [loadingSavedReports, setLoadingSavedReports] = useState(true);
+  const [viewArchived, setViewArchived] = useState(false);
+  const [archiveClientSearch, setArchiveClientSearch] = useState("");
+  const [archiveClientResults, setArchiveClientResults] = useState<
+    ClientSearchResult[]
+  >([]);
+  const [archiveSelectedClient, setArchiveSelectedClient] =
+    useState<ClientSearchResult | null>(null);
+  const [archiveDateFrom, setArchiveDateFrom] = useState("");
+  const [archiveDateTo, setArchiveDateTo] = useState("");
+
+  const normalizeReports = (data: SavedReportRowRaw[] | null) =>
+    (data || []).map((row) => ({
+      ...row,
+      clients: Array.isArray(row.clients) ? row.clients[0] || null : row.clients,
+    }));
 
   useEffect(() => {
     async function loadUser() {
@@ -131,18 +148,13 @@ export default function TimeReportsPage() {
       const { data } = await supabase
         .from("time_reports")
         .select(
-          "id, name, client_id, date_from, date_to, total_seconds, entry_count, created_at, clients(business_name, surname)"
+          "id, name, client_id, date_from, date_to, total_seconds, entry_count, created_at, is_archived, clients(business_name, surname)"
         )
         .eq("va_user_id", userId)
         .order("created_at", { ascending: false });
-      const normalized =
-        (data as SavedReportRowRaw[] | null)?.map((row) => ({
-          ...row,
-          clients: Array.isArray(row.clients)
-            ? row.clients[0] || null
-            : row.clients,
-        })) || [];
-      setSavedReports(normalized);
+      const normalized = normalizeReports(data as SavedReportRowRaw[] | null);
+      setSavedReports(normalized.filter((report) => !report.is_archived));
+      setArchivedReports(normalized.filter((report) => report.is_archived));
       setLoadingSavedReports(false);
     }
     loadSavedReports();
@@ -170,6 +182,28 @@ export default function TimeReportsPage() {
     return () => clearTimeout(handler);
   }, [clientSearch, userId]);
 
+  useEffect(() => {
+    if (!userId) return;
+    const query = archiveClientSearch.trim();
+    if (query.length < 2) {
+      return;
+    }
+
+    const handler = setTimeout(async () => {
+      const { data } = await supabase
+        .from("clients")
+        .select("id, business_name, surname, first_name")
+        .eq("va_id", userId)
+        .or(
+          `surname.ilike.%${query}%,business_name.ilike.%${query}%,first_name.ilike.%${query}%`
+        )
+        .order("surname");
+      setArchiveClientResults((data as ClientSearchResult[]) || []);
+    }, 300);
+
+    return () => clearTimeout(handler);
+  }, [archiveClientSearch, userId]);
+
   const selectedClientLabel = useMemo(() => {
     if (!selectedClient) return "";
     return (
@@ -178,6 +212,26 @@ export default function TimeReportsPage() {
     );
   }, [selectedClient]);
 
+  const archiveSelectedClientLabel = useMemo(() => {
+    if (!archiveSelectedClient) return "";
+    return (
+      archiveSelectedClient.business_name ||
+      `${archiveSelectedClient.first_name || ""} ${
+        archiveSelectedClient.surname || ""
+      }`.trim()
+    );
+  }, [archiveSelectedClient]);
+
+  const filteredArchivedReports = useMemo(() => {
+    return archivedReports.filter((report) => {
+      if (archiveSelectedClient && report.client_id !== archiveSelectedClient.id)
+        return false;
+      if (archiveDateFrom && report.date_from < archiveDateFrom) return false;
+      if (archiveDateTo && report.date_to > archiveDateTo) return false;
+      return true;
+    });
+  }, [archivedReports, archiveSelectedClient, archiveDateFrom, archiveDateTo]);
+
   const resetFilters = () => {
     setClientSearch("");
     setSelectedClient(null);
@@ -185,6 +239,14 @@ export default function TimeReportsPage() {
     setDateTo("");
     setPreview(null);
     setIncludeNotes(false);
+  };
+
+  const resetArchiveFilters = () => {
+    setArchiveClientSearch("");
+    setArchiveClientResults([]);
+    setArchiveSelectedClient(null);
+    setArchiveDateFrom("");
+    setArchiveDateTo("");
   };
 
   const handleGenerateReport = async () => {
@@ -290,18 +352,13 @@ export default function TimeReportsPage() {
     const { data: savedData } = await supabase
       .from("time_reports")
       .select(
-        "id, name, client_id, date_from, date_to, total_seconds, entry_count, created_at, clients(business_name, surname)"
+        "id, name, client_id, date_from, date_to, total_seconds, entry_count, created_at, is_archived, clients(business_name, surname)"
       )
       .eq("va_user_id", userId)
       .order("created_at", { ascending: false });
-    const refreshed =
-      (savedData as SavedReportRowRaw[] | null)?.map((row) => ({
-        ...row,
-        clients: Array.isArray(row.clients)
-          ? row.clients[0] || null
-          : row.clients,
-      })) || [];
-    setSavedReports(refreshed);
+    const refreshed = normalizeReports(savedData as SavedReportRowRaw[] | null);
+    setSavedReports(refreshed.filter((report) => !report.is_archived));
+    setArchivedReports(refreshed.filter((report) => report.is_archived));
   };
 
   const handleDeleteReport = async (reportId: string) => {
@@ -309,6 +366,41 @@ export default function TimeReportsPage() {
     if (!confirmed) return;
     await supabase.from("time_reports").delete().eq("id", reportId);
     setSavedReports((prev) => prev.filter((report) => report.id !== reportId));
+    setArchivedReports((prev) =>
+      prev.filter((report) => report.id !== reportId)
+    );
+  };
+
+  const handleArchiveReport = async (reportId: string) => {
+    await supabase
+      .from("time_reports")
+      .update({ is_archived: true })
+      .eq("id", reportId);
+    setSavedReports((prev) => {
+      const target = prev.find((report) => report.id === reportId);
+      if (!target) return prev;
+      setArchivedReports((archived) => [
+        { ...target, is_archived: true },
+        ...archived,
+      ]);
+      return prev.filter((report) => report.id !== reportId);
+    });
+  };
+
+  const handleUnarchiveReport = async (reportId: string) => {
+    await supabase
+      .from("time_reports")
+      .update({ is_archived: false })
+      .eq("id", reportId);
+    setArchivedReports((prev) => {
+      const target = prev.find((report) => report.id === reportId);
+      if (!target) return prev;
+      setSavedReports((active) => [
+        { ...target, is_archived: false },
+        ...active,
+      ]);
+      return prev.filter((report) => report.id !== reportId);
+    });
   };
 
   return (
@@ -549,18 +641,136 @@ export default function TimeReportsPage() {
       </div>
 
       <section className="mt-8 bg-white border border-gray-100 rounded-2xl shadow-sm p-6 space-y-4">
-        <h2 className="text-sm font-black tracking-widest text-gray-500 uppercase">
-          Saved reports
-        </h2>
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-sm font-black tracking-widest text-gray-500 uppercase">
+            {viewArchived ? "Archived reports" : "Saved reports"}
+          </h2>
+          <button
+            type="button"
+            onClick={() => setViewArchived((prev) => !prev)}
+            className="text-xs font-semibold text-[#333333] hover:text-[#333333]/70"
+          >
+            {viewArchived ? "View saved reports" : "View Archive"}
+          </button>
+        </div>
+
+        {viewArchived && (
+          <div className="grid gap-4 rounded-xl border border-gray-100 p-4">
+            <div className="grid gap-3 md:grid-cols-[1.2fr_1fr_1fr_auto] md:items-end">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-gray-400 tracking-widest uppercase">
+                  Filter by client
+                </label>
+                <div className="relative">
+                  <Search
+                    size={14}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Type a client name..."
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 bg-white text-xs font-semibold focus:ring-2 focus:ring-[#9d4edd] outline-none"
+                    value={
+                      archiveSelectedClient
+                        ? archiveSelectedClientLabel
+                        : archiveClientSearch
+                    }
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setArchiveSelectedClient(null);
+                      setArchiveClientSearch(value);
+                      if (value.trim().length < 2) {
+                        setArchiveClientResults([]);
+                      }
+                    }}
+                    onFocus={() => {
+                      if (!archiveSelectedClient)
+                        setArchiveClientSearch((prev) => prev);
+                    }}
+                  />
+                  {archiveClientSearch.trim().length >= 2 &&
+                    !archiveSelectedClient && (
+                      <div className="absolute z-30 mt-2 w-full rounded-xl border border-gray-100 bg-white shadow-xl max-h-56 overflow-auto">
+                        {archiveClientResults.length === 0 ? (
+                          <div className="px-3 py-3 text-xs text-gray-400">
+                            No clients found.
+                          </div>
+                        ) : (
+                          archiveClientResults.map((client) => (
+                            <button
+                              key={client.id}
+                              onClick={() => {
+                                setArchiveSelectedClient(client);
+                                setArchiveClientSearch("");
+                                setArchiveClientResults([]);
+                              }}
+                              className="w-full text-left px-3 py-2 text-xs font-semibold text-[#333333] hover:bg-gray-50 transition-colors"
+                            >
+                              {client.business_name ||
+                                `${client.first_name || ""} ${
+                                  client.surname || ""
+                                }`.trim()}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                </div>
+                {archiveSelectedClient && (
+                  <button
+                    type="button"
+                    onClick={() => setArchiveSelectedClient(null)}
+                    className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-3 py-1 text-[10px] font-semibold text-gray-600"
+                  >
+                    {archiveSelectedClientLabel || "Client"}
+                    <span className="text-red-500">✕</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-col text-[10px] font-bold text-gray-400 tracking-widest uppercase">
+                From
+                <input
+                  type="date"
+                  value={archiveDateFrom}
+                  onChange={(event) => setArchiveDateFrom(event.target.value)}
+                  className="mt-2 rounded-xl border border-gray-200 px-3 py-2 text-xs text-[#333333] focus:ring-2 focus:ring-[#9d4edd] outline-none"
+                />
+              </div>
+              <div className="flex flex-col text-[10px] font-bold text-gray-400 tracking-widest uppercase">
+                To
+                <input
+                  type="date"
+                  value={archiveDateTo}
+                  onChange={(event) => setArchiveDateTo(event.target.value)}
+                  className="mt-2 rounded-xl border border-gray-200 px-3 py-2 text-xs text-[#333333] focus:ring-2 focus:ring-[#9d4edd] outline-none"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={resetArchiveFilters}
+                className="text-xs font-semibold text-[#333333] hover:text-[#333333]/70"
+              >
+                Clear all filters
+              </button>
+            </div>
+          </div>
+        )}
+
         {loadingSavedReports ? (
           <div className="text-sm text-gray-400 italic">Loading reports...</div>
-        ) : savedReports.length === 0 ? (
+        ) : viewArchived && filteredArchivedReports.length === 0 ? (
+          <div className="text-sm text-gray-400 italic">
+            No archived reports yet.
+          </div>
+        ) : !viewArchived && savedReports.length === 0 ? (
           <div className="text-sm text-gray-400 italic">
             No saved reports yet.
           </div>
         ) : (
           <div className="space-y-3">
-            {savedReports.map((report) => (
+            {(viewArchived ? filteredArchivedReports : savedReports).map(
+              (report) => (
               <div
                 key={report.id}
                 className="flex flex-wrap items-center justify-between gap-4 border border-gray-100 rounded-xl px-4 py-3"
@@ -592,6 +802,21 @@ export default function TimeReportsPage() {
                   >
                     View
                   </button>
+                  {viewArchived ? (
+                    <button
+                      onClick={() => handleUnarchiveReport(report.id)}
+                      className="text-gray-500 hover:text-[#333333]"
+                    >
+                      Unarchive
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleArchiveReport(report.id)}
+                      className="text-gray-500 hover:text-[#333333]"
+                    >
+                      Archive
+                    </button>
+                  )}
                   <button
                     onClick={() => handleDeleteReport(report.id)}
                     className="text-gray-400 hover:text-red-500"
