@@ -6,12 +6,8 @@ import {
   MoreHorizontal,
   Plus,
   Clock,
-  Circle,
-  ArrowRightCircle,
-  PlayCircle,
-  CheckCircle2,
 } from "lucide-react";
-import { STATUS_CONFIG, Task } from "./types";
+import { Task } from "./types";
 
 interface KanbanViewProps {
   tasks: Task[];
@@ -25,23 +21,20 @@ interface KanbanViewProps {
 
 // 1. Unified Config to match List & Calendar
 const COLUMNS = [
-  { id: "todo", title: "To do", icon: Circle, color: "border-[#333333]" },
+  { id: "todo", title: "To Do", color: "border-[#333333]" },
   {
     id: "up_next",
-    title: "Up next",
-    icon: ArrowRightCircle,
+    title: "Up Next",
     color: "border-[#333333]",
   },
   {
     id: "in_progress",
-    title: "In progress",
-    icon: PlayCircle,
+    title: "In Progress",
     color: "border-[#333333]",
   },
   {
     id: "completed",
     title: "Completed",
-    icon: CheckCircle2,
     color: "border-[#333333]",
   },
 ];
@@ -79,21 +72,19 @@ export default function KanbanView({
     <div className="h-[calc(100vh-220px)] overflow-x-auto pb-6 custom-scrollbar">
       <div className="flex gap-6 h-full min-w-max px-2">
         {visibleColumns.map((col) => {
-          const ColIcon = col.icon;
           const colTasks = tasks.filter((t) => t.status === col.id);
 
           return (
             <div
               key={col.id}
-              className={`flex-1 w-80 flex flex-col bg-gray-50/50 rounded-2xl border-t-4 ${col.color} border-x border-b border-gray-100 h-full transition-all duration-300`}
+              className={`flex-1 w-80 flex flex-col bg-gray-50/50 rounded-2xl border-2 ${col.color} h-full transition-all duration-300`}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => handleDrop(e, col.id)}
             >
               {/* COLUMN HEADER */}
               <div className="p-4 flex items-center justify-between sticky top-0 z-10">
                 <div className="flex items-center gap-2">
-                  <ColIcon size={16} className="text-gray-400" />
-                  <h3 className="text-sm font-bold text-[#333333] capitalize tracking-tight">
+                  <h3 className="text-sm font-bold text-[#333333] tracking-tight">
                     {col.title}
                   </h3>
                   <span className="bg-white px-2 py-0.5 rounded-full text-[10px] font-bold text-[#333333] border border-gray-100">
@@ -129,11 +120,6 @@ export default function KanbanView({
                     {/* Card Header: Category & Context */}
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex items-center gap-2">
-                        <span
-                          className={`text-[9px] font-black tracking-widest px-2 py-0.5 rounded-full ${STATUS_CONFIG[task.status]?.color || STATUS_CONFIG.todo.color}`}
-                        >
-                          {STATUS_CONFIG[task.status]?.label || "To Do"}
-                        </span>
                         <span className="text-[9px] font-black tracking-widest text-[#333333] opacity-70">
                           {task.category ||
                             (task.client_id ? "Client" : "Personal")}
