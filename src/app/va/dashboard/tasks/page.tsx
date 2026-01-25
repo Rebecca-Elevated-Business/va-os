@@ -109,6 +109,14 @@ export default function TaskCentrePage() {
   ]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
+  const [filterType, setFilterType] = useState<
+    "all" | "client" | "business" | "personal"
+  >("all");
+  const [isTypeFilterOpen, setIsTypeFilterOpen] = useState(false);
+  const typeFilterRef = useRef<HTMLDivElement>(null);
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const [clientSearch, setClientSearch] = useState("");
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [isColumnsOpen, setIsColumnsOpen] = useState(false);
   const columnsRef = useRef<HTMLDivElement>(null);
 
@@ -273,6 +281,12 @@ export default function TaskCentrePage() {
         setIsFilterOpen(false);
       }
       if (
+        typeFilterRef.current &&
+        !typeFilterRef.current.contains(event.target as Node)
+      ) {
+        setIsTypeFilterOpen(false);
+      }
+      if (
         columnsRef.current &&
         !columnsRef.current.contains(event.target as Node)
       ) {
@@ -413,6 +427,23 @@ export default function TaskCentrePage() {
     return format(new Date(dateValue), "d MMM");
   };
 
+  const resolveTaskType = (task: Task) => {
+    const raw = (task.category || "").toLowerCase();
+    if (raw === "client" || raw === "business" || raw === "personal") {
+      return raw;
+    }
+    return task.client_id ? "client" : "personal";
+  };
+
+  const matchesTypeFilter = (task: Task) => {
+    if (filterType === "all") return true;
+    const resolved = resolveTaskType(task);
+    if (filterType !== "client") return resolved === filterType;
+    if (resolved !== "client") return false;
+    if (!selectedClientId) return true;
+    return task.client_id === selectedClientId;
+  };
+
   // --- GROUPING LOGIC ---
   const draftTaskId = "draft-task";
   const isCreatingNew = isAdding && !selectedTask;
@@ -434,7 +465,11 @@ export default function TaskCentrePage() {
         category: "personal",
       }
     : null;
-  const listTasks = draftTask ? [draftTask, ...tasks] : tasks;
+  const filteredTasks = tasks.filter((task) => matchesTypeFilter(task));
+  const listTasks =
+    draftTask && matchesTypeFilter(draftTask)
+      ? [draftTask, ...filteredTasks]
+      : filteredTasks;
   const activeTaskId =
     selectedTask?.id || (isCreatingNew ? draftTaskId : null);
   const orderedStatuses = normalizeStatusOrder(statusOrder);
@@ -516,6 +551,41 @@ export default function TaskCentrePage() {
       setIsColumnsOpen(false);
     }
   };
+
+  const handleTypeFilterChange = (
+    nextType: "all" | "client" | "business" | "personal",
+  ) => {
+    setFilterType(nextType);
+    setIsTypeFilterOpen(false);
+    if (nextType === "client") {
+      setIsClientModalOpen(true);
+    } else {
+      setIsClientModalOpen(false);
+    }
+  };
+
+  const selectedClient = selectedClientId
+    ? clients.find((client) => client.id === selectedClientId)
+    : null;
+  const selectedClientLabel = selectedClient
+    ? `${selectedClient.business_name || ""} ${
+        selectedClient.surname || ""
+      }`.trim()
+    : "";
+  const typeFilterLabel =
+    filterType === "all"
+      ? "Filter by Type"
+      : filterType === "client"
+        ? selectedClientLabel
+          ? `Client: ${selectedClientLabel}`
+          : "Type: Client"
+        : `Type: ${filterType.charAt(0).toUpperCase()}${filterType.slice(1)}`;
+  const filteredClients = clients.filter((client) => {
+    const name = `${client.business_name || ""} ${client.surname || ""}`
+      .trim()
+      .toLowerCase();
+    return name.includes(clientSearch.toLowerCase().trim());
+  });
 
   if (loading)
     return (
@@ -612,7 +682,54 @@ export default function TaskCentrePage() {
             )}
           </div>
 
-          {/* 3. Columns */}
+          {/* 3. Type Filter */}
+          <div className="relative" ref={typeFilterRef}>
+            <button
+              onClick={() => setIsTypeFilterOpen(!isTypeFilterOpen)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold hover:bg-gray-50 transition-all shadow-sm text-[#333333]"
+            >
+              <Filter size={14} className="text-gray-400" />
+              {typeFilterLabel}
+            </button>
+
+            {isTypeFilterOpen && (
+              <div className="absolute left-0 mt-2 w-56 bg-white border border-gray-100 rounded-xl shadow-xl z-50 p-3 animate-in fade-in slide-in-from-top-2">
+                <p className="text-[10px] font-black text-[#333333] tracking-widest mb-3 ml-1">
+                  Task Type
+                </p>
+                <div className="space-y-1">
+                  {[
+                    { id: "all", label: "All Types" },
+                    { id: "client", label: "Client" },
+                    { id: "business", label: "Business" },
+                    { id: "personal", label: "Personal" },
+                  ].map((option) => (
+                    <button
+                      key={option.id}
+                      onClick={() =>
+                        handleTypeFilterChange(
+                          option.id as
+                            | "all"
+                            | "client"
+                            | "business"
+                            | "personal",
+                        )
+                      }
+                      className={`w-full flex items-center justify-between p-2 rounded-lg text-xs font-semibold transition-colors ${
+                        filterType === option.id
+                          ? "bg-gray-50 text-[#333333]"
+                          : "text-gray-500 hover:bg-gray-50 hover:text-[#333333]"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 4. Columns */}
           {view === "list" && (
             <div className="relative" ref={columnsRef}>
               <button
@@ -656,7 +773,7 @@ export default function TaskCentrePage() {
             </div>
           )}
 
-          {/* 4. New Task Button */}
+          {/* 5. New Task Button */}
           <button
             onClick={() => {
               setSelectedTask(null);
@@ -951,6 +1068,88 @@ export default function TaskCentrePage() {
         </div>
       )}
 
+      {isClientModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-gray-100 p-5 animate-in fade-in slide-in-from-top-3">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <h3 className="text-sm font-bold text-[#333333]">
+                  Select Client
+                </h3>
+                <p className="text-xs text-gray-500">
+                  Search and lock in the client for this filter.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsClientModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 text-sm"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={clientSearch}
+                onChange={(event) => setClientSearch(event.target.value)}
+                placeholder="Start typing a client name..."
+                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-xs font-semibold text-[#333333] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#9d4edd]/40"
+              />
+
+              {selectedClientLabel && (
+                <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+                  <span className="text-xs font-semibold text-[#333333]">
+                    {selectedClientLabel}
+                  </span>
+                  <button
+                    onClick={() => setSelectedClientId(null)}
+                    className="text-red-500 text-xs font-bold"
+                    aria-label="Clear selected client"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+
+              {!selectedClientId && (
+                <div className="max-h-56 overflow-y-auto rounded-xl border border-gray-100 bg-white">
+                  {filteredClients.map((client) => {
+                    const label = `${client.business_name || ""} ${
+                      client.surname || ""
+                    }`.trim();
+                    return (
+                      <button
+                        key={client.id}
+                        onClick={() => setSelectedClientId(client.id)}
+                        className="w-full text-left px-3 py-2 text-xs font-semibold text-[#333333] hover:bg-gray-50 transition-colors"
+                      >
+                        {label || "Unnamed Client"}
+                      </button>
+                    );
+                  })}
+                  {filteredClients.length === 0 && (
+                    <div className="px-3 py-4 text-xs text-gray-400">
+                      No clients found.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={() => setIsClientModalOpen(false)}
+                className="px-4 py-2 text-xs font-bold rounded-xl bg-[#9d4edd] text-white hover:bg-[#7b2cbf] transition-colors"
+              >
+                Select Client
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <TaskModal
         key={`${selectedTask?.id || "new"}-${modalPrefill?.status || ""}-${
           modalPrefill?.startDate || ""
@@ -973,7 +1172,7 @@ export default function TaskCentrePage() {
 
       {view === "calendar" && (
         <CalendarView
-          tasks={tasks}
+          tasks={filteredTasks}
           onAddTask={(date: string, time?: string) => {
             setSelectedTask(null);
             if (time) {
@@ -1001,7 +1200,7 @@ export default function TaskCentrePage() {
       )}
       {view === "kanban" && (
         <KanbanView
-          tasks={tasks}
+          tasks={filteredTasks}
           onUpdateStatus={handleKanbanUpdate}
           onToggleTimer={toggleTimer}
           onOpenTask={openEditModal}

@@ -28,7 +28,7 @@ const formatHms = (totalSeconds: number) => {
   const seconds = safeSeconds % 60;
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
     2,
-    "0"
+    "0",
   )}:${String(seconds).padStart(2, "0")}`;
 };
 
@@ -73,7 +73,7 @@ export default function TimeTrackingPage() {
 
   const tasksById = useMemo(
     () => new Map(tasks.map((task) => [task.id, task])),
-    [tasks]
+    [tasks],
   );
 
   const selectedTask = selectedTaskId ? tasksById.get(selectedTaskId) : null;
@@ -94,8 +94,7 @@ export default function TimeTrackingPage() {
     if (!selectedTask) return 0;
     let seconds = selectedTask.total_minutes * 60;
     if (selectedTask.is_running && selectedTask.start_time && now > 0) {
-      seconds +=
-        (now - new Date(selectedTask.start_time).getTime()) / 1000;
+      seconds += (now - new Date(selectedTask.start_time).getTime()) / 1000;
     }
     return seconds;
   }, [now, selectedTask]);
@@ -130,7 +129,9 @@ export default function TimeTrackingPage() {
 
       const { data } = await supabase
         .from("time_entries")
-        .select("id, task_id, started_at, ended_at, duration_minutes, created_at")
+        .select(
+          "id, task_id, started_at, ended_at, duration_minutes, created_at",
+        )
         .eq("va_id", userId)
         .gte("started_at", startIso)
         .lte("started_at", endIso)
@@ -139,7 +140,7 @@ export default function TimeTrackingPage() {
       setTimeEntries((data as TimeEntry[]) || []);
       setLoadingEntries(false);
     },
-    [userId]
+    [userId],
   );
 
   useEffect(() => {
@@ -154,7 +155,7 @@ export default function TimeTrackingPage() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "tasks" },
-        fetchData
+        fetchData,
       )
       .subscribe();
 
@@ -191,11 +192,9 @@ export default function TimeTrackingPage() {
             return;
           }
           setTimeEntries((prev) =>
-            prev.some((item) => item.id === entry.id)
-              ? prev
-              : [entry, ...prev]
+            prev.some((item) => item.id === entry.id) ? prev : [entry, ...prev],
           );
-        }
+        },
       )
       .subscribe();
 
@@ -222,7 +221,7 @@ export default function TimeTrackingPage() {
     const nextMidnight = new Date(
       nowTime.getFullYear(),
       nowTime.getMonth(),
-      nowTime.getDate() + 1
+      nowTime.getDate() + 1,
     );
     const timeout = nextMidnight.getTime() - nowTime.getTime();
     const timer = setTimeout(() => {
@@ -262,7 +261,7 @@ export default function TimeTrackingPage() {
 
   const patchTask = (taskId: string, updates: Partial<Task>) => {
     setTasks((prev) =>
-      prev.map((task) => (task.id === taskId ? { ...task, ...updates } : task))
+      prev.map((task) => (task.id === taskId ? { ...task, ...updates } : task)),
     );
   };
 
@@ -280,10 +279,9 @@ export default function TimeTrackingPage() {
       const sessionMins = Math.max(
         1,
         Math.round(
-          (new Date().getTime() -
-            new Date(selectedTask.start_time).getTime()) /
-            60000
-        )
+          (new Date().getTime() - new Date(selectedTask.start_time).getTime()) /
+            60000,
+        ),
       );
 
       const { data: entryData } = await supabase
@@ -297,7 +295,9 @@ export default function TimeTrackingPage() {
             duration_minutes: sessionMins,
           },
         ])
-        .select("id, task_id, started_at, ended_at, duration_minutes, created_at")
+        .select(
+          "id, task_id, started_at, ended_at, duration_minutes, created_at",
+        )
         .single();
 
       await supabase
@@ -321,9 +321,7 @@ export default function TimeTrackingPage() {
         const entry = entryData as TimeEntry;
         if (isEntryInRange(entry, activeRange.start, activeRange.end)) {
           setTimeEntries((prev) =>
-            prev.some((item) => item.id === entry.id)
-              ? prev
-              : [entry, ...prev]
+            prev.some((item) => item.id === entry.id) ? prev : [entry, ...prev],
           );
         }
       }
@@ -478,8 +476,8 @@ export default function TimeTrackingPage() {
                 !selectedTask
                   ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                   : selectedTask.is_running
-                  ? "bg-red-500 text-white hover:bg-red-600"
-                  : "bg-[#9d4edd] text-white hover:bg-[#7b2cbf]"
+                    ? "bg-red-500 text-white hover:bg-red-600"
+                    : "bg-[#9d4edd] text-white hover:bg-[#7b2cbf]"
               }`}
             >
               {selectedTask?.is_running ? (
@@ -541,7 +539,7 @@ export default function TimeTrackingPage() {
             </div>
           ) : timeEntries.length === 0 ? (
             <div className="text-sm text-gray-400 italic py-8 text-center">
-              No time entries yet. Start tracking to see your history.
+              No time entries. Start tracking to see your history.
             </div>
           ) : (
             <div className="space-y-3">
