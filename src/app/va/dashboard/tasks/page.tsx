@@ -522,9 +522,11 @@ export default function TaskCentrePage() {
       <div className="p-10 italic text-gray-400">Loading Task Centre...</div>
     );
 
+  const pageBottomPadding = view === "calendar" ? "pb-6" : "pb-20";
+
   return (
     <div
-      className={`min-h-screen text-[#333333] pb-20 font-sans ${
+      className={`min-h-screen text-[#333333] font-sans ${pageBottomPadding} ${
         isAdding ? "md:pr-115" : ""
       }`}
     >

@@ -36,8 +36,8 @@ export default function CalendarView({
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
   const containerHeightClass =
     viewMode === "month"
-      ? "min-h-[calc(100vh-220px)]"
-      : "h-[calc(100vh-220px)]";
+      ? "min-h-[calc(100vh-180px)]"
+      : "h-[calc(100vh-180px)]";
 
   // Helper: Red Line Position (64px height per hour to save vertical space)
   const HOUR_HEIGHT = 64;
