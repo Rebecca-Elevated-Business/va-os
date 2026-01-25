@@ -21,21 +21,21 @@ interface KanbanViewProps {
 
 // 1. Unified Config to match List & Calendar
 const COLUMNS = [
-  { id: "todo", title: "To Do", color: "border-[#333333]/80" },
+  { id: "todo", title: "To Do", color: "border-[#b5b3b3]" },
   {
     id: "up_next",
     title: "Up Next",
-    color: "border-[#333333]/80",
+    color: "border-[#b5b3b3]",
   },
   {
     id: "in_progress",
     title: "In Progress",
-    color: "border-[#333333]/80",
+    color: "border-[#b5b3b3]",
   },
   {
     id: "completed",
     title: "Completed",
-    color: "border-[#333333]/80",
+    color: "border-[#b5b3b3]",
   },
 ];
 
