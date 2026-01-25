@@ -39,15 +39,26 @@ export default function CalendarView({
       ? "min-h-[calc(100vh-220px)]"
       : "h-[calc(100vh-220px)]";
 
+  // Helper: Red Line Position (64px height per hour to save vertical space)
+  const HOUR_HEIGHT = 64;
+
   // Keep current time indicator updated
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60000);
-    // Scroll to 8 AM on mount for better visibility
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = 640; // Approx 8 AM
-    }
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (viewMode === "month") return;
+    const container = scrollRef.current;
+    if (!container) return;
+    const minutes = now.getHours() * 60 + now.getMinutes();
+    const targetTop = (minutes / 60) * HOUR_HEIGHT;
+    requestAnimationFrame(() => {
+      const centered = Math.max(0, targetTop - container.clientHeight / 2);
+      container.scrollTop = centered;
+    });
+  }, [viewMode, now, HOUR_HEIGHT]);
 
   // --- DATE LOGIC ---
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 }); // Monday start
@@ -70,8 +81,6 @@ export default function CalendarView({
     format(addDays(monthGridStart, i), "EEE"),
   );
 
-  // Helper: Red Line Position (64px height per hour to save vertical space)
-  const HOUR_HEIGHT = 64;
   const getTimeLineTop = () => {
     const mins = now.getHours() * 60 + now.getMinutes();
     return (mins / 60) * HOUR_HEIGHT;
