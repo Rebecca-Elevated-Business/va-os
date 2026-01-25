@@ -25,24 +25,24 @@ interface KanbanViewProps {
 
 // 1. Unified Config to match List & Calendar
 const COLUMNS = [
-  { id: "todo", title: "To do", icon: Circle, color: "border-purple-200" },
+  { id: "todo", title: "To do", icon: Circle, color: "border-[#333333]" },
   {
     id: "up_next",
     title: "Up next",
     icon: ArrowRightCircle,
-    color: "border-[#e0f2fe]",
+    color: "border-[#333333]",
   },
   {
     id: "in_progress",
     title: "In progress",
     icon: PlayCircle,
-    color: "border-yellow-200",
+    color: "border-[#333333]",
   },
   {
     id: "completed",
     title: "Completed",
     icon: CheckCircle2,
-    color: "border-green-200",
+    color: "border-[#333333]",
   },
 ];
 
