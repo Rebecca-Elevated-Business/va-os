@@ -564,6 +564,16 @@ export default function TaskCentrePage() {
     }
   };
 
+  const handleClearAllFilters = () => {
+    setFilterStatus(["todo", "up_next", "in_progress"]);
+    setIsFilterOpen(false);
+    setFilterType("all");
+    setIsTypeFilterOpen(false);
+    setSelectedClientId(null);
+    setClientSearch("");
+    setIsClientModalOpen(false);
+  };
+
   const selectedClient = selectedClientId
     ? clients.find((client) => client.id === selectedClientId)
     : null;
@@ -786,6 +796,13 @@ export default function TaskCentrePage() {
             className="bg-[#9d4edd] text-white px-5 py-2.5 rounded-xl font-bold text-xs tracking-widest shadow-lg shadow-purple-100 hover:bg-[#7b2cbf] transition-all flex items-center gap-2"
           >
             <span className="text-lg leading-none">+</span> New Task
+          </button>
+          <button
+            type="button"
+            onClick={handleClearAllFilters}
+            className="text-[10px] font-semibold text-[#333333] hover:text-[#333333]/70 transition-colors"
+          >
+            Clear all filters
           </button>
         </div>
       </div>
