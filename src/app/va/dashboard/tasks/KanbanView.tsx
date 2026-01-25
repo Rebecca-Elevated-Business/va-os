@@ -21,21 +21,21 @@ interface KanbanViewProps {
 
 // 1. Unified Config to match List & Calendar
 const COLUMNS = [
-  { id: "todo", title: "To Do", color: "border-[#333333]" },
+  { id: "todo", title: "To Do", color: "border-[#333333]/80" },
   {
     id: "up_next",
     title: "Up Next",
-    color: "border-[#333333]",
+    color: "border-[#333333]/80",
   },
   {
     id: "in_progress",
     title: "In Progress",
-    color: "border-[#333333]",
+    color: "border-[#333333]/80",
   },
   {
     id: "completed",
     title: "Completed",
-    color: "border-[#333333]",
+    color: "border-[#333333]/80",
   },
 ];
 
@@ -69,7 +69,7 @@ export default function KanbanView({
   const visibleColumns = COLUMNS.filter((col) => filterStatus.includes(col.id));
 
   return (
-    <div className="h-[calc(100vh-220px)] overflow-x-auto pb-6 custom-scrollbar">
+    <div className="h-[calc(100vh-180px)] overflow-x-auto pb-2 custom-scrollbar">
       <div className="flex gap-6 h-full min-w-max px-2">
         {visibleColumns.map((col) => {
           const colTasks = tasks.filter((t) => t.status === col.id);
@@ -93,7 +93,7 @@ export default function KanbanView({
                 </div>
                 <button
                   onClick={() => onAddTask(col.id)}
-                  className="text-gray-400 hover:text-[#9d4edd] transition-colors p-1"
+                  className="text-[#333333] hover:text-[#9d4edd] transition-colors p-1"
                 >
                   <Plus size={16} />
                 </button>

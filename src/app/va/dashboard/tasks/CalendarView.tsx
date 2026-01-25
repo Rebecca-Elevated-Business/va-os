@@ -234,7 +234,7 @@ export default function CalendarView({
       </div>
 
       {viewMode === "month" && (
-        <div className="flex-1 bg-white overflow-y-auto md:overflow-visible custom-scrollbar">
+        <div className="flex-1 bg-white overflow-y-auto md:overflow-visible custom-scrollbar flex flex-col">
           <div className="grid grid-cols-7 border-b border-gray-100">
             {weekDayLabels.map((label) => (
               <div
@@ -246,7 +246,7 @@ export default function CalendarView({
             ))}
           </div>
           <div
-            className="grid grid-cols-7 gap-px bg-gray-100"
+            className="grid grid-cols-7 gap-px bg-gray-100 flex-1 min-h-0"
             style={{ gridTemplateRows: "repeat(6, minmax(0, 1fr))" }}
           >
             {monthDays.map((day) => {
@@ -255,7 +255,7 @@ export default function CalendarView({
               return (
                 <div
                   key={day.toISOString()}
-                  className="min-h-27.5 bg-white p-2 border-r border-b border-gray-50 last:border-r-0"
+                  className="bg-white p-2 border-r border-b border-gray-50 last:border-r-0"
                   onClick={() => onAddTask(format(day, "yyyy-MM-dd"))}
                 >
                   <div

@@ -522,7 +522,8 @@ export default function TaskCentrePage() {
       <div className="p-10 italic text-gray-400">Loading Task Centre...</div>
     );
 
-  const pageBottomPadding = view === "calendar" ? "pb-6" : "pb-20";
+  const pageBottomPadding =
+    view === "calendar" || view === "kanban" ? "pb-6" : "pb-20";
 
   return (
     <div
