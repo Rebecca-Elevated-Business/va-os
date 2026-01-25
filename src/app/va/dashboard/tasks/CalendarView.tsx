@@ -22,12 +22,14 @@ interface CalendarViewProps {
   tasks: Task[];
   onAddTask: (date: string, time?: string) => void;
   onUpdateTask: (taskId: string, updates: Partial<Task>) => void;
+  onOpenTask: (task: Task) => void;
 }
 
 export default function CalendarView({
   tasks,
   onAddTask,
   onUpdateTask,
+  onOpenTask,
 }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<"month" | "week" | "day">("month");
@@ -273,7 +275,10 @@ export default function CalendarView({
                       <div
                         key={task.id}
                         className="flex items-center bg-white border border-gray-100 rounded px-2 py-1 shadow-sm text-[10px] font-bold text-[#333333] hover:border-purple-100 transition-all"
-                        onClick={(event) => event.stopPropagation()}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onOpenTask(task);
+                        }}
                       >
                         <div
                           className={`w-1.5 h-1.5 rounded-full mr-2 shrink-0 ${getStatusLineColor(
@@ -381,6 +386,10 @@ export default function CalendarView({
                         }}
                         onDragEnd={() => setDraggedTask(null)}
                         className="flex items-center bg-white border border-gray-100 rounded px-2 py-1 shadow-sm text-[10px] font-bold text-[#333333] hover:border-purple-100 transition-all"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onOpenTask(task);
+                        }}
                       >
                         <div
                           className={`w-1.5 h-1.5 rounded-full mr-2 shrink-0 ${getStatusLineColor(
@@ -505,7 +514,8 @@ export default function CalendarView({
                             height: `${Math.max(height, 40)}px`,
                           }}
                           onClick={(e) => {
-                            e.stopPropagation(); /* Future: Open Edit */
+                            e.stopPropagation();
+                            onOpenTask(task);
                           }}
                         >
                           {/* Status Line */}

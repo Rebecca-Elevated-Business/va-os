@@ -1196,6 +1196,7 @@ export default function TaskCentrePage() {
             setIsAdding(true);
           }}
           onUpdateTask={(taskId, updates) => updateTask(taskId, updates)}
+          onOpenTask={openEditModal}
         />
       )}
       {view === "kanban" && (
