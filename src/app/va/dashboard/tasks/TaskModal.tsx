@@ -260,15 +260,15 @@ export default function TaskModal({
       onClick={isSide ? onClose : undefined}
     >
       <div
-        className={`bg-white w-full max-w-lg p-8 shadow-2xl ${
+        className={`bg-white w-full max-w-lg p-7 shadow-2xl ${
           isSide
-            ? "h-full md:h-[calc(100%-2rem)] md:my-4 md:mr-4 md:rounded-[2.5rem] overflow-y-auto animate-in fade-in duration-200"
-            : "rounded-[2.5rem] animate-in zoom-in duration-200"
+            ? "h-full md:h-[calc(100%-1rem)] md:my-2 md:mr-2 overflow-y-auto animate-in fade-in duration-200"
+            : "animate-in zoom-in duration-200"
         }`}
         onClick={isSide ? (event) => event.stopPropagation() : undefined}
       >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
-          <h2 className="text-xl font-black text-[#333333]">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
+          <h2 className="text-lg font-black text-[#333333]">
             {task ? "Edit Task" : "New Task"}
           </h2>
           <div className="w-full sm:w-44">
@@ -277,7 +277,7 @@ export default function TaskModal({
             </label>
             <select
               id="task-status-select"
-              className="w-full bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd] capitalize"
+              className="w-full bg-white border-2 border-gray-100 rounded-lg p-2.5 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd] capitalize"
               value={formStatus}
               onChange={(e) => setFormStatus(e.target.value)}
             >
@@ -290,14 +290,14 @@ export default function TaskModal({
           </div>
         </div>
 
-        <div className="space-y-5">
+        <div className="space-y-4">
           <div>
-            <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-2 ml-1">
+            <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-1 ml-1">
               Task Title
             </label>
             <input
               autoFocus
-              className="w-full bg-gray-50 border-none rounded-xl p-4 font-bold text-[#333333] outline-none focus:ring-2 focus:ring-purple-100"
+              className="w-full bg-gray-50 border-none rounded-lg p-3 font-bold text-[#333333] outline-none focus:ring-2 focus:ring-purple-100"
               value={formTaskName}
               onChange={(e) => setFormTaskName(e.target.value)}
               placeholder="What needs to be done?"
@@ -305,11 +305,11 @@ export default function TaskModal({
           </div>
 
           <div>
-            <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-2 ml-1">
+            <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-1 ml-1">
               Detail
             </label>
             <textarea
-              className="w-full bg-gray-50 border-none rounded-xl p-4 text-xs font-bold text-[#333333] outline-none focus:ring-2 focus:ring-purple-100 resize-none h-24"
+              className="w-full bg-gray-50 border-none rounded-lg p-3 text-xs font-bold text-[#333333] outline-none focus:ring-2 focus:ring-purple-100 resize-none h-20"
               value={formDetails}
               onChange={(e) => setFormDetails(e.target.value)}
               placeholder="Add extra details for this task"
@@ -317,7 +317,7 @@ export default function TaskModal({
           </div>
 
           <div>
-            <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-2 ml-1">
+            <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-1 ml-1">
               Category
             </label>
             <div className="flex gap-2">
@@ -334,7 +334,7 @@ export default function TaskModal({
                       setFormClientQuery("");
                     }
                   }}
-                  className={`flex-1 py-2.5 rounded-xl text-[10px] font-bold transition-all border ${
+                  className={`flex-1 py-2 rounded-lg text-[10px] font-bold transition-all border ${
                     formCategory === cat.id
                       ? `${cat.color} shadow-sm`
                       : "bg-white border-gray-100 text-gray-400 hover:border-gray-200"
@@ -348,17 +348,17 @@ export default function TaskModal({
 
           {formCategory === "client" && (
             <div className="animate-in fade-in slide-in-from-top-2">
-              <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-2 ml-1">
+              <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-1 ml-1">
                 Assign Client
               </label>
               {lockClient ? (
-                <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-3 text-xs font-bold text-[#333333]">
+                <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5 text-xs font-bold text-[#333333]">
                   {selectedClientLabel || "Client assigned"}
                 </div>
               ) : (
                 <>
                   <input
-                    className="w-full bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
+                    className="w-full bg-white border-2 border-gray-100 rounded-lg p-2.5 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
                     value={formClientQuery}
                     onChange={(e) => {
                       const value = e.target.value;
@@ -368,7 +368,7 @@ export default function TaskModal({
                     placeholder="Type a client name"
                   />
                   {formClientQuery.trim().length > 0 && (
-                    <div className="mt-2 max-h-40 overflow-auto rounded-xl border border-gray-100 bg-white shadow-sm">
+                    <div className="mt-2 max-h-40 overflow-auto rounded-lg border border-gray-100 bg-white shadow-sm">
                       {filteredClients.slice(0, 6).map((c) => (
                         <button
                           key={c.id}
@@ -401,38 +401,38 @@ export default function TaskModal({
 
           <div className="space-y-4">
             <div>
-              <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-2 ml-1">
+              <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-1 ml-1">
                 Start date / time
               </label>
               <div className="flex gap-2">
                 <input
                   type="date"
-                  className="flex-1 min-w-0 bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
+                  className="flex-1 min-w-0 bg-white border-2 border-gray-100 rounded-lg p-2.5 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
                   value={formStartDate}
                   onChange={(e) => setFormStartDate(e.target.value)}
                 />
                 <input
                   type="time"
-                  className="w-28 shrink-0 bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
+                  className="w-28 shrink-0 bg-white border-2 border-gray-100 rounded-lg p-2.5 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
                   value={formStartTime}
                   onChange={(e) => setFormStartTime(e.target.value)}
                 />
               </div>
             </div>
             <div>
-              <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-2 ml-1">
+              <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-1 ml-1">
                 End date / time
               </label>
               <div className="flex gap-2">
                 <input
                   type="date"
-                  className="flex-1 min-w-0 bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
+                  className="flex-1 min-w-0 bg-white border-2 border-gray-100 rounded-lg p-2.5 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
                   value={formEndDate}
                   onChange={(e) => setFormEndDate(e.target.value)}
                 />
                 <input
                   type="time"
-                  className="w-28 shrink-0 bg-white border-2 border-gray-100 rounded-xl p-3 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
+                  className="w-28 shrink-0 bg-white border-2 border-gray-100 rounded-lg p-2.5 text-xs font-bold text-[#333333] outline-none focus:border-[#9d4edd]"
                   value={formEndTime}
                   onChange={(e) => setFormEndTime(e.target.value)}
                 />
@@ -440,16 +440,16 @@ export default function TaskModal({
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 pt-3">
             <button
               onClick={onClose}
-              className="px-6 py-3 rounded-xl border-2 border-gray-100 text-[#333333] font-bold text-xs tracking-widest hover:border-gray-300 transition-colors"
+              className="px-6 py-2.5 rounded-lg border-2 border-gray-100 text-[#333333] font-bold text-xs tracking-widest hover:border-gray-300 transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleSaveTask}
-              className="flex-1 bg-[#9d4edd] text-white py-3 rounded-xl font-bold text-xs tracking-widest shadow-lg shadow-purple-100 hover:bg-[#7b2cbf] transition-all"
+              className="flex-1 bg-[#9d4edd] text-white py-2.5 rounded-lg font-bold text-xs tracking-widest shadow-lg shadow-purple-100 hover:bg-[#7b2cbf] transition-all"
             >
               {task ? "Save Changes" : "Create Task"}
             </button>
