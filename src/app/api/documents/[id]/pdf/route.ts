@@ -67,7 +67,11 @@ export async function GET(
     .eq("id", id)
     .single();
 
-  if (docError || !doc) {
+  const typedDoc = doc as
+    | { id: string; title: string | null; va_id: string; client_id: string }
+    | null;
+
+  if (docError || !typedDoc) {
     return NextResponse.json({ error: "Document not found." }, { status: 404 });
   }
 
@@ -78,10 +82,10 @@ export async function GET(
     .maybeSingle();
 
   const isClient = Boolean(clientRow?.id);
-  if (isClient && clientRow?.id !== doc.client_id) {
+  if (isClient && clientRow?.id !== typedDoc.client_id) {
     return NextResponse.json({ error: "Not authorized." }, { status: 403 });
   }
-  if (!isClient && doc.va_id !== authData.user.id) {
+  if (!isClient && typedDoc.va_id !== authData.user.id) {
     return NextResponse.json({ error: "Not authorized." }, { status: 403 });
   }
 
@@ -94,7 +98,7 @@ export async function GET(
   }
 
   const baseUrl = resolveBaseUrl();
-  const targetUrl = `${baseUrl}/documents/pdf/${doc.id}?pdf=1`;
+  const targetUrl = `${baseUrl}/documents/pdf/${typedDoc.id}?pdf=1`;
 
   let browser;
   try {
@@ -103,9 +107,9 @@ export async function GET(
 
     browser = await puppeteer.launch({
       args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
+      defaultViewport: { width: 1280, height: 720 },
       executablePath,
-      headless: chromium.headless,
+      headless: true,
     });
 
     const page = await browser.newPage();
@@ -119,8 +123,8 @@ export async function GET(
       user: authData.user,
     };
 
-    await page.addInitScript(
-      (key, value) => {
+    await page.evaluateOnNewDocument(
+      (key: string, value: string) => {
         localStorage.setItem(key, value);
       },
       storageKey,
@@ -143,11 +147,11 @@ export async function GET(
       },
     });
 
-    const response = new NextResponse(pdfBuffer, {
+    const response = new NextResponse(Buffer.from(pdfBuffer), {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${buildFilename(
-          doc.title
+          typedDoc.title
         )}"`,
         "Cache-Control": "no-store",
       },
