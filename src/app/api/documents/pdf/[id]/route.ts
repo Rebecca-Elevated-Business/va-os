@@ -63,12 +63,17 @@ export async function GET(
 
   const { data: doc, error: docError } = await supabaseAdmin
     .from("client_documents")
-    .select("id, title, va_id, client_id")
+    .select("id, title, client_id, clients(id, va_id, auth_user_id)")
     .eq("id", id)
     .single();
 
   const typedDoc = doc as
-    | { id: string; title: string | null; va_id: string; client_id: string }
+    | {
+        id: string;
+        title: string | null;
+        client_id: string;
+        clients: { id: string; va_id: string | null; auth_user_id: string | null } | null;
+      }
     | null;
 
   if (docError) {
@@ -82,17 +87,10 @@ export async function GET(
     return NextResponse.json({ error: "Document not found." }, { status: 404 });
   }
 
-  const { data: clientRow } = await supabaseAdmin
-    .from("clients")
-    .select("id, auth_user_id")
-    .eq("auth_user_id", authData.user.id)
-    .maybeSingle();
+  const isClient = typedDoc.clients?.auth_user_id === authData.user.id;
+  const isVaOwner = typedDoc.clients?.va_id === authData.user.id;
 
-  const isClient = Boolean(clientRow?.id);
-  if (isClient && clientRow?.id !== typedDoc.client_id) {
-    return NextResponse.json({ error: "Not authorized." }, { status: 403 });
-  }
-  if (!isClient && typedDoc.va_id !== authData.user.id) {
+  if (!isClient && !isVaOwner) {
     return NextResponse.json({ error: "Not authorized." }, { status: 403 });
   }
 
