@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye } from "lucide-react";
 import { DOCUMENT_TEMPLATES } from "@/lib/documentTemplates";
@@ -217,6 +218,12 @@ export default function EditBookingFormPage({
     <div className="p-6 max-w-5xl mx-auto text-black pb-40 font-sans">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between mb-10 pb-6 border-b border-gray-100">
         <div>
+          <Link
+            href={`/va/dashboard/crm/profile/${doc.client_id}`}
+            className="text-xs font-bold text-gray-400 hover:text-[#333333]"
+          >
+            Back to Client Profile
+          </Link>
           <h1 className="text-3xl font-black tracking-tight uppercase">
             Booking Form Builder
           </h1>

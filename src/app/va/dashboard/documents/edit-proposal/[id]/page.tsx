@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, Plus, Trash2 } from "lucide-react";
 import {
@@ -255,6 +256,12 @@ export default function EditProposalPage({
 
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between mb-10 pb-6 border-b">
         <div>
+          <Link
+            href={`/va/dashboard/crm/profile/${doc.client_id}`}
+            className="text-xs font-bold text-gray-400 hover:text-[#333333]"
+          >
+            Back to Client Profile
+          </Link>
           <h1 className="text-3xl font-black tracking-tight uppercase">
             Proposal Builder
           </h1>
