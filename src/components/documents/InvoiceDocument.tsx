@@ -118,7 +118,7 @@ export default function InvoiceDocument({
         )}
         <div className="absolute inset-0 bg-linear-to-t from-black/60 via-black/30 to-transparent" />
         <div className="absolute inset-0 flex items-center justify-between p-6 md:p-10 text-white">
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white">
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white !text-white">
             {content.hero_title}
           </h1>
           <div className="text-right text-xs md:text-sm space-y-1 text-white/90">
