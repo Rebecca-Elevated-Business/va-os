@@ -5,10 +5,8 @@ const nextConfig: NextConfig = {
   reactCompiler: true,
   serverExternalPackages: ["puppeteer-core", "@sparticuz/chromium"],
   outputFileTracingIncludes: {
-    "/api/documents/pdf/[id]": [
-      "node_modules/@sparticuz/chromium/bin/**",
-      "node_modules/@sparticuz/chromium/lib/**",
-    ],
+    "/api/documents/pdf/[id]": ["node_modules/@sparticuz/chromium/**"],
+    "/api/documents/pdf/[id]/route": ["node_modules/@sparticuz/chromium/**"],
   },
   images: {
     remotePatterns: [
