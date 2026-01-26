@@ -3,6 +3,13 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   reactCompiler: true,
+  serverExternalPackages: ["puppeteer-core", "@sparticuz/chromium"],
+  outputFileTracingIncludes: {
+    "/api/documents/pdf/[id]": [
+      "node_modules/@sparticuz/chromium/bin/**",
+      "node_modules/@sparticuz/chromium/lib/**",
+    ],
+  },
   images: {
     remotePatterns: [
       {
