@@ -71,7 +71,14 @@ export async function GET(
     | { id: string; title: string | null; va_id: string; client_id: string }
     | null;
 
-  if (docError || !typedDoc) {
+  if (docError) {
+    return NextResponse.json(
+      { error: docError.message || "Failed to load document." },
+      { status: 500 }
+    );
+  }
+
+  if (!typedDoc) {
     return NextResponse.json({ error: "Document not found." }, { status: 404 });
   }
 
