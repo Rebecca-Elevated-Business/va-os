@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import { Filter } from "lucide-react";
 
 type Client = {
   id: string;
@@ -25,6 +26,8 @@ export default function CRMPage() {
   const [search, setSearch] = useState("");
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isStatusFilterOpen, setIsStatusFilterOpen] = useState(false);
+  const statusFilterRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -41,6 +44,19 @@ export default function CRMPage() {
     };
 
     loadData();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        statusFilterRef.current &&
+        !statusFilterRef.current.contains(event.target as Node)
+      ) {
+        setIsStatusFilterOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // Filter Logic: Handles both Search and Multi-select Status
@@ -99,32 +115,50 @@ export default function CRMPage() {
           {/* Vertical Divider */}
           <div className="hidden md:block w-px h-8 bg-gray-200 mx-2"></div>
 
-          {/* Status Multi-select Chips */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-gray-500 mr-2">
-              Filter Status:
-            </span>
-            {STATUS_OPTIONS.map((status) => (
-              <button
-                key={status}
-                onClick={() => toggleStatus(status)}
-                className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${
-                  selectedStatuses.includes(status)
-                    ? "bg-[#9d4edd] border-[#9d4edd] text-white shadow-sm"
-                    : "bg-gray-50 border-gray-200 text-gray-600 hover:border-[#9d4edd]"
-                }`}
-              >
-                {status}
-              </button>
-            ))}
+          {/* Status Filter Dropdown */}
+          <div className="relative" ref={statusFilterRef}>
+            <button
+              onClick={() => setIsStatusFilterOpen((prev) => !prev)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold hover:bg-gray-50 transition-all shadow-sm text-[#333333]"
+            >
+              <Filter size={14} className="text-gray-400" />
+              Filter by Status
+            </button>
 
-            {selectedStatuses.length > 0 && (
-              <button
-                onClick={() => setSelectedStatuses([])}
-                className="ml-2 text-xs font-bold text-red-500 hover:underline"
-              >
-                Reset Filters
-              </button>
+            {isStatusFilterOpen && (
+              <div className="absolute left-0 mt-2 w-60 bg-white border border-gray-100 rounded-xl shadow-xl z-50 p-3 animate-in fade-in slide-in-from-top-2">
+                <p className="text-[10px] font-black text-[#333333] tracking-widest mb-3 ml-1">
+                  Visible Statuses
+                </p>
+                <div className="space-y-1">
+                  {STATUS_OPTIONS.map((status) => (
+                    <label
+                      key={status}
+                      className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedStatuses.includes(status)}
+                          onChange={() => toggleStatus(status)}
+                          className="w-4 h-4 rounded border-gray-300 text-[#9d4edd] focus:ring-[#9d4edd]"
+                        />
+                        <span className="px-3 py-1 rounded-full text-[10px] font-semibold text-gray-600 border border-gray-200 bg-white">
+                          {status}
+                        </span>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+                {selectedStatuses.length > 0 && (
+                  <button
+                    onClick={() => setSelectedStatuses([])}
+                    className="mt-3 text-[10px] font-bold text-red-500 hover:underline ml-1"
+                  >
+                    Reset Filters
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
