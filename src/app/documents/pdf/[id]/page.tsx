@@ -19,12 +19,12 @@ type ClientDoc = {
   id: string;
   client_id: string;
   title: string;
-  type: string;
+  type: "proposal" | "booking_form" | "invoice" | "upload";
   status: string;
   content: Partial<ProposalContent>;
 };
 
-export default function ProposalPreviewPage({
+export default function DocumentPdfPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -34,16 +34,13 @@ export default function ProposalPreviewPage({
   const [loading, setLoading] = useState(true);
   const [invoiceReport, setInvoiceReport] =
     useState<InvoiceTimeReport | null>(null);
-  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   useEffect(() => {
     if (!doc || doc.type !== "invoice") return;
     const merged = mergeInvoiceContent(doc.content as InvoiceContent);
     if (!merged.time_report_id || !merged.show_time_report_to_client) {
-      const timer = setTimeout(() => {
-        setInvoiceReport(null);
-      }, 0);
-      return () => clearTimeout(timer);
+      setInvoiceReport(null);
+      return;
     }
     async function loadReport() {
       const { data: reportData } = await supabase
@@ -82,67 +79,34 @@ export default function ProposalPreviewPage({
     loadDoc();
   }, [id]);
 
-  const handleDownloadPdf = async () => {
-    if (!doc) return;
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session?.access_token) return;
-    setDownloadingPdf(true);
-    try {
-      const response = await fetch(`/api/documents/${doc.id}/pdf`, {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-      if (!response.ok) {
-        setDownloadingPdf(false);
-        return;
-      }
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `${doc.title || "document"}.pdf`;
-      anchor.click();
-      window.URL.revokeObjectURL(url);
-    } finally {
-      setDownloadingPdf(false);
-    }
-  };
-
   if (loading)
-    return <div className="p-10 text-gray-500 italic">Loading preview...</div>;
+    return <div className="p-10 text-gray-500 italic">Loading document...</div>;
   if (!doc)
     return <div className="p-10 text-red-500 font-bold">Document not found.</div>;
 
-  if (
-    doc.type !== "proposal" &&
-    doc.type !== "booking_form" &&
-    doc.type !== "invoice"
-  ) {
+  if (doc.type === "upload") {
     return (
-      <div className="p-10 text-gray-500 italic">
-        Preview is only available for proposals, booking forms, and invoices at
-        the moment.
+      <div
+        className="min-h-screen bg-white text-black p-8"
+        data-pdf-ready="true"
+      >
+        <div className="max-w-4xl mx-auto border border-gray-100 rounded-2xl p-8">
+          <h1 className="text-2xl font-bold text-[#333333]">{doc.title}</h1>
+          <p className="mt-4 text-sm text-gray-500">
+            This document is an uploaded file. Please download it directly from
+            the portal.
+          </p>
+        </div>
       </div>
     );
   }
 
-
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 text-black p-4 md:p-8 print:bg-white">
+    <div
+      className="min-h-screen bg-white text-black p-4 md:p-8"
+      data-pdf-ready="true"
+    >
       <div className="max-w-4xl mx-auto space-y-4">
-        <div className="flex items-center justify-end gap-3 print:hidden">
-          <button
-            onClick={handleDownloadPdf}
-            disabled={downloadingPdf}
-            className="px-6 py-2 border-2 border-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
-          >
-            {downloadingPdf ? "Preparing..." : "Download PDF"}
-          </button>
-        </div>
-
         {doc.type === "proposal" ? (
           <ProposalDocument content={mergeProposalContent(doc.content)} />
         ) : doc.type === "booking_form" ? (
