@@ -301,7 +301,7 @@ export default function EditBookingFormPage({
               </div>
             </div>
             <input
-              className="w-full p-4 bg-white border-2 border-gray-100 rounded-2xl outline-none focus:border-purple-100 text-sm"
+              className="w-full px-4 py-3 bg-white border-2 border-gray-100 rounded-2xl outline-none focus:border-purple-100 text-sm"
               placeholder="Title"
               value={doc.content.hero_title || ""}
               onChange={(e) => updateContent({ hero_title: e.target.value })}
