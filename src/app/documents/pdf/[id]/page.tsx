@@ -39,8 +39,10 @@ export default function DocumentPdfPage({
     if (!doc || doc.type !== "invoice") return;
     const merged = mergeInvoiceContent(doc.content as InvoiceContent);
     if (!merged.time_report_id || !merged.show_time_report_to_client) {
-      setInvoiceReport(null);
-      return;
+      const timer = setTimeout(() => {
+        setInvoiceReport(null);
+      }, 0);
+      return () => clearTimeout(timer);
     }
     async function loadReport() {
       const { data: reportData } = await supabase

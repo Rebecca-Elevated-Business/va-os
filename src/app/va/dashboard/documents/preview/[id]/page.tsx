@@ -90,7 +90,7 @@ export default function ProposalPreviewPage({
     if (!session?.access_token) return;
     setDownloadingPdf(true);
     try {
-      const response = await fetch(`/api/documents/${doc.id}/pdf`, {
+      const response = await fetch(`/api/documents/pdf/${doc.id}`, {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
