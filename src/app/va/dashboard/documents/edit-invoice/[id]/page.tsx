@@ -458,12 +458,17 @@ export default function EditInvoicePage({
                 )}
               </div>
             </div>
-            <input
-              className="w-full px-4 py-3 bg-white border-2 border-gray-100 rounded-2xl outline-none focus:border-purple-100 text-sm"
-              placeholder="Invoice title"
-              value={doc.content.hero_title || ""}
-              onChange={(e) => updateContent({ hero_title: e.target.value })}
-            />
+            <div className="space-y-2 self-start">
+              <label className="text-xs font-bold text-gray-500">
+                Invoice Title
+              </label>
+              <input
+                className="w-full px-4 py-3 bg-white border-2 border-gray-100 rounded-2xl outline-none focus:border-purple-100 text-sm"
+                placeholder="Invoice title"
+                value={doc.content.hero_title || ""}
+                onChange={(e) => updateContent({ hero_title: e.target.value })}
+              />
+            </div>
           </div>
         </section>
 
