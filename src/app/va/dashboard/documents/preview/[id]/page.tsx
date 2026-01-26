@@ -34,7 +34,6 @@ export default function ProposalPreviewPage({
   const [loading, setLoading] = useState(true);
   const [invoiceReport, setInvoiceReport] =
     useState<InvoiceTimeReport | null>(null);
-  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   useEffect(() => {
     if (!doc || doc.type !== "invoice") return;
@@ -82,34 +81,6 @@ export default function ProposalPreviewPage({
     loadDoc();
   }, [id]);
 
-  const handleDownloadPdf = async () => {
-    if (!doc) return;
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session?.access_token) return;
-    setDownloadingPdf(true);
-    try {
-      const response = await fetch(`/api/documents/pdf/${doc.id}`, {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-      if (!response.ok) {
-        setDownloadingPdf(false);
-        return;
-      }
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `${doc.title || "document"}.pdf`;
-      anchor.click();
-      window.URL.revokeObjectURL(url);
-    } finally {
-      setDownloadingPdf(false);
-    }
-  };
 
   if (loading)
     return <div className="p-10 text-gray-500 italic">Loading preview...</div>;
@@ -133,16 +104,6 @@ export default function ProposalPreviewPage({
   return (
     <div className="min-h-screen bg-gray-50 pb-20 text-black p-4 md:p-8 print:bg-white">
       <div className="max-w-4xl mx-auto space-y-4">
-        <div className="flex items-center justify-end gap-3 print:hidden">
-          <button
-            onClick={handleDownloadPdf}
-            disabled={downloadingPdf}
-            className="px-6 py-2 border-2 border-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
-          >
-            {downloadingPdf ? "Preparing..." : "Download PDF"}
-          </button>
-        </div>
-
         {doc.type === "proposal" ? (
           <ProposalDocument content={mergeProposalContent(doc.content)} />
         ) : doc.type === "booking_form" ? (

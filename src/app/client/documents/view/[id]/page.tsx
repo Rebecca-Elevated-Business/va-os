@@ -107,7 +107,6 @@ export default function ClientDocumentView({
     useState<InvoiceTimeReport | null>(null);
   const [clientAgreed, setClientAgreed] = useState(false);
   const [signatureError, setSignatureError] = useState("");
-  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   useEffect(() => {
     async function loadDoc() {
@@ -359,34 +358,6 @@ export default function ClientDocumentView({
     router.push("/client/dashboard");
   };
 
-  const handleDownloadPdf = async () => {
-    if (!doc) return;
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session?.access_token) return;
-    setDownloadingPdf(true);
-    try {
-      const response = await fetch(`/api/documents/pdf/${doc.id}`, {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-      if (!response.ok) {
-        setDownloadingPdf(false);
-        return;
-      }
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `${doc.title || "document"}.pdf`;
-      anchor.click();
-      window.URL.revokeObjectURL(url);
-    } finally {
-      setDownloadingPdf(false);
-    }
-  };
 
   if (loading)
     return (
@@ -447,15 +418,6 @@ export default function ClientDocumentView({
                 );
                 return (
                   <div className="space-y-10">
-                    <div className="flex justify-end print:hidden">
-                      <button
-                        onClick={handleDownloadPdf}
-                        disabled={downloadingPdf}
-                        className="px-6 py-2 border-2 border-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
-                      >
-                        {downloadingPdf ? "Preparing..." : "Download PDF"}
-                      </button>
-                    </div>
                     <ProposalDocument content={proposalContent} />
                     <div className="grid grid-cols-2 gap-4 pt-6 print:hidden">
                       <button
@@ -479,15 +441,6 @@ export default function ClientDocumentView({
                 if (!bookingContent) return null;
                 return (
                   <div className="space-y-10">
-                    <div className="flex justify-end print:hidden">
-                      <button
-                        onClick={handleDownloadPdf}
-                        disabled={downloadingPdf}
-                        className="px-6 py-2 border-2 border-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
-                      >
-                        {downloadingPdf ? "Preparing..." : "Download PDF"}
-                      </button>
-                    </div>
                     <BookingFormDocument
                       content={bookingContent}
                       mode="client"
@@ -541,15 +494,6 @@ export default function ClientDocumentView({
                 if (!invoiceContent) return null;
                 return (
                   <div className="space-y-8">
-                    <div className="flex justify-end print:hidden">
-                      <button
-                        onClick={handleDownloadPdf}
-                        disabled={downloadingPdf}
-                        className="px-6 py-2 border-2 border-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
-                      >
-                        {downloadingPdf ? "Preparing..." : "Download PDF"}
-                      </button>
-                    </div>
                     <InvoiceDocument
                       content={invoiceContent}
                       report={invoiceReport}
