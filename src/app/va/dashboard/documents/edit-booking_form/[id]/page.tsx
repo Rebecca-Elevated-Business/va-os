@@ -4,11 +4,11 @@ import { useState, useEffect, use, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye } from "lucide-react";
+import { ChevronDown, ChevronUp, Eye, Plus, Trash2 } from "lucide-react";
 import { DOCUMENT_TEMPLATES } from "@/lib/documentTemplates";
-import BookingFormDocument from "@/components/documents/BookingFormDocument";
 import {
   mergeBookingContent,
+  type BookingServiceItem,
   type BookingFormContent,
 } from "@/lib/bookingFormContent";
 
@@ -30,6 +30,40 @@ type FetchedDoc = ClientDoc & {
   };
 };
 
+const FieldRow = ({
+  label,
+  value,
+  onChange,
+  multiline,
+  type = "text",
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  multiline?: boolean;
+  type?: string;
+}) => (
+  <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
+    <div className="text-xs font-bold text-gray-500">{label}</div>
+    <div>
+      {multiline ? (
+        <textarea
+          className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none min-h-20 bg-white border-gray-200 focus:border-purple-100"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      ) : (
+        <input
+          type={type}
+          className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      )}
+    </div>
+  </div>
+);
+
 export default function EditBookingFormPage({
   params,
 }: {
@@ -42,6 +76,7 @@ export default function EditBookingFormPage({
   const [saving, setSaving] = useState(false);
   const [autosaving, setAutosaving] = useState(false);
   const [doc, setDoc] = useState<ClientDoc | null>(null);
+  const [termsOpen, setTermsOpen] = useState(false);
   const lastSavedRef = useRef<string>("");
 
   useEffect(() => {
@@ -124,6 +159,10 @@ export default function EditBookingFormPage({
   const updateContent = (updates: Partial<BookingFormContent>) => {
     if (!doc) return;
     setDoc({ ...doc, content: { ...doc.content, ...updates } });
+  };
+
+  const updateServices = (services: BookingServiceItem[]) => {
+    updateContent({ services });
   };
 
   const handleHeroUpload = (file: File) => {
@@ -340,15 +379,527 @@ export default function EditBookingFormPage({
           />
         </section>
 
-        <BookingFormDocument
-          content={doc.content as BookingFormContent}
-          mode="va"
-          standardTerms={
-            DOCUMENT_TEMPLATES.booking_form.sections.legal_text ||
-            "Terms not available."
-          }
-          onUpdate={updateContent}
-        />
+        <section className="space-y-4">
+          <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
+            1. About you and your business
+          </h2>
+          <div className="space-y-3">
+            <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
+              <div className="text-xs font-bold text-gray-500">
+                1. Client business name:
+              </div>
+              <input
+                className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
+                value={doc.content.client_business_name || ""}
+                onChange={(e) =>
+                  updateContent({ client_business_name: e.target.value })
+                }
+              />
+            </div>
+            <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
+              <div className="text-xs font-bold text-gray-500">
+                2. Client contact name:
+              </div>
+              <input
+                className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
+                value={doc.content.client_contact_name || ""}
+                onChange={(e) =>
+                  updateContent({ client_contact_name: e.target.value })
+                }
+              />
+            </div>
+            <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
+              <div className="text-xs font-bold text-gray-500">
+                3. Job title:
+              </div>
+              <input
+                className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
+                value={doc.content.client_job_title || ""}
+                onChange={(e) =>
+                  updateContent({ client_job_title: e.target.value })
+                }
+              />
+            </div>
+            <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
+              <div className="text-xs font-bold text-gray-500">
+                4. Client postal address:
+              </div>
+              <textarea
+                className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none min-h-20 bg-white border-gray-200 focus:border-purple-100"
+                value={doc.content.client_postal_address || ""}
+                onChange={(e) =>
+                  updateContent({ client_postal_address: e.target.value })
+                }
+              />
+            </div>
+            <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
+              <div className="text-xs font-bold text-gray-500">
+                5. Client email address:
+              </div>
+              <input
+                className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
+                value={doc.content.client_email || ""}
+                onChange={(e) =>
+                  updateContent({ client_email: e.target.value })
+                }
+              />
+            </div>
+            <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
+              <div className="text-xs font-bold text-gray-500">
+                6. Client phone number:
+              </div>
+              <input
+                className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
+                value={doc.content.client_phone || ""}
+                onChange={(e) =>
+                  updateContent({ client_phone: e.target.value })
+                }
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
+            2. About us
+          </h2>
+          <div className="space-y-3">
+            <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
+              <div className="text-xs font-bold text-gray-500">
+                7. Our business name:
+              </div>
+              <input
+                className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
+                value={doc.content.va_business_name || ""}
+                onChange={(e) =>
+                  updateContent({ va_business_name: e.target.value })
+                }
+              />
+            </div>
+            <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
+              <div className="text-xs font-bold text-gray-500">
+                8. VA contact name:
+              </div>
+              <input
+                className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
+                value={doc.content.va_contact_name || ""}
+                onChange={(e) =>
+                  updateContent({ va_contact_name: e.target.value })
+                }
+              />
+            </div>
+            <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
+              <div className="text-xs font-bold text-gray-500">
+                9. Job title:
+              </div>
+              <input
+                className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
+                value={doc.content.va_job_title || ""}
+                onChange={(e) =>
+                  updateContent({ va_job_title: e.target.value })
+                }
+              />
+            </div>
+            <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
+              <div className="text-xs font-bold text-gray-500">
+                10. Our contact details:
+              </div>
+              <textarea
+                className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none min-h-20 bg-white border-gray-200 focus:border-purple-100"
+                value={doc.content.va_contact_details || ""}
+                onChange={(e) =>
+                  updateContent({ va_contact_details: e.target.value })
+                }
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-5">
+          <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
+            3. About the work
+          </h2>
+          <div className="space-y-4">
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+              11. Description of services and outcomes
+            </p>
+            <div className="space-y-4">
+              {(doc.content.services || []).map((service, index) => (
+                <div
+                  key={service.id}
+                  className="rounded-3xl border border-gray-100 bg-gray-50 p-4 space-y-3 relative"
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = [...(doc.content.services || [])];
+                      updated.splice(index, 1);
+                      updateServices(updated);
+                    }}
+                    className="absolute top-4 right-4 text-gray-300 hover:text-red-500"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                  <input
+                    className="w-full rounded-2xl border-2 px-4 py-3 text-sm font-semibold outline-none bg-white border-gray-200 focus:border-purple-100"
+                    value={service.title}
+                    onChange={(e) => {
+                      const updated = [...(doc.content.services || [])];
+                      updated[index] = {
+                        ...updated[index],
+                        title: e.target.value,
+                      };
+                      updateServices(updated);
+                    }}
+                  />
+                  <textarea
+                    className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none min-h-20 bg-white border-gray-200 focus:border-purple-100"
+                    value={service.details}
+                    onChange={(e) => {
+                      const updated = [...(doc.content.services || [])];
+                      updated[index] = {
+                        ...updated[index],
+                        details: e.target.value,
+                      };
+                      updateServices(updated);
+                    }}
+                  />
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() =>
+                  updateServices([
+                    ...(doc.content.services || []),
+                    {
+                      id: `service-${Date.now()}`,
+                      title: "",
+                      details: "",
+                    },
+                  ])
+                }
+                className="w-full py-3 border-2 border-dashed border-gray-200 rounded-2xl text-xs font-black text-gray-400 hover:border-[#9d4edd] hover:text-[#9d4edd] transition-all uppercase tracking-widest flex items-center justify-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add Service Item
+              </button>
+            </div>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
+            <div className="text-xs font-bold text-gray-500">
+              12. Personal data processing required?
+            </div>
+            <select
+              className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
+              value={doc.content.personal_data_processing || "no"}
+              onChange={(e) =>
+                updateContent({
+                  personal_data_processing: e.target.value === "yes" ? "yes" : "no",
+                })
+              }
+            >
+              <option value="no">No</option>
+              <option value="yes">Yes</option>
+            </select>
+          </div>
+          <FieldRow
+            label="13. Timeline/key dates:"
+            value={doc.content.timeline_key_dates || ""}
+            multiline
+            onChange={(value) => updateContent({ timeline_key_dates: value })}
+          />
+          <FieldRow
+            label="14. Usual working hours:"
+            value={doc.content.working_hours || ""}
+            multiline
+            onChange={(value) => updateContent({ working_hours: value })}
+          />
+          <FieldRow
+            label="15. Communication channels:"
+            value={doc.content.communication_channels || ""}
+            multiline
+            onChange={(value) =>
+              updateContent({ communication_channels: value })
+            }
+          />
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
+            4. About payments
+          </h2>
+          <div className="space-y-3">
+            <FieldRow
+              label="16. Fee:"
+              value={doc.content.fee || ""}
+              onChange={(value) => updateContent({ fee: value })}
+            />
+            <FieldRow
+              label="17. Payment terms and preferred method:"
+              value={doc.content.payment_terms || ""}
+              multiline
+              onChange={(value) => updateContent({ payment_terms: value })}
+            />
+            <FieldRow
+              label="18. Expiration date of prepayments or unused retainer time:"
+              value={doc.content.prepayment_expiration || ""}
+              onChange={(value) => updateContent({ prepayment_expiration: value })}
+            />
+            <FieldRow
+              label="19. Basic hourly rate for additional work beyond original booking:"
+              value={doc.content.additional_hourly_rate || ""}
+              onChange={(value) => updateContent({ additional_hourly_rate: value })}
+            />
+            <FieldRow
+              label="20. Out of hours rate for work outside normal hours:"
+              value={doc.content.out_of_hours_rate || ""}
+              onChange={(value) => updateContent({ out_of_hours_rate: value })}
+            />
+            <FieldRow
+              label="21. Urgent work rate (less than 24 hours notice):"
+              value={doc.content.urgent_work_rate || ""}
+              onChange={(value) => updateContent({ urgent_work_rate: value })}
+            />
+            <FieldRow
+              label="22. Additional charges for payments made by other methods:"
+              value={doc.content.additional_payment_charges || ""}
+              onChange={(value) =>
+                updateContent({ additional_payment_charges: value })
+              }
+            />
+            <FieldRow
+              label="23. Late payment interest rate:"
+              value={doc.content.late_payment_interest || ""}
+              onChange={(value) => updateContent({ late_payment_interest: value })}
+            />
+            <FieldRow
+              label="24. Purchase order (PO number):"
+              value={doc.content.purchase_order_number || ""}
+              onChange={(value) =>
+                updateContent({ purchase_order_number: value })
+              }
+            />
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
+            5. Final important subjects
+          </h2>
+          <div className="space-y-3">
+            <FieldRow
+              label="25. Our data privacy policy link:"
+              value={doc.content.data_privacy_link || ""}
+              onChange={(value) => updateContent({ data_privacy_link: value })}
+            />
+            <FieldRow
+              label="26. Insurance level of cover:"
+              value={doc.content.insurance_cover || ""}
+              onChange={(value) => updateContent({ insurance_cover: value })}
+            />
+            <FieldRow
+              label="27. Notice period:"
+              value={doc.content.notice_period || ""}
+              onChange={(value) => updateContent({ notice_period: value })}
+            />
+            <FieldRow
+              label="28. Special terms for this booking:"
+              value={doc.content.special_terms || ""}
+              multiline
+              onChange={(value) => updateContent({ special_terms: value })}
+            />
+          </div>
+
+          <div className="rounded-3xl border border-gray-100 bg-gray-50 p-5 space-y-3">
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+              29. Our main terms can be found at this link or attached to this
+              form:
+            </p>
+            <div className="space-y-3">
+              <div className="space-y-2 text-xs font-bold text-gray-500">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="terms-source"
+                    checked={Boolean(doc.content.use_standard_terms)}
+                    onChange={() =>
+                      updateContent({ use_standard_terms: true })
+                    }
+                  />
+                  Use VA-OS standard terms
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="terms-source"
+                    checked={!doc.content.use_standard_terms}
+                    onChange={() =>
+                      updateContent({ use_standard_terms: false })
+                    }
+                  />
+                  Provide your own terms link
+                </label>
+              </div>
+              <p className="text-[11px] font-semibold text-gray-400">
+                Internal Note (client will not see this) The VA-OS Standard
+                Terms are provided for your convenience. We recommend you have
+                a legal professional review your contract before issuing to
+                clients.
+              </p>
+            </div>
+
+            {doc.content.use_standard_terms ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setTermsOpen((prev) => !prev)}
+                  className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-widest"
+                >
+                  {termsOpen ? "Hide terms" : "Read terms"}
+                  {termsOpen ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </button>
+                {termsOpen && (
+                  <div className="p-4 rounded-2xl bg-white border border-gray-100 text-[11px] text-gray-600 whitespace-pre-wrap max-h-80 overflow-y-auto">
+                    {DOCUMENT_TEMPLATES.booking_form.sections.legal_text ||
+                      "Terms not available."}
+                  </div>
+                )}
+              </>
+            ) : (
+              <FieldRow
+                label="Our main terms link:"
+                value={doc.content.custom_terms_url || ""}
+                onChange={(value) => updateContent({ custom_terms_url: value })}
+              />
+            )}
+          </div>
+
+          <FieldRow
+            label="30. Courts that will handle disputes:"
+            value={doc.content.courts_jurisdiction || ""}
+            onChange={(value) => updateContent({ courts_jurisdiction: value })}
+          />
+          <FieldRow
+            label="31. Please accept this booking by:"
+            value={doc.content.accept_by_date || ""}
+            onChange={(value) => updateContent({ accept_by_date: value })}
+            type="date"
+          />
+          <div className="text-xs text-gray-500 leading-relaxed whitespace-pre-wrap">
+            If this BOOKING means we will be working on personal data about any
+            clients, prospects, suppliers, or other people, please provide us
+            with a Data Processing Agreement (DPA) or help us complete a Data
+            Processing Form.
+
+            {"\n\n"}Accepting this BOOKING creates a legal agreement made up of
+            the terms set out above and our TERMS and (if applicable) the
+            completed DPA or Data Processing Form.
+
+            {"\n\n"}Our AGREEMENT begins when you sign and return this BOOKING
+            or you tell us to start work, preferably in writing.
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
+            6. Client
+          </h2>
+          <div className="space-y-3">
+            <FieldRow
+              label="Your signature:"
+              value={doc.content.client_signature_name || ""}
+              onChange={(value) =>
+                updateContent({ client_signature_name: value })
+              }
+            />
+            <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
+              <div className="text-xs font-bold text-gray-500">
+                Signature style:
+              </div>
+              <select
+                className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
+                value={doc.content.client_signature_style || "script"}
+                onChange={(e) =>
+                  updateContent({
+                    client_signature_style:
+                      e.target.value as BookingFormContent["client_signature_style"],
+                  })
+                }
+              >
+                <option value="script">Signature Script</option>
+                <option value="flow">Signature Flow</option>
+                <option value="classic">Signature Classic</option>
+              </select>
+            </div>
+            <FieldRow
+              label="Print name:"
+              value={doc.content.client_print_name || ""}
+              onChange={(value) => updateContent({ client_print_name: value })}
+            />
+            <FieldRow
+              label="Your business name:"
+              value={doc.content.client_business_name_signature || ""}
+              onChange={(value) =>
+                updateContent({ client_business_name_signature: value })
+              }
+            />
+            <FieldRow
+              label="Date and time:"
+              value={
+                doc.content.client_signed_at ||
+                new Date().toLocaleString("en-GB")
+              }
+              onChange={(value) =>
+                updateContent({ client_signed_at: value })
+              }
+            />
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
+            7. Us
+          </h2>
+          <div className="space-y-3">
+            <FieldRow
+              label="Our signature:"
+              value={doc.content.va_signature_name || ""}
+              onChange={(value) => updateContent({ va_signature_name: value })}
+            />
+            <FieldRow
+              label="Print name:"
+              value={doc.content.va_print_name || ""}
+              onChange={(value) => updateContent({ va_print_name: value })}
+            />
+            <FieldRow
+              label="Our business name:"
+              value={doc.content.va_business_name_signature || ""}
+              onChange={(value) =>
+                updateContent({ va_business_name_signature: value })
+              }
+            />
+            <FieldRow
+              label="Role:"
+              value={doc.content.va_role || ""}
+              onChange={(value) => updateContent({ va_role: value })}
+            />
+            <FieldRow
+              label="Date:"
+              value={doc.content.va_signed_at || ""}
+              onChange={(value) => updateContent({ va_signed_at: value })}
+              type="date"
+            />
+          </div>
+        </section>
+
+        <p className="text-xs text-gray-400">
+          Client signatures become active once this booking form is issued.
+        </p>
       </div>
     </div>
   );
