@@ -358,6 +358,11 @@ export default function ClientDocumentView({
     router.push("/client/dashboard");
   };
 
+  const handlePrint = () => {
+    if (!doc) return;
+    window.open(`/documents/print/${doc.id}`, "_blank", "noopener,noreferrer");
+  };
+
 
   if (loading)
     return (
@@ -418,6 +423,14 @@ export default function ClientDocumentView({
                 );
                 return (
                   <div className="space-y-10">
+                    <div className="flex justify-end print:hidden">
+                      <button
+                        onClick={handlePrint}
+                        className="px-6 py-2 border-2 border-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
+                      >
+                        Download / Print
+                      </button>
+                    </div>
                     <ProposalDocument content={proposalContent} />
                     <div className="grid grid-cols-2 gap-4 pt-6 print:hidden">
                       <button
@@ -441,6 +454,14 @@ export default function ClientDocumentView({
                 if (!bookingContent) return null;
                 return (
                   <div className="space-y-10">
+                    <div className="flex justify-end print:hidden">
+                      <button
+                        onClick={handlePrint}
+                        className="px-6 py-2 border-2 border-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
+                      >
+                        Download / Print
+                      </button>
+                    </div>
                     <BookingFormDocument
                       content={bookingContent}
                       mode="client"
@@ -494,6 +515,14 @@ export default function ClientDocumentView({
                 if (!invoiceContent) return null;
                 return (
                   <div className="space-y-8">
+                    <div className="flex justify-end print:hidden">
+                      <button
+                        onClick={handlePrint}
+                        className="px-6 py-2 border-2 border-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
+                      >
+                        Download / Print
+                      </button>
+                    </div>
                     <InvoiceDocument
                       content={invoiceContent}
                       report={invoiceReport}

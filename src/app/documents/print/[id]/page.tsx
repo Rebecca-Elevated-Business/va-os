@@ -19,12 +19,12 @@ type ClientDoc = {
   id: string;
   client_id: string;
   title: string;
-  type: string;
+  type: "proposal" | "booking_form" | "invoice" | "upload";
   status: string;
   content: Partial<ProposalContent>;
 };
 
-export default function ProposalPreviewPage({
+export default function DocumentPrintPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -36,13 +36,24 @@ export default function ProposalPreviewPage({
     useState<InvoiceTimeReport | null>(null);
 
   useEffect(() => {
+    async function loadDoc() {
+      const { data } = await supabase
+        .from("client_documents")
+        .select("*")
+        .eq("id", id)
+        .single();
+      if (data) setDoc(data as ClientDoc);
+      setLoading(false);
+    }
+    loadDoc();
+  }, [id]);
+
+  useEffect(() => {
     if (!doc || doc.type !== "invoice") return;
     const merged = mergeInvoiceContent(doc.content as InvoiceContent);
     if (!merged.time_report_id || !merged.show_time_report_to_client) {
-      const timer = setTimeout(() => {
-        setInvoiceReport(null);
-      }, 0);
-      return () => clearTimeout(timer);
+      setInvoiceReport(null);
+      return;
     }
     async function loadReport() {
       const { data: reportData } = await supabase
@@ -69,54 +80,35 @@ export default function ProposalPreviewPage({
   }, [doc]);
 
   useEffect(() => {
-    async function loadDoc() {
-      const { data } = await supabase
-        .from("client_documents")
-        .select("*")
-        .eq("id", id)
-        .single();
-      if (data) setDoc(data as ClientDoc);
-      setLoading(false);
-    }
-    loadDoc();
-  }, [id]);
-
-  const handlePrint = () => {
     if (!doc) return;
-    window.open(`/documents/print/${doc.id}`, "_blank", "noopener,noreferrer");
-  };
-
+    const timer = setTimeout(() => {
+      window.print();
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [doc]);
 
   if (loading)
-    return <div className="p-10 text-gray-500 italic">Loading preview...</div>;
+    return <div className="p-10 text-gray-500 italic">Loading document...</div>;
   if (!doc)
     return <div className="p-10 text-red-500 font-bold">Document not found.</div>;
 
-  if (
-    doc.type !== "proposal" &&
-    doc.type !== "booking_form" &&
-    doc.type !== "invoice"
-  ) {
+  if (doc.type === "upload") {
     return (
-      <div className="p-10 text-gray-500 italic">
-        Preview is only available for proposals, booking forms, and invoices at
-        the moment.
+      <div className="min-h-screen bg-white text-black p-8 font-sans">
+        <div className="max-w-4xl mx-auto border border-gray-100 rounded-2xl p-8">
+          <h1 className="text-2xl font-bold text-[#333333]">{doc.title}</h1>
+          <p className="mt-4 text-sm text-gray-500">
+            This document is an uploaded file. Please download it directly from
+            the portal.
+          </p>
+        </div>
       </div>
     );
   }
 
-
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 text-black p-4 md:p-8 print:bg-white">
+    <div className="min-h-screen bg-white text-black p-4 md:p-8 font-sans">
       <div className="max-w-4xl mx-auto space-y-4">
-        <div className="flex items-center justify-end gap-3 print:hidden">
-          <button
-            onClick={handlePrint}
-            className="px-6 py-2 border-2 border-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
-          >
-            Download / Print
-          </button>
-        </div>
         {doc.type === "proposal" ? (
           <ProposalDocument content={mergeProposalContent(doc.content)} />
         ) : doc.type === "booking_form" ? (
