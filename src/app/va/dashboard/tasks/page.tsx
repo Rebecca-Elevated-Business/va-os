@@ -957,7 +957,12 @@ export default function TaskCentrePage() {
 
                                 {columnVisibility.endDate && (
                                   <div className="text-right text-xs font-medium text-gray-600">
-                                    {formatDateCell(task.scheduled_end)}
+                                    {formatDateCell(
+                                      task.scheduled_end ||
+                                        (task.scheduled_start
+                                          ? null
+                                          : task.due_date),
+                                    )}
                                   </div>
                                 )}
 

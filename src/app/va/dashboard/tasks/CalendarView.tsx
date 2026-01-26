@@ -118,9 +118,29 @@ export default function CalendarView({
       );
     }
     if (task.due_date) {
-      return isSameDay(new Date(task.due_date), day);
+      const rangeStart = startOfDay(new Date(task.due_date));
+      const rangeEnd = task.scheduled_end
+        ? startOfDay(new Date(task.scheduled_end))
+        : rangeStart;
+      return (
+        dayStart.getTime() >= rangeStart.getTime() &&
+        dayStart.getTime() <= rangeEnd.getTime()
+      );
     }
     return false;
+  };
+
+  const isAllDayTaskOnDay = (task: Task, day: Date) => {
+    if (task.scheduled_start || !task.due_date) return false;
+    const rangeStart = startOfDay(new Date(task.due_date));
+    const rangeEnd = task.scheduled_end
+      ? startOfDay(new Date(task.scheduled_end))
+      : rangeStart;
+    const dayStart = startOfDay(day);
+    return (
+      dayStart.getTime() >= rangeStart.getTime() &&
+      dayStart.getTime() <= rangeEnd.getTime()
+    );
   };
 
   const handleDropToSlot = (day: Date, hour?: number) => {
@@ -371,11 +391,7 @@ export default function CalendarView({
                   }}
                 >
                   {tasks
-                    .filter(
-                      (t) =>
-                        isSameDay(new Date(t.due_date || ""), day) &&
-                        !t.scheduled_start,
-                    )
+                    .filter((task) => isAllDayTaskOnDay(task, day))
                     .map((task) => (
                       <div
                         key={task.id}

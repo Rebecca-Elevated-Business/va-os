@@ -166,8 +166,13 @@ export default function TaskModal({
       return new Date(`${date}T${time}`).toISOString();
     };
     const scheduledStart = buildIsoDateTime(formStartDate, formStartTime);
-    const scheduledEnd = buildIsoDateTime(formEndDate, formEndTime);
-    const dueDate = formStartDate || task?.due_date || null;
+    const scheduledEnd =
+      buildIsoDateTime(formEndDate, formEndTime) ||
+      (formEndDate
+        ? new Date(`${formEndDate}T23:59:59`).toISOString()
+        : null);
+    const dueDate =
+      formStartDate || formEndDate || task?.due_date || null;
     const clientId = lockClient
       ? formClientId || prefill?.clientId || null
       : formCategory === "client"
