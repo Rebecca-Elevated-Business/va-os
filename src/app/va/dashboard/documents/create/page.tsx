@@ -39,10 +39,6 @@ function CreateDocumentForm() {
   const isClientLocked = Boolean(clientIdParam);
 
   useEffect(() => {
-    if (typeParam) setSelectedType(typeParam);
-  }, [typeParam]);
-
-  useEffect(() => {
     async function loadClients() {
       const { data } = await supabase
         .from("clients")
