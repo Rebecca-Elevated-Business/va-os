@@ -14,7 +14,7 @@ export const DOCUMENT_TEMPLATES: Record<
   DocumentTemplate
 > = {
   proposal: {
-    title: "Project Proposal",
+    title: "Proposal",
     header_image:
       "https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&q=80&w=1000",
     sections: {
@@ -26,7 +26,7 @@ export const DOCUMENT_TEMPLATES: Record<
     },
   },
   booking_form: {
-    title: "Booking Form & Master Terms of Service",
+    title: "Booking Form",
     header_image:
       "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&q=80&w=1000",
     sections: {
@@ -43,7 +43,7 @@ export const DOCUMENT_TEMPLATES: Record<
     },
   },
   invoice: {
-    title: "Tax Invoice",
+    title: "Invoice",
     header_image:
       "https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&q=80&w=1000",
     sections: {

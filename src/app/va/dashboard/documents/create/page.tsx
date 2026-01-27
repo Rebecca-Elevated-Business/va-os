@@ -6,10 +6,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, X } from "lucide-react";
 
 const DOCUMENT_TYPES = [
-  { id: "proposal", label: "Project Proposal", accent: "bg-[#9d4edd]" },
-  { id: "booking_form", label: "Booking Form (Contract)", accent: "bg-black" },
+  { id: "proposal", label: "Proposal", accent: "bg-[#9d4edd]" },
+  { id: "booking_form", label: "Booking Form", accent: "bg-black" },
   { id: "invoice", label: "Invoice", accent: "bg-gray-700" },
-  { id: "upload", label: "Upload Own", accent: "bg-gray-400" },
+  { id: "upload", label: "Upload", accent: "bg-gray-400" },
 ] as const;
 
 type DocumentType = (typeof DOCUMENT_TYPES)[number]["id"];

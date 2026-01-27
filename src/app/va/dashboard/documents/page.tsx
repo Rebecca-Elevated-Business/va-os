@@ -14,35 +14,31 @@ import {
 const DOCUMENT_TYPES = [
   {
     id: "proposal",
-    title: "Project Proposal",
+    title: "Proposal",
     description:
       "Outline project scope, service options, and estimated timelines for potential clients.",
     icon: FileText,
-    category: "Pre-Onboarding",
   },
   {
     id: "booking_form",
-    title: "Booking Form (Contract)",
+    title: "Booking Form",
     description:
       "Formal legal agreement and booking confirmation with E-Signature requirements.",
     icon: FileSignature,
-    category: "Legal",
   },
   {
     id: "invoice",
-    title: "Professional Invoice",
+    title: "Invoice",
     description:
       "Generate billable item summaries with British Pound (£) currency and due dates.",
     icon: ReceiptText,
-    category: "Financial",
   },
   {
     id: "upload",
-    title: "Upload & send own document",
+    title: "Upload",
     description:
       "Upload an existing PDF or document from your device to send directly to the client portal.",
     icon: Upload,
-    category: "Custom",
   },
 ];
 
@@ -59,8 +55,7 @@ export default function DocumentLibraryPage() {
     return DOCUMENT_TYPES.filter(
       (doc) =>
         doc.title.toLowerCase().includes(value) ||
-        doc.description.toLowerCase().includes(value) ||
-        doc.category.toLowerCase().includes(value)
+        doc.description.toLowerCase().includes(value)
     );
   }, [search]);
 
@@ -103,9 +98,6 @@ export default function DocumentLibraryPage() {
                 <div className="h-12 w-12 rounded-2xl bg-purple-50 flex items-center justify-center text-[#9d4edd]">
                   <Icon className="h-6 w-6" />
                 </div>
-                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                  {doc.category}
-                </span>
               </div>
               <h3 className="font-bold text-sm text-gray-900 group-hover:text-[#9d4edd] transition-colors uppercase tracking-tight">
                 {doc.title}
@@ -123,9 +115,6 @@ export default function DocumentLibraryPage() {
           <div className="w-full max-w-4xl bg-white rounded-2xl shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-300">
             <div className="flex items-start justify-between p-6 border-b border-gray-100">
               <div>
-                <span className="text-xs font-bold text-[#9d4edd] uppercase tracking-widest">
-                  {selectedType.category}
-                </span>
                 <h1 className="text-2xl font-bold">{selectedType.title}</h1>
               </div>
               <button

@@ -61,7 +61,7 @@ export const createProposalDefaults = (
   seed: ProposalDefaultsSeed = {}
 ): ProposalContent => ({
   hero_image_url: "",
-  hero_title: "Project Proposal",
+  hero_title: "Proposal",
   prepared_for: "Client Name",
   prepared_by: seed.preparedBy || "VA/Business Name",
   prepared_date: formatDate(new Date()),
