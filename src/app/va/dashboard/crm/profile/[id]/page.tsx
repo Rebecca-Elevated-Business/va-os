@@ -143,7 +143,6 @@ export default function ClientProfilePage({
   const [draftClient, setDraftClient] = useState<Client | null>(null);
   const [websiteLinks, setWebsiteLinks] = useState<string[]>([]);
   const [isSavingOverview, setIsSavingOverview] = useState(false);
-  const [isNotesOpen, setIsNotesOpen] = useState(true);
   const [docTypeFilter, setDocTypeFilter] = useState("all");
   const [docStartDate, setDocStartDate] = useState("");
   const [docEndDate, setDocEndDate] = useState("");
@@ -2350,57 +2349,38 @@ export default function ClientProfilePage({
       {/* 4. NOTES (Sticky Bottom) */}
       {activeTab === "notes" && (
         <section
-          className={`bg-white rounded-xl shadow-lg border-t-4 border-[#9d4edd] flex flex-col overflow-hidden ${
-            isNotesOpen ? "h-96" : "h-auto"
-          }`}
+          className="bg-white rounded-xl shadow-lg flex flex-col overflow-hidden h-96"
         >
-          <div className="p-6 border-b border-gray-100 bg-gray-50 flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setIsNotesOpen((prev) => !prev)}
-              className="text-[#333333] hover:text-[#333333] transition-colors"
-            >
-              <ChevronDown
-                size={16}
-                className={`transition-transform ${
-                  isNotesOpen ? "rotate-0" : "-rotate-90"
-                }`}
-              />
-            </button>
-            <h2 className="text-lg font-bold">Internal Notes</h2>
-          </div>
-          {isNotesOpen && (
-            <div className="p-6 flex flex-col flex-1">
-              <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-2">
-                {notes.map((note) => (
-                  <div
-                    key={note.id}
-                    className="bg-gray-50 p-3 rounded-lg border border-gray-100"
-                  >
-                    <p className="text-sm text-gray-800">{note.content}</p>
-                    <span className="text-[10px] text-gray-400 mt-2 block">
-                      {new Date(note.created_at).toLocaleString("en-GB")}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <input
-                  className="flex-1 border rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-[#9d4edd] text-black"
-                  placeholder="Type a new internal note..."
-                  value={newNote}
-                  onChange={(e) => setNewNote(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && addNote()}
-                />
-                <button
-                  onClick={addNote}
-                  className="bg-[#9d4edd] text-white px-6 py-2 rounded-lg font-bold hover:bg-[#7b2cbf]"
+          <div className="p-6 flex flex-col flex-1">
+            <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-2">
+              {notes.map((note) => (
+                <div
+                  key={note.id}
+                  className="bg-gray-50 p-3 rounded-lg border border-gray-100"
                 >
-                  Save Note
-                </button>
-              </div>
+                  <p className="text-sm text-gray-800">{note.content}</p>
+                  <span className="text-[10px] text-gray-400 mt-2 block">
+                    {new Date(note.created_at).toLocaleString("en-GB")}
+                  </span>
+                </div>
+              ))}
             </div>
-          )}
+            <div className="flex gap-2">
+              <input
+                className="flex-1 border rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-[#9d4edd] text-black"
+                placeholder="Type a new internal note..."
+                value={newNote}
+                onChange={(e) => setNewNote(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addNote()}
+              />
+              <button
+                onClick={addNote}
+                className="bg-[#9d4edd] text-white px-6 py-2 rounded-lg font-bold hover:bg-[#7b2cbf]"
+              >
+                Save Note
+              </button>
+            </div>
+          </div>
         </section>
       )}
     </div>
