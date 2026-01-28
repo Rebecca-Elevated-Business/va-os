@@ -2086,7 +2086,7 @@ export default function ClientProfilePage({
       {/* SERVICE AGREEMENTS SECTION */}
       {activeTab === "docs" && (
         <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-6 border-b border-gray-100 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-start bg-gray-50">
+          <div className="relative z-20 p-6 border-b border-gray-100 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-start bg-gray-50">
             <div className="flex flex-wrap items-center gap-3">
               <div className="relative" ref={docTypeFilterRef}>
                 <button
@@ -2164,7 +2164,7 @@ export default function ClientProfilePage({
               </button>
             </div>
           </div>
-          <div className="p-0">
+          <div className="relative z-0 p-0">
             <table className="w-full text-left">
               <tbody className="divide-y divide-gray-100">
                 {/* --- NEW DOCUMENTS LIST --- */}
