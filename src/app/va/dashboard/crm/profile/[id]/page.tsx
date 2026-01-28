@@ -1368,11 +1368,14 @@ export default function ClientProfilePage({
                       <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-32">
                         Start Date
                       </th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-32">
+                        End Date
+                      </th>
                       <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-24 text-center">
                         Timer
                       </th>
                       <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-24 text-right">
-                        Time
+                        Time Count
                       </th>
                     </tr>
                   </thead>
@@ -1391,7 +1394,7 @@ export default function ClientProfilePage({
                     {visibleTasks.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={5}
+                          colSpan={6}
                           className="p-8 text-center text-gray-400 italic"
                         >
                           No tasks found.
@@ -1403,6 +1406,9 @@ export default function ClientProfilePage({
                           const childTasks = subtasksByParent[task.id] || [];
                           const isExpanded = expandedParents[task.id] ?? true;
                           const dueDate = task.scheduled_start || task.due_date;
+                          const endDate =
+                            task.scheduled_end ||
+                            (task.scheduled_start ? null : task.due_date);
 
                           return (
                             <Fragment key={task.id}>
@@ -1532,14 +1538,23 @@ export default function ClientProfilePage({
                                 </div>
                               </td>
 
-                              {/* 3. DATE */}
+                              {/* 3. START DATE */}
                               <td className="px-4 py-3 text-xs font-medium text-gray-600 align-top pt-4">
                                 {dueDate
                                   ? new Date(dueDate).toLocaleDateString("en-GB")
                                   : "-"}
                               </td>
 
-                              {/* 4. TIMER BUTTON */}
+                              {/* 4. END DATE */}
+                              <td className="px-4 py-3 text-xs font-medium text-gray-600 align-top pt-4">
+                                {endDate
+                                  ? new Date(endDate).toLocaleDateString(
+                                      "en-GB",
+                                    )
+                                  : "-"}
+                              </td>
+
+                              {/* 5. TIMER BUTTON */}
                               <td className="px-4 py-3 text-center align-top pt-4">
                                 {!task.is_completed && (
                                   <button
@@ -1566,7 +1581,7 @@ export default function ClientProfilePage({
                                 )}
                               </td>
 
-                              {/* 5. TIME DISPLAY */}
+                              {/* 6. TIME DISPLAY */}
                               <td className="px-4 py-3 text-right font-mono text-xs text-[#333333] align-top pt-4">
                                 {formatTime(task)}
                               </td>
@@ -1576,6 +1591,11 @@ export default function ClientProfilePage({
                                 {childTasks.map((child) => {
                                   const childDue =
                                     child.scheduled_start || child.due_date;
+                                  const childEnd =
+                                    child.scheduled_end ||
+                                    (child.scheduled_start
+                                      ? null
+                                      : child.due_date);
                                   return (
                                     <tr
                                       key={child.id}
@@ -1681,6 +1701,13 @@ export default function ClientProfilePage({
                                         {childDue
                                           ? new Date(
                                               childDue,
+                                            ).toLocaleDateString("en-GB")
+                                          : "-"}
+                                      </td>
+                                      <td className="px-4 py-3 text-xs font-medium text-gray-600 align-top pt-4">
+                                        {childEnd
+                                          ? new Date(
+                                              childEnd,
                                             ).toLocaleDateString("en-GB")
                                           : "-"}
                                       </td>
