@@ -1349,7 +1349,7 @@ export default function ClientProfilePage({
 
       {/* 3. TASK MANAGER (Table Layout) */}
       {activeTab === "tasks" && (
-        <section className="rounded-xl">
+        <section className="rounded-xl pb-8">
           <div className="p-0">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
               <div className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
@@ -1431,7 +1431,7 @@ export default function ClientProfilePage({
                     return (
                       <div
                         key={group.status}
-                        className="rounded-lg border border-gray-200 bg-white"
+                        className="relative isolate rounded-lg border border-gray-200 bg-white"
                       >
                         <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-100">
                           <button
@@ -1530,7 +1530,9 @@ export default function ClientProfilePage({
                                           reorderParents(task.id);
                                         }
                                       }}
-                                      className={`relative z-0 group hover:bg-gray-50 transition-colors ${
+                                      className={`relative ${
+                                        actionMenuId === task.id ? "z-50" : "z-0"
+                                      } group hover:bg-gray-50 transition-colors ${
                                         statusValue === "completed"
                                           ? "bg-gray-50 opacity-60"
                                           : ""
@@ -1660,7 +1662,7 @@ export default function ClientProfilePage({
 
                                       {/* 6. ACTIONS */}
                                       <td className="px-4 py-3 text-right align-top pt-4">
-                                        <div className="relative action-menu-trigger inline-flex justify-end z-30">
+                                        <div className="relative action-menu-trigger inline-flex justify-end z-40">
                                           <button
                                             onClick={(event) => {
                                               event.stopPropagation();
@@ -1789,7 +1791,11 @@ export default function ClientProfilePage({
                                                   child.id,
                                                 );
                                               }}
-                                              className={`relative z-0 group hover:bg-gray-50 transition-colors ${
+                                              className={`relative ${
+                                                actionMenuId === child.id
+                                                  ? "z-50"
+                                                  : "z-0"
+                                              } group hover:bg-gray-50 transition-colors ${
                                                 childStatusValue ===
                                                 "completed"
                                                   ? "bg-gray-50 opacity-60"
@@ -1886,7 +1892,7 @@ export default function ClientProfilePage({
                                                 {formatTime(child)}
                                               </td>
                                               <td className="px-4 py-3 text-right align-top pt-4">
-                                                <div className="relative action-menu-trigger inline-flex justify-end z-30">
+                                                <div className="relative action-menu-trigger inline-flex justify-end z-40">
                                                   <button
                                                     onClick={(event) => {
                                                       event.stopPropagation();
