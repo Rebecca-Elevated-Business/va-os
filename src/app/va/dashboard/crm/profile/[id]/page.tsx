@@ -1349,8 +1349,8 @@ export default function ClientProfilePage({
 
       {/* 3. TASK MANAGER (Table Layout) */}
       {activeTab === "tasks" && (
-        <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-6">
+        <section className="rounded-xl">
+          <div className="p-0">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
               <div className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
                 <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
