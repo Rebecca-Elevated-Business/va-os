@@ -20,6 +20,7 @@ type TimeEntryRow = {
   ended_at: string;
   duration_minutes: number;
   notes?: string | null;
+  client_id?: string | null;
   tasks: {
     task_name: string;
     client_id: string | null;
@@ -261,10 +262,10 @@ export default function TimeReportsPage() {
     const { data } = await supabase
       .from("time_entries")
       .select(
-        "*, tasks!inner(task_name, client_id, clients(business_name, surname))"
+        "*, client_id, tasks(task_name, client_id, clients(business_name, surname))"
       )
       .eq("va_id", userId)
-      .eq("tasks.client_id", selectedClient.id)
+      .or(`tasks.client_id.eq.${selectedClient.id},client_id.eq.${selectedClient.id}`)
       .gte("started_at", startIso)
       .lte("started_at", endIso)
       .order("started_at", { ascending: false });
@@ -272,7 +273,9 @@ export default function TimeReportsPage() {
     const entries = (data as TimeEntryRow[]) || [];
     const snapshot = entries.map((entry) => ({
       entry_date: entry.started_at,
-      task_title: entry.tasks?.task_name || "Untitled task",
+      task_title:
+        entry.tasks?.task_name ||
+        (entry.client_id ? "Client session (unassigned)" : "Untitled task"),
       duration_seconds: entry.duration_minutes * 60,
       notes: includeNotes ? entry.notes || null : null,
       source_time_entry_id: entry.id,

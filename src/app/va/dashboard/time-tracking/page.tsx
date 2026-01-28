@@ -10,7 +10,8 @@ import { useClientSession } from "../ClientSessionContext";
 
 type TimeEntry = {
   id: string;
-  task_id: string;
+  task_id: string | null;
+  client_id?: string | null;
   started_at: string;
   ended_at: string;
   duration_minutes: number;
@@ -152,11 +153,11 @@ export default function TimeTrackingPage() {
       const startIso = new Date(`${rangeStart}T00:00:00`).toISOString();
       const endIso = new Date(`${rangeEnd}T23:59:59.999`).toISOString();
 
-      const { data } = await supabase
-        .from("time_entries")
-        .select(
-          "id, task_id, started_at, ended_at, duration_minutes, created_at",
-        )
+    const { data } = await supabase
+      .from("time_entries")
+      .select(
+        "id, task_id, client_id, started_at, ended_at, duration_minutes, created_at",
+      )
         .eq("va_id", userId)
         .gte("started_at", startIso)
         .lte("started_at", endIso)
@@ -353,7 +354,7 @@ export default function TimeTrackingPage() {
           },
         ])
         .select(
-          "id, task_id, started_at, ended_at, duration_minutes, created_at",
+          "id, task_id, client_id, started_at, ended_at, duration_minutes, created_at",
         )
         .single();
 
@@ -403,16 +404,30 @@ export default function TimeTrackingPage() {
     }
   };
 
+  const clientsById = useMemo(
+    () => new Map(clients.map((client) => [client.id, client])),
+    [clients],
+  );
+
   const entryTaskLabel = (entry: TimeEntry) => {
+    if (!entry.task_id) return "Client session (unassigned)";
     const task = tasksById.get(entry.task_id);
     if (!task) return "Untitled task";
     return task.task_name;
   };
 
   const entryClientLabel = (entry: TimeEntry) => {
-    const task = tasksById.get(entry.task_id);
-    if (!task || !task.clients) return "Internal";
-    return task.clients.surname || task.clients.business_name || "Client";
+    if (entry.task_id) {
+      const task = tasksById.get(entry.task_id);
+      if (task?.clients) {
+        return task.clients.surname || task.clients.business_name || "Client";
+      }
+    }
+    if (entry.client_id) {
+      const client = clientsById.get(entry.client_id);
+      return client?.surname || client?.business_name || "Client";
+    }
+    return "Internal";
   };
 
   return (

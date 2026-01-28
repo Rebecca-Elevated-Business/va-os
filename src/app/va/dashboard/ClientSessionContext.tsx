@@ -53,7 +53,7 @@ const toMs = (value: string) => new Date(value).getTime();
 
 const formatDurationSeconds = (startIso: string, endIso: string) => {
   const durationSeconds = Math.round((toMs(endIso) - toMs(startIso)) / 1000);
-  return Math.max(1, durationSeconds);
+  return Math.max(0, durationSeconds);
 };
 
 export function ClientSessionProvider({ children }: { children: React.ReactNode }) {
@@ -137,21 +137,42 @@ export function ClientSessionProvider({ children }: { children: React.ReactNode 
     };
   }, [loadActiveSession, userId]);
 
-  const closeEntry = useCallback(async (entry: ClientSessionEntry, endTime: string) => {
-    const durationSeconds = formatDurationSeconds(entry.started_at, endTime);
-    await supabase
-      .from("client_session_entries")
-      .update({ ended_at: endTime, duration_seconds: durationSeconds })
-      .eq("id", entry.id);
-    return durationSeconds;
-  }, []);
+  const closeEntry = useCallback(
+    async (
+      entry: ClientSessionEntry,
+      endTime: string,
+      session: ClientSession | null,
+    ) => {
+      const durationSeconds = formatDurationSeconds(entry.started_at, endTime);
+      await supabase
+        .from("client_session_entries")
+        .update({ ended_at: endTime, duration_seconds: durationSeconds })
+        .eq("id", entry.id);
+
+      if (session && durationSeconds > 0) {
+        await supabase.from("time_entries").insert([
+          {
+            task_id: entry.task_id,
+            client_id: session.client_id,
+            va_id: session.va_id,
+            started_at: entry.started_at,
+            ended_at: endTime,
+            duration_minutes: durationSeconds / 60,
+          },
+        ]);
+      }
+
+      return durationSeconds;
+    },
+    [],
+  );
 
   const stopSession = useCallback(async () => {
     if (!activeSession) return;
     const endTime = new Date().toISOString();
 
     if (activeEntry) {
-      await closeEntry(activeEntry, endTime);
+      await closeEntry(activeEntry, endTime, activeSession);
     }
 
     await supabase
@@ -213,7 +234,7 @@ export function ClientSessionProvider({ children }: { children: React.ReactNode 
       const startTime = new Date().toISOString();
 
       if (activeEntry) {
-        await closeEntry(activeEntry, startTime);
+      await closeEntry(activeEntry, startTime, activeSession);
         lastClosedEntryRef.current = activeEntry;
       }
 
@@ -237,7 +258,7 @@ export function ClientSessionProvider({ children }: { children: React.ReactNode 
   const stopActiveTaskEntry = useCallback(async () => {
     if (!activeSession || !activeEntry || !activeEntry.task_id) return;
     const endTime = new Date().toISOString();
-    await closeEntry(activeEntry, endTime);
+    await closeEntry(activeEntry, endTime, activeSession);
 
     const { data: entryData } = await supabase
       .from("client_session_entries")
