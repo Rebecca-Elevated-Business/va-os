@@ -13,6 +13,8 @@ export interface Task {
   start_time: string | null;
   end_time?: string | null;
   parent_task_id?: string | null;
+  sort_order?: number | null;
+  created_at?: string;
   details?: string;
   category?: string; // <--- This is the magic line that fixes the errors
   clients?: {

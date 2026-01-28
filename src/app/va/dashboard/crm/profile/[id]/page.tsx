@@ -111,6 +111,10 @@ export default function ClientProfilePage({
   const [deleteClientBusy, setDeleteClientBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [newNote, setNewNote] = useState("");
+  const [isClientInfoOpen, setIsClientInfoOpen] = useState(true);
+  const [isTaskManagerOpen, setIsTaskManagerOpen] = useState(true);
+  const [isDocsOpen, setIsDocsOpen] = useState(true);
+  const [isNotesOpen, setIsNotesOpen] = useState(true);
   const [docTypeFilter, setDocTypeFilter] = useState("all");
   const [docStartDate, setDocStartDate] = useState("");
   const [docEndDate, setDocEndDate] = useState("");
@@ -118,6 +122,7 @@ export default function ClientProfilePage({
     {},
   );
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
+  const [draggingParentId, setDraggingParentId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
 
   // --- DATA FETCHING ---
@@ -438,6 +443,30 @@ export default function ClientProfilePage({
     refreshData();
   };
 
+  const reorderSubtasks = async (parentId: string, targetId: string) => {
+    if (!draggingTaskId || draggingTaskId === targetId) return;
+    if (draggingParentId !== parentId) return;
+    const siblings = subtasksByParent[parentId] || [];
+    const currentIndex = siblings.findIndex((task) => task.id === draggingTaskId);
+    const targetIndex = siblings.findIndex((task) => task.id === targetId);
+    if (currentIndex === -1 || targetIndex === -1) return;
+    const reordered = [...siblings];
+    const [moved] = reordered.splice(currentIndex, 1);
+    reordered.splice(targetIndex, 0, moved);
+    await Promise.all(
+      reordered.map((task, index) =>
+        supabase
+          .from("tasks")
+          .update({ sort_order: index + 1 })
+          .eq("id", task.id),
+      ),
+    );
+    setDraggingTaskId(null);
+    setDraggingParentId(null);
+    setDropTargetId(null);
+    refreshData();
+  };
+
   const handleCloseTaskModal = async () => {
     if (taskModalTask && activeEntry?.task_id === taskModalTask.id) {
       const duration = getActiveEntryDurationSeconds();
@@ -573,7 +602,19 @@ export default function ClientProfilePage({
   const visibleTasks = tasks.filter((t) =>
     showCompleted ? true : !t.is_completed,
   );
-  const topLevelTasks = visibleTasks.filter((task) => !task.parent_task_id);
+  const orderTasks = (items: Task[]) =>
+    [...items].sort((a, b) => {
+      const orderA = a.sort_order ?? Number.MAX_SAFE_INTEGER;
+      const orderB = b.sort_order ?? Number.MAX_SAFE_INTEGER;
+      if (orderA !== orderB) return orderA - orderB;
+      const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return timeA - timeB;
+    });
+
+  const topLevelTasks = orderTasks(
+    visibleTasks.filter((task) => !task.parent_task_id),
+  );
   const subtasksByParent = visibleTasks.reduce<Record<string, Task[]>>(
     (acc, task) => {
       if (!task.parent_task_id) return acc;
@@ -583,6 +624,9 @@ export default function ClientProfilePage({
     },
     {},
   );
+  Object.keys(subtasksByParent).forEach((parentId) => {
+    subtasksByParent[parentId] = orderTasks(subtasksByParent[parentId]);
+  });
   const hasSubtasks = (taskId: string) =>
     Boolean(subtasksByParent[taskId]?.length);
   const portalInviteLink = client.portal_invite_link?.trim() || "";
@@ -714,10 +758,18 @@ export default function ClientProfilePage({
 
       {/* 2. CLIENT INFORMATION (Horizontal Layout) */}
       <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <h2 className="text-lg font-bold mb-4 border-b pb-2">
-          Client Information
-        </h2>
-        {isEditing ? (
+        <div className="flex items-center justify-between mb-4 border-b pb-2">
+          <h2 className="text-lg font-bold">Client Information</h2>
+          <button
+            type="button"
+            onClick={() => setIsClientInfoOpen((prev) => !prev)}
+            className="text-xs font-bold text-gray-500 hover:text-[#9d4edd]"
+          >
+            {isClientInfoOpen ? "Hide" : "Show"}
+          </button>
+        </div>
+        {isClientInfoOpen &&
+          (isEditing ? (
           <form
             onSubmit={handleUpdateClient}
             className="flex flex-wrap gap-4 items-end"
@@ -856,13 +908,22 @@ export default function ClientProfilePage({
               {client.price_quoted || "-"}
             </div>
           </div>
-        )}
+        ))}
       </section>
 
       {/* 3. TASK MANAGER (Table Layout) */}
       <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold">Task Manager</h2>
+          <div className="flex items-center gap-4">
+            <h2 className="text-xl font-bold">Task Manager</h2>
+            <button
+              type="button"
+              onClick={() => setIsTaskManagerOpen((prev) => !prev)}
+              className="text-xs font-bold text-gray-500 hover:text-[#9d4edd]"
+            >
+              {isTaskManagerOpen ? "Hide" : "Show"}
+            </button>
+          </div>
           <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
             <input
               type="checkbox"
@@ -874,302 +935,178 @@ export default function ClientProfilePage({
           </label>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
-          <div className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
-              Client Session
+        {isTaskManagerOpen && (
+          <>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+              <div className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                  Client Session
+                </div>
+                <span className="font-mono text-sm text-[#333333]">
+                  {formatHms(sessionElapsedSeconds)}
+                </span>
+                <button
+                  onClick={handleToggleSession}
+                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                    isSessionRunning
+                      ? "bg-red-500 text-white hover:bg-red-600"
+                      : "bg-[#9d4edd] text-white hover:bg-[#7b2cbf]"
+                  }`}
+                >
+                  {isSessionRunning && activeClientId && activeClientId !== id
+                    ? "Switch to this client"
+                    : isSessionRunning
+                      ? "Stop Session"
+                      : "Start Session"}
+                </button>
+              </div>
+              <button
+                onClick={() => openTaskModal()}
+                className="bg-black text-white px-6 py-2 rounded font-bold hover:bg-gray-800"
+              >
+                Add Task
+              </button>
             </div>
-            <span className="font-mono text-sm text-[#333333]">
-              {formatHms(sessionElapsedSeconds)}
-            </span>
-            <button
-              onClick={handleToggleSession}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                isSessionRunning
-                  ? "bg-red-500 text-white hover:bg-red-600"
-                  : "bg-[#9d4edd] text-white hover:bg-[#7b2cbf]"
-              }`}
-            >
-              {isSessionRunning && activeClientId && activeClientId !== id
-                ? "Switch to this client"
-                : isSessionRunning
-                  ? "Stop Session"
-                  : "Start Session"}
-            </button>
-          </div>
-          <button
-            onClick={() => openTaskModal()}
-            className="bg-black text-white px-6 py-2 rounded font-bold hover:bg-gray-800"
-          >
-            Add Task
-          </button>
-        </div>
 
-        {/* Tasks Table */}
-        <div className="overflow-hidden border border-gray-200 rounded-lg">
-          <table className="w-full text-left">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-12 text-center">
-                  Done
-                </th>
-                <th className="px-4 py-3 text-xs font-bold text-gray-400 case">
-                  Task
-                </th>
-                <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-32">
-                  Start Date
-                </th>
-                <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-24 text-center">
-                  Timer
-                </th>
-                <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-24 text-right">
-                  Time
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {visibleTasks.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="p-8 text-center text-gray-400 italic"
-                  >
-                    No tasks found.
-                  </td>
-                </tr>
-              ) : (
-                <>
-                  <tr
-                    onDragOver={(event) => {
-                      if (!draggingTaskId) return;
-                      event.preventDefault();
-                      setDropTargetId("top-level");
-                    }}
-                    onDragLeave={() => setDropTargetId(null)}
-                    onDrop={(event) => {
-                      event.preventDefault();
-                      handleDropToTopLevel();
-                    }}
-                    className={`text-[10px] font-bold uppercase tracking-widest text-gray-400 ${
-                      dropTargetId === "top-level"
-                        ? "bg-purple-50 text-[#9d4edd]"
-                        : ""
-                    }`}
-                  >
-                    <td className="px-4 py-2" colSpan={5}>
-                      Drag here to make top-level
-                    </td>
+            {/* Tasks Table */}
+            <div className="overflow-hidden border border-gray-200 rounded-lg">
+              <table className="w-full text-left">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-12 text-center">
+                      Done
+                    </th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-400 case">
+                      Task
+                    </th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-32">
+                      Start Date
+                    </th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-24 text-center">
+                      Timer
+                    </th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-24 text-right">
+                      Time
+                    </th>
                   </tr>
-                  {topLevelTasks.map((task) => {
-                    const childTasks = subtasksByParent[task.id] || [];
-                    const isExpanded = expandedParents[task.id] ?? true;
-                    const dueDate = task.scheduled_start || task.due_date;
+                </thead>
+                <tbody
+                  className="divide-y divide-gray-100"
+                  onDragOver={(event) => {
+                    if (!draggingTaskId || !draggingParentId) return;
+                    event.preventDefault();
+                  }}
+                  onDrop={(event) => {
+                    if (!draggingTaskId || !draggingParentId) return;
+                    event.preventDefault();
+                    handleDropToTopLevel();
+                  }}
+                >
+                  {visibleTasks.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="p-8 text-center text-gray-400 italic"
+                      >
+                        No tasks found.
+                      </td>
+                    </tr>
+                  ) : (
+                    <>
+                      {topLevelTasks.map((task) => {
+                        const childTasks = subtasksByParent[task.id] || [];
+                        const isExpanded = expandedParents[task.id] ?? true;
+                        const dueDate = task.scheduled_start || task.due_date;
 
-                    return (
-                      <Fragment key={task.id}>
-                        <tr
-                          draggable
-                          onDragStart={() => setDraggingTaskId(task.id)}
-                          onDragEnd={() => {
-                            setDraggingTaskId(null);
-                            setDropTargetId(null);
-                          }}
-                          onDragOver={(event) => {
-                            if (!draggingTaskId || draggingTaskId === task.id)
-                              return;
-                            event.preventDefault();
-                            setDropTargetId(task.id);
-                          }}
-                          onDragLeave={() => {
-                            if (dropTargetId === task.id) {
-                              setDropTargetId(null);
-                            }
-                          }}
-                          onDrop={(event) => {
-                            event.preventDefault();
-                            handleDropOnParent(task.id);
-                          }}
-                          className={`group hover:bg-gray-50 transition-colors ${
-                            task.is_completed ? "bg-gray-50 opacity-60" : ""
-                          } ${
-                            dropTargetId === task.id
-                              ? "bg-purple-50/80 ring-1 ring-purple-100"
-                              : ""
-                          }`}
-                          onClick={() => openTaskModal(task)}
-                        >
-                          {/* 1. CHECKBOX */}
-                          <td className="px-4 py-3 text-center">
-                            <input
-                              type="checkbox"
-                              checked={task.is_completed}
-                              onChange={(event) => {
-                                event.stopPropagation();
-                                toggleComplete(task);
+                        return (
+                          <Fragment key={task.id}>
+                            <tr
+                              draggable
+                              onDragStart={() => {
+                                setDraggingTaskId(task.id);
+                                setDraggingParentId(task.parent_task_id || null);
                               }}
-                              className="w-5 h-5 text-[#9d4edd] rounded focus:ring-[#9d4edd] cursor-pointer"
-                            />
-                          </td>
-
-                          {/* 2. TASK NAME */}
-                          <td className="px-4 py-3">
-                            <div className="flex items-start gap-2">
-                              {hasSubtasks(task.id) ? (
-                                <button
-                                  type="button"
-                                  onClick={(event) => {
+                              onDragEnd={() => {
+                                setDraggingTaskId(null);
+                                setDraggingParentId(null);
+                                setDropTargetId(null);
+                              }}
+                              onDragOver={(event) => {
+                                if (
+                                  !draggingTaskId ||
+                                  draggingTaskId === task.id
+                                )
+                                  return;
+                                event.preventDefault();
+                                setDropTargetId(task.id);
+                              }}
+                              onDragLeave={() => {
+                                if (dropTargetId === task.id) {
+                                  setDropTargetId(null);
+                                }
+                              }}
+                              onDrop={(event) => {
+                                event.preventDefault();
+                                handleDropOnParent(task.id);
+                              }}
+                              className={`group hover:bg-gray-50 transition-colors ${
+                                task.is_completed ? "bg-gray-50 opacity-60" : ""
+                              } ${
+                                dropTargetId === task.id
+                                  ? "bg-purple-50/80 ring-1 ring-purple-100"
+                                  : ""
+                              }`}
+                              onClick={() => openTaskModal(task)}
+                            >
+                              {/* 1. CHECKBOX */}
+                              <td className="px-4 py-3 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={task.is_completed}
+                                  onChange={(event) => {
                                     event.stopPropagation();
-                                    toggleParentExpanded(task.id);
+                                    toggleComplete(task);
                                   }}
-                                  className="mt-1 text-gray-400 hover:text-gray-600"
-                                >
-                                  {isExpanded ? (
-                                    <ChevronDown size={14} />
-                                  ) : (
-                                    <ChevronRight size={14} />
-                                  )}
-                                </button>
-                              ) : (
-                                <div className="w-4" />
-                              )}
-                              <div>
-                                <div
-                                  className={`font-medium ${
-                                    task.is_completed
-                                      ? "line-through text-gray-400"
-                                      : ""
-                                  }`}
-                                >
-                                  {task.task_name}
-                                </div>
-                                <div className="flex gap-3 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      openTaskModal(task);
-                                    }}
-                                    className="text-[10px] font-bold text-gray-400 hover:text-[#9d4edd] case tracking-wider"
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      openTaskModal(undefined, {
-                                        parentTaskId: task.id,
-                                      });
-                                    }}
-                                    className="text-[10px] font-bold text-gray-400 hover:text-[#9d4edd] case tracking-wider"
-                                  >
-                                    Add subtask
-                                  </button>
-                                  <button
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      deleteTask(task.id);
-                                    }}
-                                    className="text-[10px] font-bold text-gray-400 hover:text-red-500 case tracking-wider"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          </td>
+                                  className="w-5 h-5 text-[#9d4edd] rounded focus:ring-[#9d4edd] cursor-pointer"
+                                />
+                              </td>
 
-                          {/* 3. DATE */}
-                          <td className="px-4 py-3 text-sm text-gray-500 align-top pt-4">
-                            {dueDate
-                              ? new Date(dueDate).toLocaleDateString("en-GB")
-                              : "-"}
-                          </td>
-
-                          {/* 4. TIMER BUTTON */}
-                          <td className="px-4 py-3 text-center align-top pt-4">
-                            {!task.is_completed && (
-                              <button
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  if (isSessionRunning) return;
-                                  toggleTimer(task);
-                                }}
-                                disabled={isSessionRunning}
-                                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all mx-auto ${
-                                  isSessionRunning
-                                    ? "bg-gray-100 text-gray-300 cursor-not-allowed"
-                                    : task.is_running
-                                      ? "bg-red-100 text-red-600 hover:bg-red-200 animate-pulse"
-                                      : "bg-green-100 text-green-600 hover:bg-green-200"
-                                }`}
-                              >
-                                {task.is_running && !isSessionRunning ? (
-                                  <div className="w-3 h-3 bg-current rounded-sm" />
-                                ) : (
-                                  <div className="w-0 h-0 border-t-[5px] border-t-transparent border-l-8 border-l-current border-b-[5px] border-b-transparent ml-1" />
-                                )}
-                              </button>
-                            )}
-                          </td>
-
-                          {/* 5. TIME DISPLAY */}
-                          <td className="px-4 py-3 text-right font-mono font-bold text-[#9d4edd] align-top pt-4">
-                            {formatTime(task)}
-                          </td>
-                        </tr>
-                        {hasSubtasks(task.id) && isExpanded && (
-                          <>
-                            {childTasks.map((child) => {
-                              const childDue =
-                                child.scheduled_start || child.due_date;
-                              return (
-                                <tr
-                                  key={child.id}
-                                  draggable
-                                  onDragStart={() =>
-                                    setDraggingTaskId(child.id)
-                                  }
-                                  onDragEnd={() => {
-                                    setDraggingTaskId(null);
-                                    setDropTargetId(null);
-                                  }}
-                                  className={`group hover:bg-gray-50 transition-colors ${
-                                    child.is_completed
-                                      ? "bg-gray-50 opacity-60"
-                                      : ""
-                                  }`}
-                                  onClick={() => openTaskModal(child)}
-                                >
-                                  <td className="px-4 py-3 text-center">
-                                    <input
-                                      type="checkbox"
-                                      checked={child.is_completed}
-                                      onChange={(event) => {
+                              {/* 2. TASK NAME */}
+                              <td className="px-4 py-3">
+                                <div className="flex items-start gap-2">
+                                  {hasSubtasks(task.id) ? (
+                                    <button
+                                      type="button"
+                                      onClick={(event) => {
                                         event.stopPropagation();
-                                        toggleComplete(child);
+                                        toggleParentExpanded(task.id);
                                       }}
-                                      className="w-5 h-5 text-[#9d4edd] rounded focus:ring-[#9d4edd] cursor-pointer"
-                                    />
-                                  </td>
-                                  <td className="px-4 py-3">
-                                    <div className="flex items-center gap-2 pl-6">
-                                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                                        Subtask
-                                      </span>
-                                      <span
-                                        className={`font-medium ${
-                                          child.is_completed
-                                            ? "line-through text-gray-400"
-                                            : ""
-                                        }`}
-                                      >
-                                        {child.task_name}
-                                      </span>
+                                      className="mt-1 text-gray-400 hover:text-gray-600"
+                                    >
+                                      {isExpanded ? (
+                                        <ChevronDown size={14} />
+                                      ) : (
+                                        <ChevronRight size={14} />
+                                      )}
+                                    </button>
+                                  ) : (
+                                    <div className="w-4" />
+                                  )}
+                                  <div>
+                                    <div
+                                      className={`font-medium ${
+                                        task.is_completed
+                                          ? "line-through text-gray-400"
+                                          : ""
+                                      }`}
+                                    >
+                                      {task.task_name}
                                     </div>
-                                    <div className="flex gap-3 mt-1 pl-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="flex gap-3 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                       <button
                                         onClick={(event) => {
                                           event.stopPropagation();
-                                          openTaskModal(child);
+                                          openTaskModal(task);
                                         }}
                                         className="text-[10px] font-bold text-gray-400 hover:text-[#9d4edd] case tracking-wider"
                                       >
@@ -1178,63 +1115,224 @@ export default function ClientProfilePage({
                                       <button
                                         onClick={(event) => {
                                           event.stopPropagation();
-                                          deleteTask(child.id);
+                                          openTaskModal(undefined, {
+                                            parentTaskId: task.id,
+                                          });
+                                        }}
+                                        className="text-[10px] font-bold text-gray-400 hover:text-[#9d4edd] case tracking-wider"
+                                      >
+                                        Add subtask
+                                      </button>
+                                      <button
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+                                          deleteTask(task.id);
                                         }}
                                         className="text-[10px] font-bold text-gray-400 hover:text-red-500 case tracking-wider"
                                       >
                                         Delete
                                       </button>
                                     </div>
-                                  </td>
-                                  <td className="px-4 py-3 text-sm text-gray-500 align-top pt-4">
-                                    {childDue
-                                      ? new Date(childDue).toLocaleDateString(
-                                          "en-GB",
-                                        )
-                                      : "-"}
-                                  </td>
-                                  <td className="px-4 py-3 text-center align-top pt-4">
-                                    {!child.is_completed && (
-                                      <button
-                                        onClick={(event) => {
-                                          event.stopPropagation();
-                                          if (isSessionRunning) return;
-                                          toggleTimer(child);
-                                        }}
-                                        disabled={isSessionRunning}
-                                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all mx-auto ${
-                                          isSessionRunning
-                                            ? "bg-gray-100 text-gray-300 cursor-not-allowed"
-                                            : child.is_running
-                                              ? "bg-red-100 text-red-600 hover:bg-red-200 animate-pulse"
-                                              : "bg-green-100 text-green-600 hover:bg-green-200"
-                                        }`}
-                                      >
-                                        {child.is_running &&
-                                        !isSessionRunning ? (
-                                          <div className="w-3 h-3 bg-current rounded-sm" />
-                                        ) : (
-                                          <div className="w-0 h-0 border-t-[5px] border-t-transparent border-l-8 border-l-current border-b-[5px] border-b-transparent ml-1" />
-                                        )}
-                                      </button>
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* 3. DATE */}
+                              <td className="px-4 py-3 text-sm text-gray-500 align-top pt-4">
+                                {dueDate
+                                  ? new Date(dueDate).toLocaleDateString("en-GB")
+                                  : "-"}
+                              </td>
+
+                              {/* 4. TIMER BUTTON */}
+                              <td className="px-4 py-3 text-center align-top pt-4">
+                                {!task.is_completed && (
+                                  <button
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      if (isSessionRunning) return;
+                                      toggleTimer(task);
+                                    }}
+                                    disabled={isSessionRunning}
+                                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all mx-auto ${
+                                      isSessionRunning
+                                        ? "bg-gray-100 text-gray-300 cursor-not-allowed"
+                                        : task.is_running
+                                          ? "bg-red-100 text-red-600 hover:bg-red-200 animate-pulse"
+                                          : "bg-green-100 text-green-600 hover:bg-green-200"
+                                    }`}
+                                  >
+                                    {task.is_running && !isSessionRunning ? (
+                                      <div className="w-3 h-3 bg-current rounded-sm" />
+                                    ) : (
+                                      <div className="w-0 h-0 border-t-[5px] border-t-transparent border-l-8 border-l-current border-b-[5px] border-b-transparent ml-1" />
                                     )}
-                                  </td>
-                                  <td className="px-4 py-3 text-right font-mono font-bold text-[#9d4edd] align-top pt-4">
-                                    {formatTime(child)}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </>
-                        )}
-                      </Fragment>
-                    );
-                  })}
-                </>
-              )}
-            </tbody>
-          </table>
-        </div>
+                                  </button>
+                                )}
+                              </td>
+
+                              {/* 5. TIME DISPLAY */}
+                              <td className="px-4 py-3 text-right font-mono font-bold text-[#9d4edd] align-top pt-4">
+                                {formatTime(task)}
+                              </td>
+                            </tr>
+                            {hasSubtasks(task.id) && isExpanded && (
+                              <>
+                                {childTasks.map((child) => {
+                                  const childDue =
+                                    child.scheduled_start || child.due_date;
+                                  return (
+                                    <tr
+                                      key={child.id}
+                                      draggable
+                                      onDragStart={() => {
+                                        setDraggingTaskId(child.id);
+                                        setDraggingParentId(
+                                          child.parent_task_id || null,
+                                        );
+                                      }}
+                                      onDragEnd={() => {
+                                        setDraggingTaskId(null);
+                                        setDraggingParentId(null);
+                                        setDropTargetId(null);
+                                      }}
+                                      onDragOver={(event) => {
+                                        if (
+                                          !draggingTaskId ||
+                                          draggingParentId !==
+                                            child.parent_task_id
+                                        )
+                                          return;
+                                        event.preventDefault();
+                                        setDropTargetId(child.id);
+                                      }}
+                                      onDragLeave={() => {
+                                        if (dropTargetId === child.id) {
+                                          setDropTargetId(null);
+                                        }
+                                      }}
+                                      onDrop={(event) => {
+                                        if (
+                                          !draggingTaskId ||
+                                          draggingParentId !==
+                                            child.parent_task_id
+                                        )
+                                          return;
+                                        event.preventDefault();
+                                        reorderSubtasks(
+                                          child.parent_task_id || "",
+                                          child.id,
+                                        );
+                                      }}
+                                      className={`group hover:bg-gray-50 transition-colors ${
+                                        child.is_completed
+                                          ? "bg-gray-50 opacity-60"
+                                          : ""
+                                      } ${
+                                        dropTargetId === child.id
+                                          ? "bg-purple-50/80 ring-1 ring-purple-100"
+                                          : ""
+                                      }`}
+                                      onClick={() => openTaskModal(child)}
+                                    >
+                                      <td className="px-4 py-3 text-center">
+                                        <input
+                                          type="checkbox"
+                                          checked={child.is_completed}
+                                          onChange={(event) => {
+                                            event.stopPropagation();
+                                            toggleComplete(child);
+                                          }}
+                                          className="w-5 h-5 text-[#9d4edd] rounded focus:ring-[#9d4edd] cursor-pointer"
+                                        />
+                                      </td>
+                                      <td className="px-4 py-3">
+                                        <div className="flex items-center gap-2 pl-6">
+                                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                            Subtask
+                                          </span>
+                                          <span
+                                            className={`font-medium ${
+                                              child.is_completed
+                                                ? "line-through text-gray-400"
+                                                : ""
+                                            }`}
+                                          >
+                                            {child.task_name}
+                                          </span>
+                                        </div>
+                                        <div className="flex gap-3 mt-1 pl-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                                          <button
+                                            onClick={(event) => {
+                                              event.stopPropagation();
+                                              openTaskModal(child);
+                                            }}
+                                            className="text-[10px] font-bold text-gray-400 hover:text-[#9d4edd] case tracking-wider"
+                                          >
+                                            Edit
+                                          </button>
+                                          <button
+                                            onClick={(event) => {
+                                              event.stopPropagation();
+                                              deleteTask(child.id);
+                                            }}
+                                            className="text-[10px] font-bold text-gray-400 hover:text-red-500 case tracking-wider"
+                                          >
+                                            Delete
+                                          </button>
+                                        </div>
+                                      </td>
+                                      <td className="px-4 py-3 text-sm text-gray-500 align-top pt-4">
+                                        {childDue
+                                          ? new Date(
+                                              childDue,
+                                            ).toLocaleDateString("en-GB")
+                                          : "-"}
+                                      </td>
+                                      <td className="px-4 py-3 text-center align-top pt-4">
+                                        {!child.is_completed && (
+                                          <button
+                                            onClick={(event) => {
+                                              event.stopPropagation();
+                                              if (isSessionRunning) return;
+                                              toggleTimer(child);
+                                            }}
+                                            disabled={isSessionRunning}
+                                            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all mx-auto ${
+                                              isSessionRunning
+                                                ? "bg-gray-100 text-gray-300 cursor-not-allowed"
+                                                : child.is_running
+                                                  ? "bg-red-100 text-red-600 hover:bg-red-200 animate-pulse"
+                                                  : "bg-green-100 text-green-600 hover:bg-green-200"
+                                            }`}
+                                          >
+                                            {child.is_running &&
+                                            !isSessionRunning ? (
+                                              <div className="w-3 h-3 bg-current rounded-sm" />
+                                            ) : (
+                                              <div className="w-0 h-0 border-t-[5px] border-t-transparent border-l-8 border-l-current border-b-[5px] border-b-transparent ml-1" />
+                                            )}
+                                          </button>
+                                        )}
+                                      </td>
+                                      <td className="px-4 py-3 text-right font-mono font-bold text-[#9d4edd] align-top pt-4">
+                                        {formatTime(child)}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </>
+                            )}
+                          </Fragment>
+                        );
+                      })}
+                    </>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </section>
       <TaskModal
         key={`${client.id}-${taskModalTask?.id || "new"}-${
@@ -1264,9 +1362,18 @@ export default function ClientProfilePage({
       {/* SERVICE AGREEMENTS SECTION */}
       <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-6 border-b border-gray-100 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between bg-gray-50">
-          <h2 className="text-xl font-bold text-gray-800">
-            Documents & Workflows
-          </h2>
+          <div className="flex items-center gap-4">
+            <h2 className="text-xl font-bold text-gray-800">
+              Documents & Workflows
+            </h2>
+            <button
+              type="button"
+              onClick={() => setIsDocsOpen((prev) => !prev)}
+              className="text-xs font-bold text-gray-500 hover:text-[#9d4edd]"
+            >
+              {isDocsOpen ? "Hide" : "Show"}
+            </button>
+          </div>
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
               <label htmlFor="doc-type-filter">Type</label>
@@ -1317,84 +1424,166 @@ export default function ClientProfilePage({
             </button>
           </div>
         </div>
-        <div className="p-0">
-          <table className="w-full text-left">
-            <tbody className="divide-y divide-gray-100">
-              {/* --- NEW DOCUMENTS LIST --- */}
-              {hasDocuments &&
-                filteredDocuments.map((doc) => {
-                  const DocIcon = documentIcon(doc.type);
-                  return (
-                    <tr
-                      key={doc.id}
-                      className="hover:bg-purple-50/30 transition-colors"
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <DocIcon size={18} className="text-[#333333]" />
-                          <div>
-                            <div className="font-bold text-black">
-                              {doc.title}
-                            </div>
-                            <div className="text-[10px] text-gray-400 case tracking-widest">
-                              {doc.type.replace("_", " ")}
+        {isDocsOpen && (
+          <div className="p-0">
+            <table className="w-full text-left">
+              <tbody className="divide-y divide-gray-100">
+                {/* --- NEW DOCUMENTS LIST --- */}
+                {hasDocuments &&
+                  filteredDocuments.map((doc) => {
+                    const DocIcon = documentIcon(doc.type);
+                    return (
+                      <tr
+                        key={doc.id}
+                        className="hover:bg-purple-50/30 transition-colors"
+                      >
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <DocIcon size={18} className="text-[#333333]" />
+                            <div>
+                              <div className="font-bold text-black">
+                                {doc.title}
+                              </div>
+                              <div className="text-[10px] text-gray-400 case tracking-widest">
+                                {doc.type.replace("_", " ")}
+                              </div>
                             </div>
                           </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <div
+                              className={`w-3 h-3 rounded-full ${
+                                doc.status === "draft"
+                                  ? "bg-red-500"
+                                  : "bg-green-500"
+                              }`}
+                            />
+                            <span className="text-[10px] font-black case text-gray-600">
+                              {doc.status}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-right flex justify-end gap-4 items-center">
+                          {/* REVOKE LINK: Only shows if NOT a draft */}
+                          {doc.status !== "draft" && (
+                            <button
+                              onClick={() => revokeDocument(doc.id)}
+                              className="text-[10px] font-bold text-orange-500 hover:underline case"
+                            >
+                              Revoke
+                            </button>
+                          )}
+
+                          <button
+                            onClick={() => {
+                              const routeSuffix =
+                                doc.type === "proposal"
+                                  ? "proposal"
+                                  : doc.type === "invoice"
+                                    ? "invoice"
+                                    : doc.type === "booking_form"
+                                      ? "booking_form"
+                                      : doc.type === "upload"
+                                        ? "upload"
+                                        : "";
+                              router.push(
+                                routeSuffix
+                                  ? `/va/dashboard/documents/edit-${routeSuffix}/${doc.id}`
+                                  : `/va/dashboard/documents/edit/${doc.id}`,
+                              );
+                            }}
+                            className="text-xs font-bold text-[#9d4edd] hover:underline"
+                          >
+                            {doc.status === "draft" ? "Edit & Issue" : "View"}
+                          </button>
+
+                          {/* RUBBISH BIN ICON */}
+                          <button
+                            onClick={() => deleteDocument(doc.id)}
+                            className="text-gray-300 hover:text-red-500 transition-colors"
+                            title="Delete Document"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                            </svg>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                {hasAgreements &&
+                  filteredAgreements.map((ag) => (
+                    <tr
+                      key={ag.id}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="px-6 py-4">
+                        <div className="font-bold text-black">{ag.title}</div>
+                        <div className="text-xs text-gray-500">
+                          Updated:{" "}
+                          {new Date(ag.last_updated_at).toLocaleDateString(
+                            "en-GB",
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4">
+                        {/* TRAFFIC LIGHT STATUS INDICATORS */}
                         <div className="flex items-center gap-2">
                           <div
                             className={`w-3 h-3 rounded-full ${
-                              doc.status === "draft"
+                              ag.status === "draft"
                                 ? "bg-red-500"
-                                : "bg-green-500"
+                                : ag.status === "pending_client"
+                                  ? "bg-yellow-400"
+                                  : "bg-green-500"
                             }`}
                           />
-                          <span className="text-[10px] font-black case text-gray-600">
-                            {doc.status}
+                          <span className="text-[10px] font-black case tracking-tighter text-gray-600">
+                            {ag.status === "draft"
+                              ? "Draft"
+                              : ag.status === "pending_client"
+                                ? "Issued - Pending"
+                                : "Authorised"}
                           </span>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-right flex justify-end gap-4 items-center">
                         {/* REVOKE LINK: Only shows if NOT a draft */}
-                        {doc.status !== "draft" && (
+                        {ag.status !== "draft" && (
                           <button
-                            onClick={() => revokeDocument(doc.id)}
+                            onClick={() => revokeAgreement(ag.id)}
                             className="text-[10px] font-bold text-orange-500 hover:underline case"
                           >
                             Revoke
                           </button>
                         )}
-
                         <button
-                          onClick={() => {
-                            const routeSuffix =
-                              doc.type === "proposal"
-                                ? "proposal"
-                                : doc.type === "invoice"
-                                  ? "invoice"
-                                  : doc.type === "booking_form"
-                                    ? "booking_form"
-                                    : doc.type === "upload"
-                                      ? "upload"
-                                      : "";
+                          onClick={() =>
                             router.push(
-                              routeSuffix
-                                ? `/va/dashboard/documents/edit-${routeSuffix}/${doc.id}`
-                                : `/va/dashboard/documents/edit/${doc.id}`,
-                            );
-                          }}
+                              `/va/dashboard/workflows/portal-view/${ag.id}`,
+                            )
+                          }
                           className="text-xs font-bold text-[#9d4edd] hover:underline"
                         >
-                          {doc.status === "draft" ? "Edit & Issue" : "View"}
+                          {ag.status === "draft"
+                            ? "Review & Issue"
+                            : "View Document"}
                         </button>
-
-                        {/* RUBBISH BIN ICON */}
                         <button
-                          onClick={() => deleteDocument(doc.id)}
+                          onClick={() => deleteAgreement(ag.id)}
                           className="text-gray-300 hover:text-red-500 transition-colors"
-                          title="Delete Document"
+                          title="Delete Agreement"
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -1412,124 +1601,57 @@ export default function ClientProfilePage({
                         </button>
                       </td>
                     </tr>
-                  );
-                })}
-              {hasAgreements &&
-                filteredAgreements.map((ag) => (
-                  <tr
-                    key={ag.id}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-black">{ag.title}</div>
-                      <div className="text-xs text-gray-500">
-                        Updated:{" "}
-                        {new Date(ag.last_updated_at).toLocaleDateString(
-                          "en-GB",
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      {/* TRAFFIC LIGHT STATUS INDICATORS */}
-                      <div className="flex items-center gap-2">
-                        <div
-                          className={`w-3 h-3 rounded-full ${
-                            ag.status === "draft"
-                              ? "bg-red-500"
-                              : ag.status === "pending_client"
-                                ? "bg-yellow-400"
-                                : "bg-green-500"
-                          }`}
-                        />
-                        <span className="text-[10px] font-black case tracking-tighter text-gray-600">
-                          {ag.status === "draft"
-                            ? "Draft"
-                            : ag.status === "pending_client"
-                              ? "Issued - Pending"
-                              : "Authorised"}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-right flex justify-end gap-4 items-center">
-                      {/* REVOKE LINK: Only shows if NOT a draft */}
-                      {ag.status !== "draft" && (
-                        <button
-                          onClick={() => revokeAgreement(ag.id)}
-                          className="text-[10px] font-bold text-orange-500 hover:underline case"
-                        >
-                          Revoke
-                        </button>
-                      )}
-                      <button
-                        onClick={() =>
-                          router.push(
-                            `/va/dashboard/workflows/portal-view/${ag.id}`,
-                          )
-                        }
-                        className="text-xs font-bold text-[#9d4edd] hover:underline"
-                      >
-                        {ag.status === "draft"
-                          ? "Review & Issue"
-                          : "View Document"}
-                      </button>
-                      <button
-                        onClick={() => deleteAgreement(ag.id)}
-                        className="text-gray-300 hover:text-red-500 transition-colors"
-                        title="Delete Agreement"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                        </svg>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       {/* 4. NOTES (Sticky Bottom) */}
       <section className="bg-white p-6 rounded-xl shadow-lg border-t-4 border-[#9d4edd] flex flex-col h-96">
-        <h2 className="text-lg font-bold mb-4">Internal Confidential Notes</h2>
-        <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-2">
-          {notes.map((note) => (
-            <div
-              key={note.id}
-              className="bg-gray-50 p-3 rounded-lg border border-gray-100"
-            >
-              <p className="text-sm text-gray-800">{note.content}</p>
-              <span className="text-[10px] text-gray-400 mt-2 block">
-                {new Date(note.created_at).toLocaleString("en-GB")}
-              </span>
-            </div>
-          ))}
-        </div>
-        <div className="flex gap-2">
-          <input
-            className="flex-1 border rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-[#9d4edd] text-black"
-            placeholder="Type a new internal note..."
-            value={newNote}
-            onChange={(e) => setNewNote(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && addNote()}
-          />
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold">Internal Notes</h2>
           <button
-            onClick={addNote}
-            className="bg-[#9d4edd] text-white px-6 py-2 rounded-lg font-bold hover:bg-[#7b2cbf]"
+            type="button"
+            onClick={() => setIsNotesOpen((prev) => !prev)}
+            className="text-xs font-bold text-gray-500 hover:text-[#9d4edd]"
           >
-            Save Note
+            {isNotesOpen ? "Hide" : "Show"}
           </button>
         </div>
+        {isNotesOpen && (
+          <>
+            <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-2">
+              {notes.map((note) => (
+                <div
+                  key={note.id}
+                  className="bg-gray-50 p-3 rounded-lg border border-gray-100"
+                >
+                  <p className="text-sm text-gray-800">{note.content}</p>
+                  <span className="text-[10px] text-gray-400 mt-2 block">
+                    {new Date(note.created_at).toLocaleString("en-GB")}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                className="flex-1 border rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-[#9d4edd] text-black"
+                placeholder="Type a new internal note..."
+                value={newNote}
+                onChange={(e) => setNewNote(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addNote()}
+              />
+              <button
+                onClick={addNote}
+                className="bg-[#9d4edd] text-white px-6 py-2 rounded-lg font-bold hover:bg-[#7b2cbf]"
+              >
+                Save Note
+              </button>
+            </div>
+          </>
+        )}
       </section>
     </div>
   );
