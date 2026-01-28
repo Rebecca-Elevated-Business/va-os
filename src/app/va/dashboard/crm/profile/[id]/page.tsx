@@ -9,6 +9,9 @@ import {
   ChevronRight,
   FileSignature,
   FileText,
+  MoreHorizontal,
+  Edit2,
+  Trash2,
   ReceiptText,
 } from "lucide-react";
 import TaskModal from "../../../tasks/TaskModal";
@@ -138,6 +141,10 @@ export default function ClientProfilePage({
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [draggingParentId, setDraggingParentId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const [actionMenuId, setActionMenuId] = useState<string | null>(null);
+  const [collapsedStatus, setCollapsedStatus] = useState<Record<string, boolean>>(
+    { completed: true },
+  );
   const [activeTab, setActiveTab] = useState<CrmTabId>("overview");
 
   // --- DATA FETCHING ---
@@ -180,6 +187,16 @@ export default function ClientProfilePage({
       active = false;
     };
   }, [id, refreshData]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!(event.target as Element).closest(".action-menu-trigger")) {
+        setActionMenuId(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     async function fetchAgreements() {
@@ -699,6 +716,7 @@ export default function ClientProfilePage({
     if (statusFilter !== "all" && status !== statusFilter) return false;
     return true;
   });
+  const statusOrder = ["todo", "up_next", "in_progress", "completed"];
   const orderTasks = (items: Task[]) =>
     [...items].sort((a, b) => {
       const orderA = a.sort_order ?? Number.MAX_SAFE_INTEGER;
@@ -712,6 +730,14 @@ export default function ClientProfilePage({
   const topLevelTasks = orderTasks(
     visibleTasks.filter((task) => !task.parent_task_id),
   );
+  const groupedTasks = statusOrder
+    .map((status) => ({
+      status,
+      items: topLevelTasks.filter(
+        (task) => getTaskStatus(task) === status,
+      ),
+    }))
+    .filter((group) => group.items.length > 0);
   const subtasksByParent = visibleTasks.reduce<Record<string, Task[]>>(
     (acc, task) => {
       if (!task.parent_task_id) return acc;
@@ -1379,9 +1405,6 @@ export default function ClientProfilePage({
                 <table className="w-full text-left">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-28 text-center">
-                        Status
-                      </th>
                       <th className="px-4 py-3 text-xs font-bold text-gray-400 case">
                         Task
                       </th>
@@ -1397,6 +1420,9 @@ export default function ClientProfilePage({
                       <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-24 text-right">
                         Time Count
                       </th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-12 text-right">
+                        &nbsp;
+                      </th>
                     </tr>
                   </thead>
                   <tbody
@@ -1411,7 +1437,7 @@ export default function ClientProfilePage({
                       handleDropToTopLevel();
                     }}
                   >
-                    {visibleTasks.length === 0 ? (
+                    {groupedTasks.length === 0 ? (
                       <tr>
                         <td
                           colSpan={6}
@@ -1422,17 +1448,68 @@ export default function ClientProfilePage({
                       </tr>
                     ) : (
                       <>
-                        {topLevelTasks.map((task) => {
-                          const childTasks = subtasksByParent[task.id] || [];
-                          const isExpanded = expandedParents[task.id] ?? true;
-                          const dueDate = task.scheduled_start || task.due_date;
-                          const statusValue = getTaskStatus(task);
-                          const endDate =
-                            task.scheduled_end ||
-                            (task.scheduled_start ? null : task.due_date);
-
+                        {groupedTasks.map((group) => {
+                          const statusConfig =
+                            STATUS_CONFIG[group.status] ||
+                            STATUS_CONFIG["todo"];
+                          const isCollapsed =
+                            collapsedStatus[group.status] || false;
                           return (
-                            <Fragment key={task.id}>
+                            <Fragment key={group.status}>
+                              <tr className="bg-gray-50/70">
+                                <td
+                                  colSpan={6}
+                                  className="px-4 py-2 text-xs font-semibold text-gray-600"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setCollapsedStatus((prev) => ({
+                                          ...prev,
+                                          [group.status]: !isCollapsed,
+                                        }))
+                                      }
+                                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                                      aria-label={`Toggle ${statusConfig.label}`}
+                                    >
+                                      {isCollapsed ? (
+                                        <ChevronRight size={14} />
+                                      ) : (
+                                        <ChevronDown size={14} />
+                                      )}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setCollapsedStatus((prev) => ({
+                                          ...prev,
+                                          [group.status]: !isCollapsed,
+                                        }))
+                                      }
+                                      className="text-left"
+                                    >
+                                      {statusConfig.label} (
+                                      {group.items.length})
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                              {!isCollapsed &&
+                                group.items.map((task) => {
+                                  const childTasks =
+                                    subtasksByParent[task.id] || [];
+                                  const isExpanded =
+                                    expandedParents[task.id] ?? true;
+                                  const dueDate =
+                                  task.scheduled_start || task.due_date;
+                                const statusValue = getTaskStatus(task);
+                                const endDate =
+                                  task.scheduled_end ||
+                                  (task.scheduled_start ? null : task.due_date);
+
+                                  return (
+                                    <Fragment key={task.id}>
                               <tr
                                 draggable
                                 onDragStart={() => {
@@ -1480,28 +1557,7 @@ export default function ClientProfilePage({
                                 }`}
                                 onClick={() => openTaskModal(task)}
                               >
-                              {/* 1. STATUS */}
-                              <td className="px-4 py-3 text-center">
-                                <select
-                                  value={statusValue}
-                                  onClick={(event) => event.stopPropagation()}
-                                  onChange={(event) => {
-                                    event.stopPropagation();
-                                    updateTaskStatus(task, event.target.value);
-                                  }}
-                                  className="rounded-md border border-gray-200 bg-white px-2 py-1 text-[10px] font-semibold text-gray-600 focus:ring-2 focus:ring-[#9d4edd] outline-none"
-                                >
-                                  {Object.values(STATUS_CONFIG).map(
-                                    (status) => (
-                                      <option key={status.id} value={status.id}>
-                                        {status.label}
-                                      </option>
-                                    ),
-                                  )}
-                                </select>
-                              </td>
-
-                              {/* 2. TASK NAME */}
+                              {/* 1. TASK NAME */}
                               <td className="px-4 py-3">
                                 <div className="flex items-start gap-2">
                                   {hasSubtasks(task.id) ? (
@@ -1567,14 +1623,14 @@ export default function ClientProfilePage({
                                 </div>
                               </td>
 
-                              {/* 3. START DATE */}
+                              {/* 2. START DATE */}
                               <td className="px-4 py-3 text-xs font-medium text-gray-600 align-top pt-4">
                                 {dueDate
                                   ? new Date(dueDate).toLocaleDateString("en-GB")
                                   : "-"}
                               </td>
 
-                              {/* 4. END DATE */}
+                              {/* 3. END DATE */}
                               <td className="px-4 py-3 text-xs font-medium text-gray-600 align-top pt-4">
                                 {endDate
                                   ? new Date(endDate).toLocaleDateString(
@@ -1583,7 +1639,7 @@ export default function ClientProfilePage({
                                   : "-"}
                               </td>
 
-                              {/* 5. TIMER BUTTON */}
+                              {/* 4. TIMER BUTTON */}
                               <td className="px-4 py-3 text-center align-top pt-4">
                                 {statusValue !== "completed" && (
                                   <button
@@ -1610,9 +1666,79 @@ export default function ClientProfilePage({
                                 )}
                               </td>
 
-                              {/* 6. TIME DISPLAY */}
+                              {/* 5. TIME DISPLAY */}
                               <td className="px-4 py-3 text-right font-mono text-xs text-[#333333] align-top pt-4">
                                 {formatTime(task)}
+                              </td>
+
+                              {/* 6. ACTIONS */}
+                              <td className="px-4 py-3 text-right align-top pt-4">
+                                <div className="relative action-menu-trigger inline-flex justify-end">
+                                  <button
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      setActionMenuId(
+                                        actionMenuId === task.id
+                                          ? null
+                                          : task.id,
+                                      );
+                                    }}
+                                    className="text-[#333333] transition-colors"
+                                    aria-label="Task actions"
+                                  >
+                                    <MoreHorizontal size={18} />
+                                  </button>
+
+                                  {actionMenuId === task.id && (
+                                    <div
+                                      className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-1"
+                                      onClick={(event) => event.stopPropagation()}
+                                    >
+                                      <button
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+                                          openTaskModal(task);
+                                          setActionMenuId(null);
+                                        }}
+                                        className="w-full text-left px-4 py-3 text-xs font-bold text-[#333333] hover:bg-gray-50 flex items-center gap-2"
+                                      >
+                                        <Edit2 size={12} /> Edit
+                                      </button>
+                                      <div className="px-4 pt-3 pb-2 text-[9px] font-semibold text-gray-400 uppercase tracking-widest border-t border-gray-100">
+                                        Move to
+                                      </div>
+                                      {Object.values(STATUS_CONFIG).map(
+                                        (status) => (
+                                          <button
+                                            key={status.id}
+                                            onClick={(event) => {
+                                              event.stopPropagation();
+                                              updateTaskStatus(task, status.id);
+                                              setActionMenuId(null);
+                                            }}
+                                            className={`w-full text-left px-4 py-2 text-xs font-semibold hover:bg-gray-50 ${
+                                              statusValue === status.id
+                                                ? "text-[#333333]"
+                                                : "text-gray-600"
+                                            }`}
+                                          >
+                                            {status.label}
+                                          </button>
+                                        ),
+                                      )}
+                                      <button
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+                                          deleteTask(task.id);
+                                          setActionMenuId(null);
+                                        }}
+                                        className="w-full text-left px-4 py-3 text-xs font-bold text-red-500 hover:bg-red-50 flex items-center gap-2 border-t border-gray-50"
+                                      >
+                                        <Trash2 size={12} /> Delete
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                             {hasSubtasks(task.id) && isExpanded && (
@@ -1680,33 +1806,6 @@ export default function ClientProfilePage({
                                       }`}
                                       onClick={() => openTaskModal(child)}
                                     >
-                                      <td className="px-4 py-3 text-center">
-                                        <select
-                                          value={childStatusValue}
-                                          onClick={(event) =>
-                                            event.stopPropagation()
-                                          }
-                                          onChange={(event) => {
-                                            event.stopPropagation();
-                                            updateTaskStatus(
-                                              child,
-                                              event.target.value,
-                                            );
-                                          }}
-                                          className="rounded-md border border-gray-200 bg-white px-2 py-1 text-[10px] font-semibold text-gray-600 focus:ring-2 focus:ring-[#9d4edd] outline-none"
-                                        >
-                                          {Object.values(STATUS_CONFIG).map(
-                                            (status) => (
-                                              <option
-                                                key={status.id}
-                                                value={status.id}
-                                              >
-                                                {status.label}
-                                              </option>
-                                            ),
-                                          )}
-                                        </select>
-                                      </td>
                                       <td className="px-4 py-3">
                                         <div className="flex items-center gap-2 pl-6">
                                           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
@@ -1786,14 +1885,91 @@ export default function ClientProfilePage({
                                       <td className="px-4 py-3 text-right font-mono text-xs text-[#333333] align-top pt-4">
                                         {formatTime(child)}
                                       </td>
+                                      <td className="px-4 py-3 text-right align-top pt-4">
+                                        <div className="relative action-menu-trigger inline-flex justify-end">
+                                          <button
+                                            onClick={(event) => {
+                                              event.stopPropagation();
+                                              setActionMenuId(
+                                                actionMenuId === child.id
+                                                  ? null
+                                                  : child.id,
+                                              );
+                                            }}
+                                            className="text-[#333333] transition-colors"
+                                            aria-label="Task actions"
+                                          >
+                                            <MoreHorizontal size={18} />
+                                          </button>
+
+                                          {actionMenuId === child.id && (
+                                            <div
+                                              className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-1"
+                                              onClick={(event) =>
+                                                event.stopPropagation()
+                                              }
+                                            >
+                                              <button
+                                                onClick={(event) => {
+                                                  event.stopPropagation();
+                                                  openTaskModal(child);
+                                                  setActionMenuId(null);
+                                                }}
+                                                className="w-full text-left px-4 py-3 text-xs font-bold text-[#333333] hover:bg-gray-50 flex items-center gap-2"
+                                              >
+                                                <Edit2 size={12} /> Edit
+                                              </button>
+                                              <div className="px-4 pt-3 pb-2 text-[9px] font-semibold text-gray-400 uppercase tracking-widest border-t border-gray-100">
+                                                Move to
+                                              </div>
+                                              {Object.values(STATUS_CONFIG).map(
+                                                (status) => (
+                                                  <button
+                                                    key={status.id}
+                                                    onClick={(event) => {
+                                                      event.stopPropagation();
+                                                      updateTaskStatus(
+                                                        child,
+                                                        status.id,
+                                                      );
+                                                      setActionMenuId(null);
+                                                    }}
+                                                    className={`w-full text-left px-4 py-2 text-xs font-semibold hover:bg-gray-50 ${
+                                                      childStatusValue ===
+                                                      status.id
+                                                        ? "text-[#333333]"
+                                                        : "text-gray-600"
+                                                    }`}
+                                                  >
+                                                    {status.label}
+                                                  </button>
+                                                ),
+                                              )}
+                                              <button
+                                                onClick={(event) => {
+                                                  event.stopPropagation();
+                                                  deleteTask(child.id);
+                                                  setActionMenuId(null);
+                                                }}
+                                                className="w-full text-left px-4 py-3 text-xs font-bold text-red-500 hover:bg-red-50 flex items-center gap-2 border-t border-gray-50"
+                                              >
+                                                <Trash2 size={12} /> Delete
+                                              </button>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </td>
                                     </tr>
                                   );
                                 })}
                               </>
                             )}
-                          </Fragment>
-                        );
-                      })}
+                                    </Fragment>
+                                  );
+                                })}
+                            </Fragment>
+                          );
+                        })}
                     </>
                   )}
                 </tbody>
