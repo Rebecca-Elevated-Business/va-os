@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
 import { CheckCircle2, Inbox, Star } from "lucide-react";
+import { usePrompt } from "@/components/ui/PromptProvider";
 
 type InboxMessage = {
   id: string;
@@ -28,6 +29,7 @@ export default function VAInboxPage() {
     "inbox"
   );
   const [selectedMsg, setSelectedMsg] = useState<InboxMessage | null>(null);
+  const { confirm, alert } = usePrompt();
 
   const fetchMessages = useCallback(async () => {
     const { data } = await supabase
@@ -93,14 +95,23 @@ export default function VAInboxPage() {
     ]);
 
     if (!error) {
-      alert("Converted to client task! Message remains in Inbox.");
+      await alert({
+        title: "Task created",
+        message: "Converted to client task! Message remains in Inbox.",
+      });
       // UPDATED: Removed the auto-complete line here so it stays in Inbox
       setSelectedMsg(null);
     }
   };
 
   const deleteMessage = async (msg: InboxMessage) => {
-    if (!confirm("Delete this message permanently?")) return;
+    const ok = await confirm({
+      title: "Delete message?",
+      message: "Delete this message permanently?",
+      confirmLabel: "Delete",
+      tone: "danger",
+    });
+    if (!ok) return;
     const { error } = await supabase
       .from("client_requests")
       .delete()

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import AgreementEditor, {
   Agreement,
 } from "@/app/va/dashboard/workflows/AgreementEditor";
+import { usePrompt } from "@/components/ui/PromptProvider";
 
 export default function EditAgreementPage({
   params,
@@ -14,6 +15,7 @@ export default function EditAgreementPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const { alert } = usePrompt();
 
   const [agreement, setAgreement] = useState<Agreement | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,7 +52,11 @@ export default function EditAgreementPage({
       .eq("id", id);
 
     if (updateError) {
-      alert("Error saving: " + updateError.message);
+      await alert({
+        title: "Error saving",
+        message: `Error saving: ${updateError.message}`,
+        tone: "danger",
+      });
       setSaving(false);
       return;
     }
@@ -65,7 +71,10 @@ export default function EditAgreementPage({
       },
     ]);
 
-    alert("Changes saved successfully.");
+    await alert({
+      title: "Changes saved",
+      message: "Changes saved successfully.",
+    });
     setSaving(false);
   };
 

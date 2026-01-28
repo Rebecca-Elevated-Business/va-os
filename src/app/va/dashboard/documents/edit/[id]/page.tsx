@@ -3,6 +3,7 @@
 import { useState, useEffect, use } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { usePrompt } from "@/components/ui/PromptProvider";
 
 // Define the structure to eliminate 'any'
 type ClientDoc = {
@@ -30,6 +31,7 @@ export default function EditDocumentPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const { alert } = usePrompt();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -67,10 +69,16 @@ export default function EditDocumentPage({
 
     setSaving(false);
     if (!error && isIssuing) {
-      alert("Document Issued to Client!");
+      await alert({
+        title: "Document issued",
+        message: "Document Issued to Client!",
+      });
       router.push(`/va/dashboard/crm/profile/${doc.client_id}`);
     } else if (!error) {
-      alert("Draft Saved.");
+      await alert({
+        title: "Draft saved",
+        message: "Draft Saved.",
+      });
     }
   };
 

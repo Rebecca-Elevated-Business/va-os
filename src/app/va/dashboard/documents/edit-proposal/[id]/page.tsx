@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
+import { usePrompt } from "@/components/ui/PromptProvider";
 import {
   mergeProposalContent,
   type ProposalContent,
@@ -53,6 +54,7 @@ export default function EditProposalPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const { alert } = usePrompt();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -207,7 +209,12 @@ export default function EditProposalPage({
           status: shouldIssue ? "issued" : doc.status,
         });
         if (!silent) {
-          alert(shouldIssue ? "Proposal issued to client!" : "Draft saved.");
+          await alert({
+            title: shouldIssue ? "Proposal issued" : "Draft saved",
+            message: shouldIssue
+              ? "Proposal issued to client!"
+              : "Draft saved.",
+          });
           if (shouldIssue)
             router.push(`/va/dashboard/crm/profile/${doc.client_id}`);
         }

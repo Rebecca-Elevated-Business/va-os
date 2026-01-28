@@ -3,6 +3,7 @@
 import { useState, useEffect, use } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { usePrompt } from "@/components/ui/PromptProvider";
 
 type AgreementValue = string | string[] | undefined;
 
@@ -39,6 +40,7 @@ export default function AgreementPortalView({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const { confirm, alert } = usePrompt();
 
   const [agreement, setAgreement] = useState<Agreement | null>(null);
   const [loading, setLoading] = useState(true);
@@ -97,14 +99,24 @@ export default function AgreementPortalView({
       .update({ custom_structure: agreement.custom_structure })
       .eq("id", id);
 
-    if (!error) alert("Progress saved successfully.");
+    if (!error) {
+      await alert({
+        title: "Progress saved",
+        message: "Progress saved successfully.",
+      });
+    }
     setIsSaving(false);
   };
 
   // 1. VA ISSUE LOGIC (Restored)
   const handlePublish = async () => {
     if (!agreement) return;
-    if (!window.confirm("Issue this to the client portal?")) return;
+    const ok = await confirm({
+      title: "Issue to client?",
+      message: "Issue this to the client portal?",
+      confirmLabel: "Issue",
+    });
+    if (!ok) return;
 
     setIsPublishing(true);
     const { error } = await supabase
@@ -122,7 +134,10 @@ export default function AgreementPortalView({
           change_summary: "VA pre-populated and issued agreement",
         },
       ]);
-      alert("Agreement Issued!");
+      await alert({
+        title: "Agreement issued",
+        message: "Agreement Issued!",
+      });
       router.push(`/va/dashboard/crm/profile/${agreement.client_id}`);
     }
     setIsPublishing(false);
@@ -131,12 +146,14 @@ export default function AgreementPortalView({
   // 3. CLIENT AUTHORISATION LOGIC
   const handleAuthorise = async () => {
     if (!agreement) return;
-    if (
-      !window.confirm(
-        "Are you sure you want to authorise this workflow? This will lock the document and notify your VA."
-      )
-    )
-      return;
+    const ok = await confirm({
+      title: "Authorise workflow?",
+      message:
+        "Are you sure you want to authorise this workflow? This will lock the document and notify your VA.",
+      confirmLabel: "Authorise",
+      tone: "danger",
+    });
+    if (!ok) return;
 
     setIsAuthorising(true);
     const { error } = await supabase
@@ -156,7 +173,10 @@ export default function AgreementPortalView({
         },
       ]);
 
-      alert("Workflow Authorised Successfully.");
+      await alert({
+        title: "Workflow authorised",
+        message: "Workflow Authorised Successfully.",
+      });
       router.push("/client/dashboard");
     }
     setIsAuthorising(false);

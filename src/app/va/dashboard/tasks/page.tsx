@@ -10,6 +10,7 @@ import {
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { addMinutes, format } from "date-fns";
+import { usePrompt } from "@/components/ui/PromptProvider";
 import {
   ChevronDown,
   ChevronRight,
@@ -91,6 +92,7 @@ const normalizeStatusOrder = (order: string[]) => {
 };
 
 export default function TaskCentrePage() {
+  const { confirm } = usePrompt();
   // --- STATE ---
   const [tasks, setTasks] = useState<Task[]>([]);
   const [clients, setClients] = useState<
@@ -352,7 +354,13 @@ export default function TaskCentrePage() {
   };
 
   const deleteTask = async (taskId: string) => {
-    if (!confirm("Delete this task permanently?")) return;
+    const ok = await confirm({
+      title: "Delete task?",
+      message: "Delete this task permanently?",
+      confirmLabel: "Delete",
+      tone: "danger",
+    });
+    if (!ok) return;
     await supabase.from("tasks").delete().eq("id", taskId);
     setTasks((prev) => prev.filter((t) => t.id !== taskId));
     setActionMenuId(null);

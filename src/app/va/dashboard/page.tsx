@@ -5,6 +5,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { Pencil, X } from "lucide-react";
 import { Task } from "./tasks/types";
+import { usePrompt } from "@/components/ui/PromptProvider";
 
 type InboxMessage = {
   id: string;
@@ -65,6 +66,7 @@ const formatUkDate = (value: string) =>
   new Date(value).toLocaleDateString("en-GB");
 
 export default function VADashboard() {
+  const { confirm } = usePrompt();
   const [userId, setUserId] = useState<string | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
   const [agendaDate, setAgendaDate] = useState(getTodayDateString());
@@ -269,9 +271,13 @@ export default function VADashboard() {
   };
 
   const confirmDismissWelcome = async () => {
-    if (window.confirm("Are you sure you want to end the video now?")) {
-      await dismissWelcome();
-    }
+    const ok = await confirm({
+      title: "End video?",
+      message: "Are you sure you want to end the video now?",
+      confirmLabel: "End video",
+      tone: "danger",
+    });
+    if (ok) await dismissWelcome();
   };
 
   return (

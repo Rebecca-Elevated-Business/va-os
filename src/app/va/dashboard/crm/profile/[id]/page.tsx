@@ -3,6 +3,7 @@
 import { useState, useEffect, use, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { usePrompt } from "@/components/ui/PromptProvider";
 import { FileSignature, FileText, ReceiptText } from "lucide-react";
 import TaskModal from "../../../tasks/TaskModal";
 import { Task } from "../../../tasks/types";
@@ -54,6 +55,7 @@ export default function ClientProfilePage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const { confirm } = usePrompt();
 
   // --- STATE ---
   const [client, setClient] = useState<Client | null>(null);
@@ -257,14 +259,26 @@ export default function ClientProfilePage({
   };
   // 6. Delete Task
   const deleteTask = async (taskId: string) => {
-    if (!window.confirm("Are you sure you want to delete this task?")) return;
+    const ok = await confirm({
+      title: "Delete task?",
+      message: "Are you sure you want to delete this task?",
+      confirmLabel: "Delete",
+      tone: "danger",
+    });
+    if (!ok) return;
 
     const { error } = await supabase.from("tasks").delete().eq("id", taskId);
     if (!error) refreshData();
   };
 
   const deleteAgreement = async (agreementId: string) => {
-    if (!confirm("Delete this agreement?")) return;
+    const ok = await confirm({
+      title: "Delete agreement?",
+      message: "Delete this agreement?",
+      confirmLabel: "Delete",
+      tone: "danger",
+    });
+    if (!ok) return;
     const { error } = await supabase
       .from("client_agreements")
       .delete()
@@ -276,12 +290,14 @@ export default function ClientProfilePage({
 
   // New: Function to delete a service agreement
   const revokeAgreement = async (agreementId: string) => {
-    if (
-      !confirm(
+    const ok = await confirm({
+      title: "Revoke agreement?",
+      message:
         "Revoke this agreement? It will return to draft mode and hide from the client.",
-      )
-    )
-      return;
+      confirmLabel: "Revoke",
+      tone: "danger",
+    });
+    if (!ok) return;
     const { error } = await supabase
       .from("client_agreements")
       .update({ status: "draft" })
@@ -296,7 +312,13 @@ export default function ClientProfilePage({
   };
 
   const deleteDocument = async (docId: string) => {
-    if (!confirm("Delete this document permanently?")) return;
+    const ok = await confirm({
+      title: "Delete document?",
+      message: "Delete this document permanently?",
+      confirmLabel: "Delete",
+      tone: "danger",
+    });
+    if (!ok) return;
     const { error } = await supabase
       .from("client_documents")
       .delete()
@@ -305,12 +327,14 @@ export default function ClientProfilePage({
       setClientDocuments(clientDocuments.filter((d) => d.id !== docId));
   };
   const revokeDocument = async (docId: string) => {
-    if (
-      !confirm(
+    const ok = await confirm({
+      title: "Revoke document?",
+      message:
         "Revoke this document? It will disappear from the client portal and return to draft.",
-      )
-    )
-      return;
+      confirmLabel: "Revoke",
+      tone: "danger",
+    });
+    if (!ok) return;
     const { error } = await supabase
       .from("client_documents")
       .update({ status: "draft" })
@@ -416,7 +440,13 @@ export default function ClientProfilePage({
 
   const deleteClient = async () => {
     if (!client || deleteConfirmInput.trim() !== "DELETE") return;
-    if (!confirm("Delete this client permanently?")) return;
+    const ok = await confirm({
+      title: "Delete client?",
+      message: "Delete this client permanently?",
+      confirmLabel: "Delete",
+      tone: "danger",
+    });
+    if (!ok) return;
     setDeleteClientBusy(true);
     await supabase.from("tasks").delete().eq("client_id", id);
     await supabase.from("client_notes").delete().eq("client_id", id);

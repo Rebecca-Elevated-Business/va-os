@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Search } from "lucide-react";
+import { usePrompt } from "@/components/ui/PromptProvider";
 
 type ClientSearchResult = {
   id: string;
@@ -102,6 +103,7 @@ const buildReportName = (clientName: string, from: string, to: string) =>
 
 export default function TimeReportsPage() {
   const router = useRouter();
+  const { confirm } = usePrompt();
   const [userId, setUserId] = useState<string | null>(null);
   const [clientSearch, setClientSearch] = useState("");
   const [clientResults, setClientResults] = useState<ClientSearchResult[]>([]);
@@ -362,8 +364,13 @@ export default function TimeReportsPage() {
   };
 
   const handleDeleteReport = async (reportId: string) => {
-    const confirmed = window.confirm("Delete this report?");
-    if (!confirmed) return;
+    const ok = await confirm({
+      title: "Delete report?",
+      message: "Delete this report?",
+      confirmLabel: "Delete",
+      tone: "danger",
+    });
+    if (!ok) return;
     await supabase.from("time_reports").delete().eq("id", reportId);
     setSavedReports((prev) => prev.filter((report) => report.id !== reportId));
     setArchivedReports((prev) =>

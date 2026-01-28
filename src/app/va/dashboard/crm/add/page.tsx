@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { usePrompt } from "@/components/ui/PromptProvider";
 
 export default function AddClientPage() {
   const router = useRouter();
+  const { alert } = usePrompt();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     first_name: "",
@@ -48,7 +50,11 @@ export default function AddClientPage() {
       .single();
 
     if (clientError) {
-      alert("Error saving client: " + clientError.message);
+      await alert({
+        title: "Error saving client",
+        message: `Error saving client: ${clientError.message}`,
+        tone: "danger",
+      });
       setLoading(false);
       return;
     }

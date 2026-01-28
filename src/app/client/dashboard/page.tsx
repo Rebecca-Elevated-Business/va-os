@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { usePrompt } from "@/components/ui/PromptProvider";
 
 // Define strict types for the dashboard
 type Agreement = {
@@ -21,6 +22,7 @@ type ClientDocument = {
 
 export default function ClientDashboard() {
   const router = useRouter();
+  const { alert } = usePrompt();
   const [loading, setLoading] = useState(true);
 
   // Data State
@@ -108,9 +110,11 @@ export default function ClientDashboard() {
 
     // DEBUG: Alert if ID is missing
     if (!clientId) {
-      alert(
-        `STOP: Cannot send. System does not know your Client ID.\nDebug Info: ${debugInfo}`
-      );
+      await alert({
+        title: "Unable to send request",
+        message: `STOP: Cannot send. System does not know your Client ID.\nDebug Info: ${debugInfo}`,
+        tone: "danger",
+      });
       return;
     }
 
@@ -134,10 +138,17 @@ export default function ClientDashboard() {
     setSending(false);
 
     if (error) {
-      alert("DATABASE ERROR: " + error.message + "\nCode: " + error.code);
+      await alert({
+        title: "Database error",
+        message: `DATABASE ERROR: ${error.message}\nCode: ${error.code}`,
+        tone: "danger",
+      });
       console.error("Insert Error:", error);
     } else {
-      alert("SUCCESS: Request sent to database! Row created.");
+      await alert({
+        title: "Request sent",
+        message: "SUCCESS: Request sent to database! Row created.",
+      });
       setRequestMessage("");
     }
   };

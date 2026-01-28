@@ -21,6 +21,7 @@ import {
   mergeInvoiceContent,
   type InvoiceContent,
 } from "@/lib/invoiceContent";
+import { usePrompt } from "@/components/ui/PromptProvider";
 
 type ClientDoc = {
   id: string;
@@ -92,6 +93,7 @@ export default function ClientDocumentView({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const { alert } = usePrompt();
   const [doc, setDoc] = useState<ClientDoc | null>(null);
   const [loading, setLoading] = useState(true);
   const [responseMode, setResponseMode] = useState<
@@ -215,7 +217,10 @@ export default function ClientDocumentView({
       },
     ]);
 
-    alert("Response recorded! Your VA has been notified.");
+    await alert({
+      title: "Response recorded",
+      message: "Your VA has been notified.",
+    });
     router.push("/client/dashboard");
   };
 
@@ -316,7 +321,10 @@ export default function ClientDocumentView({
       },
     ]);
 
-    alert("Booking form signed and sent to your VA.");
+    await alert({
+      title: "Booking form signed",
+      message: "Booking form signed and sent to your VA.",
+    });
     router.push("/client/dashboard");
   };
 
@@ -338,7 +346,10 @@ export default function ClientDocumentView({
         }`,
       },
     ]);
-    alert("Message sent to your VA.");
+    await alert({
+      title: "Message sent",
+      message: "Message sent to your VA.",
+    });
     router.push("/client/dashboard");
   };
 
@@ -358,7 +369,10 @@ export default function ClientDocumentView({
       },
     ]);
 
-    alert("Marked as paid. Your VA has been notified.");
+    await alert({
+      title: "Marked as paid",
+      message: "Your VA has been notified.",
+    });
     router.push("/client/dashboard");
   };
 

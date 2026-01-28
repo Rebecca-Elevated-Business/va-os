@@ -3,6 +3,7 @@
 import { useState, useEffect, use } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { usePrompt } from "@/components/ui/PromptProvider";
 
 type UploadContent = {
   file_url?: string;
@@ -25,6 +26,7 @@ export default function EditUploadPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const { alert } = usePrompt();
 
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -58,7 +60,11 @@ export default function EditUploadPage({
       .upload(filePath, file);
 
     if (uploadError) {
-      alert("Upload failed: " + uploadError.message);
+      await alert({
+        title: "Upload failed",
+        message: `Upload failed: ${uploadError.message}`,
+        tone: "danger",
+      });
       setUploading(false);
       return;
     }
@@ -77,8 +83,14 @@ export default function EditUploadPage({
   };
 
   const handleSave = async (isIssuing = false) => {
-    if (!doc || !doc.content.file_url)
-      return alert("Please upload a file first.");
+    if (!doc || !doc.content.file_url) {
+      await alert({
+        title: "File required",
+        message: "Please upload a file first.",
+        tone: "danger",
+      });
+      return;
+    }
 
     const { error } = await supabase
       .from("client_documents")
@@ -90,7 +102,10 @@ export default function EditUploadPage({
       .eq("id", id);
 
     if (!error) {
-      alert(isIssuing ? "Document Issued!" : "Draft Saved.");
+      await alert({
+        title: isIssuing ? "Document issued" : "Draft saved",
+        message: isIssuing ? "Document Issued!" : "Draft Saved.",
+      });
       if (isIssuing) router.push(`/va/dashboard/crm/profile/${doc.client_id}`);
     }
   };

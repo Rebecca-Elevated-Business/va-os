@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { usePrompt } from "@/components/ui/PromptProvider";
 import {
   FileText,
   FileSignature,
@@ -45,6 +46,7 @@ const DOCUMENT_TYPES = [
 
 export default function DocumentLibraryPage() {
   const router = useRouter();
+  const { alert } = usePrompt();
   const [selectedType, setSelectedType] = useState<
     (typeof DOCUMENT_TYPES)[0] | null
   >(null);
@@ -123,7 +125,11 @@ export default function DocumentLibraryPage() {
       .single();
 
     if (error || !data) {
-      alert("Error: " + (error?.message || "Unable to create document"));
+      await alert({
+        title: "Error",
+        message: `Error: ${error?.message || "Unable to create document"}`,
+        tone: "danger",
+      });
       return;
     }
 

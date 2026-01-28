@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
+import { usePrompt } from "@/components/ui/PromptProvider";
 import { DOCUMENT_TEMPLATES } from "@/lib/documentTemplates";
 import {
   mergeInvoiceContent,
@@ -71,6 +72,7 @@ export default function EditInvoicePage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const { alert } = usePrompt();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -284,11 +286,20 @@ export default function EditInvoicePage({
           doc.content.client_email,
         ];
         if (requiredFields.some((value) => !String(value || "").trim())) {
-          alert("Please complete all client and invoice details before issuing.");
+          await alert({
+            title: "Missing details",
+            message:
+              "Please complete all client and invoice details before issuing.",
+            tone: "danger",
+          });
           return;
         }
         if (doc.content.show_po && !(doc.content.po_number || "").trim()) {
-          alert("Enter a PO number or disable the PO field.");
+          await alert({
+            title: "PO number required",
+            message: "Enter a PO number or disable the PO field.",
+            tone: "danger",
+          });
           return;
         }
       }
@@ -324,9 +335,17 @@ export default function EditInvoicePage({
         setDoc((prev) => (prev ? { ...prev, status } : prev));
         if (!silent) {
           if (options?.status === "paid") {
-            alert("Invoice marked as paid.");
+            await alert({
+              title: "Invoice marked as paid",
+              message: "Invoice marked as paid.",
+            });
           } else {
-            alert(shouldIssue ? "Invoice issued to client!" : "Draft saved.");
+            await alert({
+              title: shouldIssue ? "Invoice issued" : "Draft saved",
+              message: shouldIssue
+                ? "Invoice issued to client!"
+                : "Draft saved.",
+            });
           }
           if (shouldIssue)
             router.push(`/va/dashboard/crm/profile/${doc.client_id}`);

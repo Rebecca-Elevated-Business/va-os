@@ -8,6 +8,7 @@ import AgreementEditor, {
   Agreement,
   AgreementStructure,
 } from "@/app/va/dashboard/workflows/AgreementEditor";
+import { usePrompt } from "@/components/ui/PromptProvider";
 
 type Client = {
   id: string;
@@ -37,6 +38,7 @@ export default function DeployAgreementPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const { alert } = usePrompt();
 
   // Data State
   const [template, setTemplate] = useState<Template | null>(null);
@@ -107,7 +109,11 @@ export default function DeployAgreementPage({
     if (!error && agreement) {
       setAgreement(agreement);
     } else {
-      alert("Error deploying: " + error?.message);
+      await alert({
+        title: "Error deploying",
+        message: `Error deploying: ${error?.message || "Unknown error"}`,
+        tone: "danger",
+      });
     }
     setDeploying(false);
   };
@@ -147,7 +153,13 @@ export default function DeployAgreementPage({
       .eq("id", agreement.id);
 
     if (updateError) {
-      if (notify) alert("Error saving: " + updateError.message);
+      if (notify) {
+        await alert({
+          title: "Error saving",
+          message: `Error saving: ${updateError.message}`,
+          tone: "danger",
+        });
+      }
       return false;
     }
 
@@ -160,7 +172,12 @@ export default function DeployAgreementPage({
       },
     ]);
 
-    if (notify) alert("Changes saved successfully.");
+    if (notify) {
+      await alert({
+        title: "Changes saved",
+        message: "Changes saved successfully.",
+      });
+    }
     return true;
   };
 

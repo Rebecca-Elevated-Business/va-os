@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, X } from "lucide-react";
+import { usePrompt } from "@/components/ui/PromptProvider";
 
 const DOCUMENT_TYPES = [
   { id: "proposal", label: "Proposal", accent: "bg-[#9d4edd]" },
@@ -16,6 +17,7 @@ type DocumentType = (typeof DOCUMENT_TYPES)[number]["id"];
 
 function CreateDocumentForm() {
   const router = useRouter();
+  const { alert } = usePrompt();
   const searchParams = useSearchParams();
   const typeParamRaw = searchParams.get("type");
   const typeParam = DOCUMENT_TYPES.some((doc) => doc.id === typeParamRaw)
@@ -79,7 +81,11 @@ function CreateDocumentForm() {
     if (!error) {
       router.push(`/va/dashboard/documents/edit-${selectedType}/${data.id}`);
     } else {
-      alert("Error: " + error.message);
+      await alert({
+        title: "Error",
+        message: `Error: ${error.message}`,
+        tone: "danger",
+      });
       setLoading(false); // Reset on error
     }
   };
