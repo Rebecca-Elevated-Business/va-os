@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use, useCallback, Fragment } from "react";
+import { useState, useEffect, use, useCallback, useRef, Fragment } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { usePrompt } from "@/components/ui/PromptProvider";
@@ -111,7 +111,13 @@ export default function ClientProfilePage({
 
   // Task Manager State
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string[]>([
+    "todo",
+    "up_next",
+    "in_progress",
+  ]);
+  const [isStatusFilterOpen, setIsStatusFilterOpen] = useState(false);
+  const statusFilterRef = useRef<HTMLDivElement>(null);
   const [now, setNow] = useState(0); // Initialize with 0 to satisfy React Purity
   const [taskModalTask, setTaskModalTask] = useState<Task | null>(null);
   const [taskModalPrefill, setTaskModalPrefill] = useState<{
@@ -190,6 +196,12 @@ export default function ClientProfilePage({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      if (
+        statusFilterRef.current &&
+        !statusFilterRef.current.contains(event.target as Node)
+      ) {
+        setIsStatusFilterOpen(false);
+      }
       if (!(event.target as Element).closest(".action-menu-trigger")) {
         setActionMenuId(null);
       }
@@ -713,7 +725,7 @@ export default function ClientProfilePage({
     task.status || (task.is_completed ? "completed" : "todo");
   const visibleTasks = tasks.filter((task) => {
     const status = getTaskStatus(task);
-    if (statusFilter !== "all" && status !== statusFilter) return false;
+    if (!statusFilter.includes(status)) return false;
     return true;
   });
   const statusOrder = ["todo", "up_next", "in_progress", "completed"];
@@ -1375,21 +1387,48 @@ export default function ClientProfilePage({
                 </button>
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-2 text-xs font-semibold text-gray-600">
-                  <label htmlFor="crm-task-status-filter">Status</label>
-                  <select
-                    id="crm-task-status-filter"
-                    value={statusFilter}
-                    onChange={(event) => setStatusFilter(event.target.value)}
-                    className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-[#333333] focus:ring-2 focus:ring-[#9d4edd] outline-none"
+                <div className="relative" ref={statusFilterRef}>
+                  <button
+                    onClick={() =>
+                      setIsStatusFilterOpen((prev) => !prev)
+                    }
+                    className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold hover:bg-gray-50 transition-all shadow-sm text-[#333333]"
                   >
-                    <option value="all">All</option>
-                    {Object.values(STATUS_CONFIG).map((status) => (
-                      <option key={status.id} value={status.id}>
-                        {status.label}
-                      </option>
-                    ))}
-                  </select>
+                    Status
+                  </button>
+                  {isStatusFilterOpen && (
+                    <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-xl shadow-xl z-50 p-3 animate-in fade-in slide-in-from-top-2">
+                      <p className="text-[10px] font-black text-[#333333] tracking-widest mb-3 ml-1">
+                        Visible Statuses
+                      </p>
+                      <div className="space-y-1">
+                        {Object.values(STATUS_CONFIG).map((status) => (
+                          <label
+                            key={status.id}
+                            className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={statusFilter.includes(status.id)}
+                                onChange={() =>
+                                  setStatusFilter((prev) =>
+                                    prev.includes(status.id)
+                                      ? prev.filter((x) => x !== status.id)
+                                      : [...prev, status.id],
+                                  )
+                                }
+                                className="w-4 h-4 rounded border-gray-300 text-[#9d4edd] focus:ring-[#9d4edd]"
+                              />
+                              <span className="px-3 py-1 rounded-full text-[10px] font-semibold text-gray-600 border border-gray-200 bg-white">
+                                {status.label}
+                              </span>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <button
                   onClick={() => openTaskModal()}
