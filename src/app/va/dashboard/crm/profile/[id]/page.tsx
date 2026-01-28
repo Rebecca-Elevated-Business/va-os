@@ -1470,7 +1470,7 @@ export default function ClientProfilePage({
                     return (
                       <div
                         key={group.status}
-                        className="relative isolate rounded-lg border border-gray-200 bg-white"
+                        className="relative z-0 rounded-lg border border-gray-200 bg-white"
                       >
                         <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-100">
                           <button
