@@ -83,29 +83,23 @@ export default function SOPLibraryPage() {
               onClick={() => setSelectedTemplate(template)}
               className="group text-left bg-white border border-gray-100 rounded-2xl p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg hover:border-[#9d4edd]"
             >
-              <div className="flex items-center justify-between mb-6">
-                <div className="h-12 w-12 rounded-2xl bg-gray-50 flex items-center justify-center text-[#333333]">
+              <div className="flex items-center justify-between mb-4">
+                <div className="h-12 w-12 rounded-2xl bg-purple-50 flex items-center justify-center text-[#9d4edd]">
                   <FileText className="h-6 w-6" />
                 </div>
-                <span className="text-[10px] font-black text-[#333333] uppercase tracking-widest">
-                  {template.category}
-                </span>
               </div>
-              <h3 className="font-bold text-sm text-[#333333] group-hover:text-[#9d4edd] transition-colors uppercase tracking-tight">
+              <h3 className="font-bold text-sm text-gray-900 group-hover:text-[#9d4edd] transition-colors uppercase tracking-tight">
                 {template.title}
               </h3>
             </button>
           ))}
           <div className="text-left bg-white border border-dashed border-gray-200 rounded-2xl p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <div className="h-12 w-12 rounded-2xl bg-gray-50 flex items-center justify-center text-[#333333]">
+            <div className="flex items-center justify-between mb-4">
+              <div className="h-12 w-12 rounded-2xl bg-purple-50 flex items-center justify-center text-[#9d4edd]">
                 <FileText className="h-6 w-6" />
               </div>
-              <span className="text-[10px] font-black text-[#333333] uppercase tracking-widest">
-                Placeholder
-              </span>
             </div>
-            <h3 className="font-bold text-sm text-[#333333] uppercase tracking-tight">
+            <h3 className="font-bold text-sm text-gray-900 uppercase tracking-tight">
               Request a Workflow
             </h3>
           </div>
