@@ -1,13 +1,6 @@
 "use client";
-
-import { useState } from "react";
 import Image from "next/image";
-import {
-  ChevronDown,
-  ChevronUp,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import {
   Allura,
   Dancing_Script,
@@ -95,7 +88,6 @@ const FieldRow = ({
 type BookingFormDocumentProps = {
   content: BookingFormContent;
   mode: "va" | "client" | "preview";
-  standardTerms: string;
   onUpdate?: (updates: Partial<BookingFormContent>) => void;
   clientAgreed?: boolean;
   onClientAgreeChange?: (checked: boolean) => void;
@@ -104,12 +96,10 @@ type BookingFormDocumentProps = {
 export default function BookingFormDocument({
   content,
   mode,
-  standardTerms,
   onUpdate,
   clientAgreed = false,
   onClientAgreeChange,
 }: BookingFormDocumentProps) {
-  const [termsOpen, setTermsOpen] = useState(false);
   const heroUrl = content.hero_image_url
     ? normalizeImageUrl(content.hero_image_url)
     : "";
@@ -491,61 +481,9 @@ export default function BookingFormDocument({
 
           <div className="rounded-3xl border border-gray-100 bg-gray-50 p-5 space-y-3">
             <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-              29. Our main terms can be found at this link or attached to this
-              form:
+              29. Our main terms can be found at this link:
             </p>
-            {isVa && (
-              <div className="space-y-3">
-                <div className="space-y-2 text-xs font-bold text-gray-500">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="terms-source"
-                      checked={content.use_standard_terms}
-                      onChange={() => updateField("use_standard_terms", true)}
-                    />
-                    Use VA-OS standard terms
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="terms-source"
-                      checked={!content.use_standard_terms}
-                      onChange={() => updateField("use_standard_terms", false)}
-                    />
-                    Provide your own terms link
-                  </label>
-                </div>
-                <p className="text-[11px] font-semibold text-gray-400">
-                  Internal Note (client will not see this) The VA-OS Standard
-                  Terms are provided for your convenience. We recommend you have
-                  a legal professional review your contract before issuing to
-                  clients.
-                </p>
-              </div>
-            )}
-
-            {content.use_standard_terms ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setTermsOpen((prev) => !prev)}
-                  className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-widest"
-                >
-                  {termsOpen ? "Hide terms" : "Read terms"}
-                  {termsOpen ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  )}
-                </button>
-                {termsOpen && (
-                  <div className="p-4 rounded-2xl bg-white border border-gray-100 text-[11px] text-gray-600 whitespace-pre-wrap max-h-80 overflow-y-auto">
-                    {standardTerms}
-                  </div>
-                )}
-              </>
-            ) : isVa ? (
+            {isVa ? (
               <FieldRow
                 label="Our main terms link:"
                 value={content.custom_terms_url}
@@ -554,15 +492,20 @@ export default function BookingFormDocument({
               />
             ) : (
               <div className="text-xs text-gray-500">
-                Our main terms can be found here:{" "}
-                <a
-                  href={content.custom_terms_url}
-                  className="text-[#9d4edd] font-bold underline"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {content.custom_terms_url}
-                </a>
+                {content.custom_terms_url?.trim() ? (
+                  <a
+                    href={content.custom_terms_url}
+                    className="text-[#9d4edd] font-bold underline"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {content.custom_terms_url}
+                  </a>
+                ) : (
+                  <span className="text-gray-400 italic">
+                    No terms link provided.
+                  </span>
+                )}
               </div>
             )}
           </div>

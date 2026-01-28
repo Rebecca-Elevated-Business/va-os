@@ -21,7 +21,6 @@ import {
   mergeInvoiceContent,
   type InvoiceContent,
 } from "@/lib/invoiceContent";
-import { DOCUMENT_TEMPLATES } from "@/lib/documentTemplates";
 
 type ClientDoc = {
   id: string;
@@ -264,12 +263,7 @@ export default function ClientDocumentView({
       (service) => !hasValue(service.title) || !hasValue(service.details)
     );
 
-    const missingTerms =
-      !content.use_standard_terms && !hasValue(content.custom_terms_url);
-
-    return (
-      missingFields.length === 0 && !missingServiceFields && !missingTerms
-    );
+    return missingFields.length === 0 && !missingServiceFields;
   };
 
   const handleSignBooking = async () => {
@@ -465,10 +459,6 @@ export default function ClientDocumentView({
                     <BookingFormDocument
                       content={bookingContent}
                       mode="client"
-                      standardTerms={
-                        DOCUMENT_TEMPLATES.booking_form.sections.legal_text ||
-                        "Terms not available."
-                      }
                       clientAgreed={clientAgreed}
                       onClientAgreeChange={setClientAgreed}
                       onUpdate={(updates) =>

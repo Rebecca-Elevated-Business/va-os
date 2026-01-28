@@ -13,7 +13,6 @@ import {
   type BookingFormContent,
 } from "@/lib/bookingFormContent";
 import { mergeInvoiceContent, type InvoiceContent } from "@/lib/invoiceContent";
-import { DOCUMENT_TEMPLATES } from "@/lib/documentTemplates";
 
 type ClientDoc = {
   id: string;
@@ -115,10 +114,6 @@ export default function DocumentPrintPage({
           <BookingFormDocument
             content={mergeBookingContent(doc.content as BookingFormContent)}
             mode="preview"
-            standardTerms={
-              DOCUMENT_TEMPLATES.booking_form.sections.legal_text ||
-              "Terms not available."
-            }
           />
         ) : (
           <InvoiceDocument

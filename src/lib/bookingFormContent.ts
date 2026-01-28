@@ -117,7 +117,7 @@ export const createBookingDefaults = (
   insurance_cover: "",
   notice_period: "",
   special_terms: "",
-  use_standard_terms: true,
+  use_standard_terms: false,
   custom_terms_url: "",
   courts_jurisdiction: "England and Wales",
   accept_by_date: "",

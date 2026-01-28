@@ -4,7 +4,7 @@ import { useState, useEffect, use, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, Eye, Plus, Trash2 } from "lucide-react";
+import { Eye, Plus, Trash2 } from "lucide-react";
 import { DOCUMENT_TEMPLATES } from "@/lib/documentTemplates";
 import {
   mergeBookingContent,
@@ -76,7 +76,6 @@ export default function EditBookingFormPage({
   const [saving, setSaving] = useState(false);
   const [autosaving, setAutosaving] = useState(false);
   const [doc, setDoc] = useState<ClientDoc | null>(null);
-  const [termsOpen, setTermsOpen] = useState(false);
   const lastSavedRef = useRef<string>("");
 
   useEffect(() => {
@@ -180,13 +179,6 @@ export default function EditBookingFormPage({
       if (!doc) return;
       const shouldIssue = Boolean(options?.issue);
       const silent = Boolean(options?.silent);
-
-      if (shouldIssue && !doc.content.use_standard_terms) {
-        if (!(doc.content.custom_terms_url || "").trim()) {
-          alert("Please provide a custom terms link or enable standard terms.");
-          return;
-        }
-      }
 
       if (silent) {
         setAutosaving(true);
@@ -713,70 +705,13 @@ export default function EditBookingFormPage({
 
           <div className="rounded-3xl border border-gray-100 bg-gray-50 p-5 space-y-3">
             <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-              29. Our main terms can be found at this link or attached to this
-              form:
+              29. Our main terms can be found at this link:
             </p>
-            <div className="space-y-3">
-              <div className="space-y-2 text-xs font-bold text-gray-500">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="terms-source"
-                    checked={Boolean(doc.content.use_standard_terms)}
-                    onChange={() =>
-                      updateContent({ use_standard_terms: true })
-                    }
-                  />
-                  Use VA-OS standard terms
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="terms-source"
-                    checked={!doc.content.use_standard_terms}
-                    onChange={() =>
-                      updateContent({ use_standard_terms: false })
-                    }
-                  />
-                  Provide your own terms link
-                </label>
-              </div>
-              <p className="text-[11px] font-semibold text-gray-400">
-                Internal Note (client will not see this) The VA-OS Standard
-                Terms are provided for your convenience. We recommend you have
-                a legal professional review your contract before issuing to
-                clients.
-              </p>
-            </div>
-
-            {doc.content.use_standard_terms ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setTermsOpen((prev) => !prev)}
-                  className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-widest"
-                >
-                  {termsOpen ? "Hide terms" : "Read terms"}
-                  {termsOpen ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  )}
-                </button>
-                {termsOpen && (
-                  <div className="p-4 rounded-2xl bg-white border border-gray-100 text-[11px] text-gray-600 whitespace-pre-wrap max-h-80 overflow-y-auto">
-                    {DOCUMENT_TEMPLATES.booking_form.sections.legal_text ||
-                      "Terms not available."}
-                  </div>
-                )}
-              </>
-            ) : (
-              <FieldRow
-                label="Our main terms link:"
-                value={doc.content.custom_terms_url || ""}
-                onChange={(value) => updateContent({ custom_terms_url: value })}
-              />
-            )}
+            <FieldRow
+              label="Our main terms link:"
+              value={doc.content.custom_terms_url || ""}
+              onChange={(value) => updateContent({ custom_terms_url: value })}
+            />
           </div>
 
           <FieldRow
