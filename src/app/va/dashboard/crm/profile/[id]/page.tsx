@@ -15,6 +15,7 @@ import {
   Trash2,
   ReceiptText,
 } from "lucide-react";
+import { format } from "date-fns";
 import TaskModal from "../../../tasks/TaskModal";
 import { STATUS_CONFIG, Task } from "../../../tasks/types";
 import { useClientSession } from "../../../ClientSessionContext";
@@ -79,6 +80,11 @@ const formatHms = (totalSeconds: number) => {
     2,
     "0",
   )}:${String(seconds).padStart(2, "0")}`;
+};
+
+const formatDateCell = (dateValue: string | null | undefined) => {
+  if (!dateValue) return "-";
+  return format(new Date(dateValue), "d MMM");
 };
 
 // --- COMPONENT ---
@@ -1666,20 +1672,12 @@ export default function ClientProfilePage({
 
                                       {/* 2. START DATE */}
                                       <td className="px-4 py-3 text-xs font-medium text-gray-600 align-top pt-4 text-right">
-                                        {dueDate
-                                          ? new Date(
-                                              dueDate,
-                                            ).toLocaleDateString("en-GB")
-                                          : "-"}
+                                        {formatDateCell(dueDate)}
                                       </td>
 
                                       {/* 3. END DATE */}
                                       <td className="px-4 py-3 text-xs font-medium text-gray-600 align-top pt-4 text-right">
-                                        {endDate
-                                          ? new Date(
-                                              endDate,
-                                            ).toLocaleDateString("en-GB")
-                                          : "-"}
+                                        {formatDateCell(endDate)}
                                       </td>
 
                                       {/* 4. TIMER BUTTON */}
@@ -1902,18 +1900,10 @@ export default function ClientProfilePage({
                                                 </div>
                                               </td>
                                               <td className="px-4 py-3 text-xs font-medium text-gray-600 align-top pt-4 text-right">
-                                                {childDue
-                                                  ? new Date(
-                                                      childDue,
-                                                    ).toLocaleDateString("en-GB")
-                                                  : "-"}
+                                                {formatDateCell(childDue)}
                                               </td>
                                               <td className="px-4 py-3 text-xs font-medium text-gray-600 align-top pt-4 text-right">
-                                                {childEnd
-                                                  ? new Date(
-                                                      childEnd,
-                                                    ).toLocaleDateString("en-GB")
-                                                  : "-"}
+                                                {formatDateCell(childEnd)}
                                               </td>
                                               <td className="px-4 py-3 text-center align-top pt-4">
                                                 {childStatusValue !==
