@@ -20,7 +20,7 @@ export default function AddClientPage() {
     address: "",
     source: "Referral",
     status: "Enquiry",
-    work_type: "Ad-hoc",
+    work_type: "Retainer",
     initial_notes: "",
   });
 
@@ -288,7 +288,6 @@ export default function AddClientPage() {
           <textarea
             rows={4}
             className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#9d4edd] outline-none"
-            placeholder="Summarize the scope of work and agreed rates..."
             value={formData.initial_notes}
             onChange={(e) =>
               setFormData({ ...formData, initial_notes: e.target.value })

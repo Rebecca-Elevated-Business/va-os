@@ -707,19 +707,17 @@ export default function ClientProfilePage({
       {/* 1. HEADER */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold flex flex-wrap items-baseline gap-x-3">
-            <span>
-              Viewing Client: {client.first_name} {client.surname}
-            </span>
-            <span className="text-sm font-medium text-gray-500">
-              {client.business_name || "No Business Name"}
-            </span>
+          <h1 className="text-3xl font-bold">
+            {client.first_name} {client.surname}
           </h1>
+          <p className="text-sm text-gray-400">
+            {client.business_name || "No Business Name"}
+          </p>
         </div>
         <div className="flex gap-3">
           <button
             onClick={() => setIsEditing(!isEditing)}
-            className="bg-gray-100 px-4 py-2 rounded-lg font-semibold text-black hover:bg-gray-200"
+            className="text-sm font-semibold text-gray-500 hover:text-gray-800"
           >
             {isEditing ? "Cancel" : "Edit Details"}
           </button>
