@@ -83,10 +83,17 @@ const formatHms = (totalSeconds: number) => {
   )}:${String(seconds).padStart(2, "0")}`;
 };
 
-const formatDateCell = (dateValue: string | null | undefined) => {
-  if (!dateValue) return "-";
-  return format(new Date(dateValue), "d MMM");
-};
+  const formatDateCell = (dateValue: string | null | undefined) => {
+    if (!dateValue) return "-";
+    return format(new Date(dateValue), "d MMM");
+  };
+  const formatDocStatus = (status: string) => {
+    if (status === "draft") return "Draft";
+    if (status === "pending_client") return "Issued";
+    if (status === "authorised") return "Accepted";
+    if (status === "accepted") return "Accepted";
+    return "Issued";
+  };
 
 // --- COMPONENT ---
 export default function ClientProfilePage({
@@ -901,8 +908,6 @@ export default function ClientProfilePage({
     if (type === "booking_form") return FileSignature;
     return FileText;
   };
-  const hasDocuments = filteredDocuments.length > 0;
-  const hasAgreements = filteredAgreements.length > 0;
   const summaryValue = notes[0]?.content || "";
   const displayClient = (isEditing ? draftClient : client) || client;
   const websiteDisplayLinks =
@@ -2161,10 +2166,10 @@ export default function ClientProfilePage({
         onFallbackRefresh={refreshData}
       />
 
-      {/* SERVICE AGREEMENTS SECTION */}
+      {/* DOCUMENTS & WORKFLOWS SECTION */}
       {activeTab === "docs" && (
-        <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="relative z-20 p-6 border-b border-gray-100 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-start bg-gray-50">
+        <section className="rounded-xl pb-8">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
             <div className="flex flex-wrap items-center gap-3">
               <div className="relative" ref={docTypeFilterRef}>
                 <button
@@ -2235,6 +2240,8 @@ export default function ClientProfilePage({
                   className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-[#333333] focus:ring-2 focus:ring-[#9d4edd] outline-none"
                 />
               </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
               <button
                 onClick={() => router.push("/va/dashboard/documents")}
                 className="text-sm border border-[#9d4edd] text-[#9d4edd] px-4 py-2 rounded-lg font-bold hover:bg-purple-50 transition-all"
@@ -2249,185 +2256,211 @@ export default function ClientProfilePage({
               </button>
             </div>
           </div>
-          <div className="relative z-0 p-0">
-            <table className="w-full text-left">
-              <tbody className="divide-y divide-gray-100">
-                {/* --- NEW DOCUMENTS LIST --- */}
-                {hasDocuments &&
-                  filteredDocuments.map((doc) => {
-                    const DocIcon = documentIcon(doc.type);
-                    return (
-                      <tr
-                        key={doc.id}
-                        className="hover:bg-purple-50/30 transition-colors"
-                      >
-                        <td className="px-6 py-4">
+
+          <div className="space-y-4">
+            <div className="rounded-lg border border-gray-200 bg-white">
+              <table className="w-full table-fixed text-left">
+                <colgroup>
+                  <col />
+                  <col className="w-32" />
+                  <col className="w-32" />
+                  <col className="w-48" />
+                </colgroup>
+                <thead>
+                  <tr className="text-[10px] font-semibold tracking-widest text-gray-500 uppercase">
+                    <th className="px-4 py-2 text-left">Item</th>
+                    <th className="px-4 py-2 text-left">Status</th>
+                    <th className="px-4 py-2 text-left">Date Issued</th>
+                    <th className="px-4 py-2 text-right">Stage</th>
+                  </tr>
+                </thead>
+              </table>
+            </div>
+
+            <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-100 text-xs font-bold uppercase tracking-widest text-gray-400">
+                Workflows ({filteredAgreements.length})
+              </div>
+              {filteredAgreements.length === 0 ? (
+                <div className="p-6 text-sm text-gray-400 italic">
+                  No workflows found.
+                </div>
+              ) : (
+                <table className="w-full table-fixed text-left">
+                  <colgroup>
+                    <col />
+                    <col className="w-32" />
+                    <col className="w-32" />
+                    <col className="w-48" />
+                  </colgroup>
+                  <tbody className="divide-y divide-gray-100">
+                    {filteredAgreements.map((ag) => (
+                      <tr key={ag.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
-                            <DocIcon size={18} className="text-[#333333]" />
+                            <FileSignature size={18} className="text-[#333333]" />
                             <div>
-                              <div className="font-bold text-black">
-                                {doc.title}
-                              </div>
-                              <div className="text-[10px] text-gray-400 case tracking-widest">
-                                {doc.type.replace("_", " ")}
+                              <div className="font-bold text-black">{ag.title}</div>
+                              <div className="text-[10px] text-gray-400 tracking-widest">
+                                Workflow
                               </div>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                            <div
-                              className={`w-3 h-3 rounded-full ${
-                                doc.status === "draft"
-                                  ? "bg-red-500"
-                                  : "bg-green-500"
-                              }`}
-                            />
-                            <span className="text-[10px] font-black case text-gray-600">
-                              {doc.status}
-                            </span>
+                        <td className="px-4 py-3 text-xs font-semibold text-gray-600">
+                          {formatDocStatus(ag.status)}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-600">
+                          {formatDateCell(ag.last_updated_at)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-4">
+                            {ag.status !== "draft" && (
+                              <button
+                                onClick={() => revokeAgreement(ag.id)}
+                                className="text-[10px] font-bold text-red-500 hover:underline"
+                              >
+                                Revoke
+                              </button>
+                            )}
+                            <button
+                              onClick={() =>
+                                router.push(
+                                  `/va/dashboard/workflows/portal-view/${ag.id}`,
+                                )
+                              }
+                              className="text-xs font-bold text-[#9d4edd] hover:underline"
+                            >
+                              {ag.status === "draft" ? "Edit & Issue" : "View"}
+                            </button>
+                            <button
+                              onClick={() => deleteAgreement(ag.id)}
+                              className="text-gray-300 hover:text-red-500 transition-colors"
+                              title="Delete Agreement"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                              </svg>
+                            </button>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-right flex justify-end gap-4 items-center">
-                          {/* REVOKE LINK: Only shows if NOT a draft */}
-                          {doc.status !== "draft" && (
-                            <button
-                              onClick={() => revokeDocument(doc.id)}
-                              className="text-[10px] font-bold text-orange-500 hover:underline case"
-                            >
-                              Revoke
-                            </button>
-                          )}
-
-                          <button
-                            onClick={() => {
-                              const routeSuffix =
-                                doc.type === "proposal"
-                                  ? "proposal"
-                                  : doc.type === "invoice"
-                                    ? "invoice"
-                                    : doc.type === "booking_form"
-                                      ? "booking_form"
-                                      : doc.type === "upload"
-                                        ? "upload"
-                                        : "";
-                              router.push(
-                                routeSuffix
-                                  ? `/va/dashboard/documents/edit-${routeSuffix}/${doc.id}`
-                                  : `/va/dashboard/documents/edit/${doc.id}`,
-                              );
-                            }}
-                            className="text-xs font-bold text-[#9d4edd] hover:underline"
-                          >
-                            {doc.status === "draft" ? "Edit & Issue" : "View"}
-                          </button>
-
-                          {/* RUBBISH BIN ICON */}
-                          <button
-                            onClick={() => deleteDocument(doc.id)}
-                            className="text-[#333333] hover:text-red-500 transition-colors"
-                            title="Delete Document"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                            </svg>
-                          </button>
-                        </td>
                       </tr>
-                    );
-                  })}
-                {hasAgreements &&
-                  filteredAgreements.map((ag) => (
-                    <tr
-                      key={ag.id}
-                      className="hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="px-6 py-4">
-                        <div className="font-bold text-black">{ag.title}</div>
-                        <div className="text-xs text-gray-500">
-                          Updated:{" "}
-                          {new Date(ag.last_updated_at).toLocaleDateString(
-                            "en-GB",
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        {/* TRAFFIC LIGHT STATUS INDICATORS */}
-                        <div className="flex items-center gap-2">
-                          <div
-                            className={`w-3 h-3 rounded-full ${
-                              ag.status === "draft"
-                                ? "bg-red-500"
-                                : ag.status === "pending_client"
-                                  ? "bg-yellow-400"
-                                  : "bg-green-500"
-                            }`}
-                          />
-                          <span className="text-[10px] font-black case tracking-tighter text-gray-600">
-                            {ag.status === "draft"
-                              ? "Draft"
-                              : ag.status === "pending_client"
-                                ? "Issued - Pending"
-                                : "Authorised"}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-right flex justify-end gap-4 items-center">
-                        {/* REVOKE LINK: Only shows if NOT a draft */}
-                        {ag.status !== "draft" && (
-                          <button
-                            onClick={() => revokeAgreement(ag.id)}
-                            className="text-[10px] font-bold text-orange-500 hover:underline case"
-                          >
-                            Revoke
-                          </button>
-                        )}
-                        <button
-                          onClick={() =>
-                            router.push(
-                              `/va/dashboard/workflows/portal-view/${ag.id}`,
-                            )
-                          }
-                          className="text-xs font-bold text-[#9d4edd] hover:underline"
-                        >
-                          {ag.status === "draft"
-                            ? "Review & Issue"
-                            : "View Document"}
-                        </button>
-                        <button
-                          onClick={() => deleteAgreement(ag.id)}
-                          className="text-gray-300 hover:text-red-500 transition-colors"
-                          title="Delete Agreement"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                          </svg>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-100 text-xs font-bold uppercase tracking-widest text-gray-400">
+                Documents ({filteredDocuments.length})
+              </div>
+              {filteredDocuments.length === 0 ? (
+                <div className="p-6 text-sm text-gray-400 italic">
+                  No documents found.
+                </div>
+              ) : (
+                <table className="w-full table-fixed text-left">
+                  <colgroup>
+                    <col />
+                    <col className="w-32" />
+                    <col className="w-32" />
+                    <col className="w-48" />
+                  </colgroup>
+                  <tbody className="divide-y divide-gray-100">
+                    {filteredDocuments.map((doc) => {
+                      const DocIcon = documentIcon(doc.type);
+                      return (
+                        <tr key={doc.id} className="hover:bg-purple-50/30 transition-colors">
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <DocIcon size={18} className="text-[#333333]" />
+                              <div>
+                                <div className="font-bold text-black">
+                                  {doc.title}
+                                </div>
+                                <div className="text-[10px] text-gray-400 tracking-widest">
+                                  {doc.type.replace("_", " ")}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-xs font-semibold text-gray-600">
+                            {formatDocStatus(doc.status)}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-gray-600">
+                            {formatDateCell(doc.created_at)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center justify-end gap-4">
+                              {doc.status !== "draft" && (
+                                <button
+                                  onClick={() => revokeDocument(doc.id)}
+                                  className="text-[10px] font-bold text-red-500 hover:underline"
+                                >
+                                  Revoke
+                                </button>
+                              )}
+                              <button
+                                onClick={() => {
+                                  const routeSuffix =
+                                    doc.type === "proposal"
+                                      ? "proposal"
+                                      : doc.type === "invoice"
+                                        ? "invoice"
+                                        : doc.type === "booking_form"
+                                          ? "booking_form"
+                                          : doc.type === "upload"
+                                            ? "upload"
+                                            : "";
+                                  router.push(
+                                    routeSuffix
+                                      ? `/va/dashboard/documents/edit-${routeSuffix}/${doc.id}`
+                                      : `/va/dashboard/documents/edit/${doc.id}`,
+                                  );
+                                }}
+                                className="text-xs font-bold text-[#9d4edd] hover:underline"
+                              >
+                                {doc.status === "draft" ? "Edit & Issue" : "View"}
+                              </button>
+                              <button
+                                onClick={() => deleteDocument(doc.id)}
+                                className="text-[#333333] hover:text-red-500 transition-colors"
+                                title="Delete Document"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="16"
+                                  height="16"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                                </svg>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
         </section>
       )}
