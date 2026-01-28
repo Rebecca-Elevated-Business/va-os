@@ -9,15 +9,16 @@ export default function AddClientPage() {
   const router = useRouter();
   const { alert } = usePrompt();
   const [loading, setLoading] = useState(false);
+  const [websiteLinks, setWebsiteLinks] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     first_name: "",
     surname: "",
     business_name: "",
     email: "",
     phone: "",
+    address: "",
     source: "Referral",
     status: "Enquiry",
-    price_quoted: "",
     work_type: "Ad-hoc",
     initial_notes: "",
   });
@@ -40,10 +41,11 @@ export default function AddClientPage() {
           business_name: formData.business_name,
           email: formData.email,
           phone: formData.phone,
+          address: formData.address,
           source: formData.source,
           status: formData.status,
-          price_quoted: formData.price_quoted,
           work_type: formData.work_type,
+          website_links: websiteLinks.filter((link) => link.trim().length > 0),
         },
       ])
       .select()
@@ -141,13 +143,15 @@ export default function AddClientPage() {
 
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-1">
-            Business Name
+            Address
           </label>
-          <input
+          <textarea
+            rows={3}
             className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#9d4edd] outline-none"
-            value={formData.business_name}
+            placeholder="Street, City, Postcode, Country"
+            value={formData.address}
             onChange={(e) =>
-              setFormData({ ...formData, business_name: e.target.value })
+              setFormData({ ...formData, address: e.target.value })
             }
           />
         </div>
@@ -190,32 +194,86 @@ export default function AddClientPage() {
               }
             >
               <option value="Ad-hoc">Ad-hoc</option>
-              <option value="Ongoing">Ongoing</option>
+              <option value="Retainer">Retainer</option>
+              <option value="Hourly">Hourly</option>
             </select>
           </div>
         </div>
 
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-1">
-            Price Quoted (e.g. £30/hr or £500 Project)
+            Business Name
           </label>
           <input
             className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#9d4edd] outline-none"
-            value={formData.price_quoted}
+            value={formData.business_name}
             onChange={(e) =>
-              setFormData({ ...formData, price_quoted: e.target.value })
+              setFormData({ ...formData, business_name: e.target.value })
             }
           />
         </div>
 
         <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Websites & Social Links
+          </label>
+          <div className="space-y-3">
+            {websiteLinks.length === 0 && (
+              <button
+                type="button"
+                onClick={() => setWebsiteLinks([""])}
+                className="text-sm font-semibold text-[#9d4edd] hover:underline"
+              >
+                + Add website address
+              </button>
+            )}
+            {websiteLinks.map((link, index) => (
+              <div key={`website-${index}`} className="flex flex-col gap-2">
+                <input
+                  type="url"
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#9d4edd] outline-none"
+                  placeholder="Web page URL"
+                  value={link}
+                  onChange={(event) => {
+                    const next = [...websiteLinks];
+                    next[index] = event.target.value;
+                    setWebsiteLinks(next);
+                  }}
+                />
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = websiteLinks.filter((_, i) => i !== index);
+                      setWebsiteLinks(next);
+                    }}
+                    className="text-xs font-semibold text-gray-400 hover:text-red-500"
+                  >
+                    Remove
+                  </button>
+                  {index === websiteLinks.length - 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setWebsiteLinks([...websiteLinks, ""])}
+                      className="text-sm font-semibold text-[#9d4edd] hover:underline"
+                    >
+                      + Add another website address
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div>
           <label className="block text-sm font-semibold text-gray-700 mb-1">
-            Initial Enquiry Notes
+            Summary of scope of work & rates
           </label>
           <textarea
             rows={4}
             className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#9d4edd] outline-none"
-            placeholder="Summarize the first interaction..."
+            placeholder="Summarize the scope of work and agreed rates..."
             value={formData.initial_notes}
             onChange={(e) =>
               setFormData({ ...formData, initial_notes: e.target.value })
