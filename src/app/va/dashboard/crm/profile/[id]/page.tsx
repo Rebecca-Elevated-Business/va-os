@@ -1431,7 +1431,7 @@ export default function ClientProfilePage({
                     return (
                       <div
                         key={group.status}
-                        className="rounded-lg border border-gray-200 bg-white overflow-hidden"
+                        className="rounded-lg border border-gray-200 bg-white"
                       >
                         <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-100">
                           <button
@@ -1660,7 +1660,7 @@ export default function ClientProfilePage({
 
                                       {/* 6. ACTIONS */}
                                       <td className="px-4 py-3 text-right align-top pt-4">
-                                        <div className="relative action-menu-trigger inline-flex justify-end">
+                                        <div className="relative action-menu-trigger inline-flex justify-end z-20">
                                           <button
                                             onClick={(event) => {
                                               event.stopPropagation();
@@ -1886,7 +1886,7 @@ export default function ClientProfilePage({
                                                 {formatTime(child)}
                                               </td>
                                               <td className="px-4 py-3 text-right align-top pt-4">
-                                                <div className="relative action-menu-trigger inline-flex justify-end">
+                                                <div className="relative action-menu-trigger inline-flex justify-end z-20">
                                                   <button
                                                     onClick={(event) => {
                                                       event.stopPropagation();
