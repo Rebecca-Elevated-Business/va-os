@@ -202,7 +202,8 @@ export default function TaskCentrePage() {
     const { data: taskData } = await supabase
       .from("tasks")
       .select("*, clients(business_name, surname)")
-      .eq("va_id", user.id);
+      .eq("va_id", user.id)
+      .is("deleted_at", null);
 
     if (taskData) {
       setTasks(taskData as Task[]);
@@ -394,8 +395,14 @@ export default function TaskCentrePage() {
       tone: "danger",
     });
     if (!ok) return;
-    await supabase.from("tasks").delete().eq("id", taskId);
-    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    const deletedAt = new Date().toISOString();
+    await supabase
+      .from("tasks")
+      .update({ deleted_at: deletedAt })
+      .eq("id", taskId);
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, deleted_at: deletedAt } : t)),
+    );
     setActionMenuId(null);
   };
 

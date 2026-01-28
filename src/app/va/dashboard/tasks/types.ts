@@ -15,6 +15,7 @@ export interface Task {
   parent_task_id?: string | null;
   sort_order?: number | null;
   created_at?: string;
+  deleted_at?: string | null;
   details?: string;
   category?: string; // <--- This is the magic line that fixes the errors
   clients?: {

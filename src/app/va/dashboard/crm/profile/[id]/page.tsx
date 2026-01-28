@@ -148,6 +148,7 @@ export default function ClientProfilePage({
       .from("tasks")
       .select("*")
       .eq("client_id", id)
+      .is("deleted_at", null)
       .order("created_at", { ascending: false });
 
     if (tasksData) setTasks(tasksData);
@@ -311,7 +312,11 @@ export default function ClientProfilePage({
     });
     if (!ok) return;
 
-    const { error } = await supabase.from("tasks").delete().eq("id", taskId);
+    const deletedAt = new Date().toISOString();
+    const { error } = await supabase
+      .from("tasks")
+      .update({ deleted_at: deletedAt })
+      .eq("id", taskId);
     if (!error) refreshData();
   };
 
@@ -784,8 +789,8 @@ export default function ClientProfilePage({
       )}
 
       {/* 2. CLIENT INFORMATION (Horizontal Layout) */}
-      <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <div className="flex items-center gap-3 mb-4 border-b pb-2">
+      <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="p-6 border-b border-gray-100 bg-gray-50 flex items-center gap-3">
           <button
             type="button"
             onClick={() => setIsClientInfoOpen((prev) => !prev)}
@@ -800,12 +805,13 @@ export default function ClientProfilePage({
           </button>
           <h2 className="text-lg font-bold">Client Information</h2>
         </div>
-        {isClientInfoOpen &&
-          (isEditing ? (
-          <form
-            onSubmit={handleUpdateClient}
-            className="flex flex-wrap gap-4 items-end"
-          >
+        {isClientInfoOpen && (
+          <div className="p-6">
+            {isEditing ? (
+              <form
+                onSubmit={handleUpdateClient}
+                className="flex flex-wrap gap-4 items-end"
+              >
             <div className="flex flex-col">
               <label className="text-xs font-bold text-gray-400">
                 FIRST NAME
@@ -940,12 +946,14 @@ export default function ClientProfilePage({
               {client.price_quoted || "-"}
             </div>
           </div>
-        ))}
+        )}
+          </div>
+        )}
       </section>
 
       {/* 3. TASK MANAGER (Table Layout) */}
-      <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <div className="flex justify-between items-center mb-6">
+      <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="p-6 border-b border-gray-100 bg-gray-50 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -973,7 +981,7 @@ export default function ClientProfilePage({
         </div>
 
         {isTaskManagerOpen && (
-          <>
+          <div className="p-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
               <div className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
                 <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
@@ -1373,7 +1381,7 @@ export default function ClientProfilePage({
                 </tbody>
               </table>
             </div>
-          </>
+          </div>
         )}
       </section>
       <TaskModal
@@ -1656,8 +1664,12 @@ export default function ClientProfilePage({
       </section>
 
       {/* 4. NOTES (Sticky Bottom) */}
-      <section className="bg-white p-6 rounded-xl shadow-lg border-t-4 border-[#9d4edd] flex flex-col h-96">
-        <div className="flex items-center gap-3 mb-4">
+      <section
+        className={`bg-white rounded-xl shadow-lg border-t-4 border-[#9d4edd] flex flex-col overflow-hidden ${
+          isNotesOpen ? "h-96" : "h-auto"
+        }`}
+      >
+        <div className="p-6 border-b border-gray-100 bg-gray-50 flex items-center gap-3">
           <button
             type="button"
             onClick={() => setIsNotesOpen((prev) => !prev)}
@@ -1673,7 +1685,7 @@ export default function ClientProfilePage({
           <h2 className="text-lg font-bold">Internal Notes</h2>
         </div>
         {isNotesOpen && (
-          <>
+          <div className="p-6 flex flex-col flex-1">
             <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-2">
               {notes.map((note) => (
                 <div
@@ -1702,7 +1714,7 @@ export default function ClientProfilePage({
                 Save Note
               </button>
             </div>
-          </>
+          </div>
         )}
       </section>
     </div>

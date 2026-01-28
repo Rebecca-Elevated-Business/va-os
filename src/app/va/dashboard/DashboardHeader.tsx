@@ -90,6 +90,7 @@ export default function DashboardHeader() {
         .from("tasks")
         .select("id, task_name")
         .ilike("task_name", `%${searchQuery}%`)
+        .is("deleted_at", null)
         .limit(3);
 
       // 3. Search Documents

@@ -103,6 +103,7 @@ export default function VADashboard() {
         .from("tasks")
         .select("*, clients(business_name, surname)")
         .eq("va_id", user.id)
+        .is("deleted_at", null)
         .order("due_date", { ascending: true }),
       supabase
         .from("clients")

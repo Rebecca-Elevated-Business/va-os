@@ -94,8 +94,9 @@ export default function TimeTrackingPage() {
 
   const filteredTasks = useMemo(() => {
     const query = searchValue.trim().toLowerCase();
-    if (!query) return tasks;
-    return tasks.filter((task) => {
+    const activeTasks = tasks.filter((task) => !task.deleted_at);
+    if (!query) return activeTasks;
+    return activeTasks.filter((task) => {
       const clientName = task.clients?.surname?.toLowerCase() || "";
       return (
         task.task_name.toLowerCase().includes(query) ||
