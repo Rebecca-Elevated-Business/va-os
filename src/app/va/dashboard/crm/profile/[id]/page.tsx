@@ -127,7 +127,6 @@ export default function ClientProfilePage({
   const [summaryDraft, setSummaryDraft] = useState("");
   const [draftClient, setDraftClient] = useState<Client | null>(null);
   const [websiteLinks, setWebsiteLinks] = useState<string[]>([]);
-  const [isClientInfoOpen, setIsClientInfoOpen] = useState(true);
   const [isTaskManagerOpen, setIsTaskManagerOpen] = useState(true);
   const [isDocsOpen, setIsDocsOpen] = useState(true);
   const [isNotesOpen, setIsNotesOpen] = useState(true);
@@ -752,7 +751,7 @@ export default function ClientProfilePage({
   return (
     <div className="flex flex-col h-full text-black space-y-8 pb-20">
       {/* 1. HEADER */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">
             {client.first_name} {client.surname}
@@ -874,45 +873,67 @@ export default function ClientProfilePage({
       {activeTab === "overview" && (
       <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <form onSubmit={handleUpdateClient}>
-          <div className="p-6 border-b border-gray-100 bg-gray-50 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setIsClientInfoOpen((prev) => !prev)}
-                className="text-[#333333] hover:text-[#333333] transition-colors"
-              >
-                <ChevronDown
-                  size={16}
-                  className={`transition-transform ${
-                    isClientInfoOpen ? "rotate-0" : "-rotate-90"
-                  }`}
-                />
-              </button>
-              <h2 className="text-lg font-bold">Client Information</h2>
+          <div className="p-6">
+            <div className="flex items-center justify-end gap-2 pb-4">
+              {isEditing && (
+                <>
+                  <button
+                    type="submit"
+                    className="bg-[#9d4edd] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#7b2cbf]"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={cancelEditing}
+                    className="text-sm font-semibold text-gray-500 hover:text-gray-800"
+                  >
+                    Cancel
+                  </button>
+                </>
+              )}
             </div>
-            {isEditing && (
-              <div className="flex items-center gap-2">
-                <button
-                  type="submit"
-                  className="bg-[#9d4edd] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#7b2cbf]"
-                >
-                  Save
-                </button>
-                <button
-                  type="button"
-                  onClick={cancelEditing}
-                  className="text-sm font-semibold text-gray-500 hover:text-gray-800"
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
-          </div>
-          {isClientInfoOpen && displayClient && (
-            <div className="p-6">
+            {displayClient && (
               <dl className="grid gap-x-8 gap-y-5 md:grid-cols-2">
                 <div>
-                  <dt className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                  <dt className="text-[11px] font-semibold text-[#333333]">
+                    Client Name
+                  </dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {isEditing ? (
+                      <div className="grid grid-cols-2 gap-3">
+                        <input
+                          className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
+                          value={displayClient.first_name || ""}
+                          onChange={(e) =>
+                            draftClient &&
+                            setDraftClient({
+                              ...draftClient,
+                              first_name: e.target.value,
+                            })
+                          }
+                        />
+                        <input
+                          className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
+                          value={displayClient.surname || ""}
+                          onChange={(e) =>
+                            draftClient &&
+                            setDraftClient({
+                              ...draftClient,
+                              surname: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                    ) : (
+                      `${displayClient.first_name || ""} ${
+                        displayClient.surname || ""
+                      }`.trim() || "—"
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] font-semibold text-[#333333]">
                     Email
                   </dt>
                   <dd className="mt-1 text-sm text-gray-900">
@@ -934,7 +955,7 @@ export default function ClientProfilePage({
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                  <dt className="text-[11px] font-semibold text-[#333333]">
                     Phone
                   </dt>
                   <dd className="mt-1 text-sm text-gray-900">
@@ -956,7 +977,7 @@ export default function ClientProfilePage({
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                  <dt className="text-[11px] font-semibold text-[#333333]">
                     Job Title
                   </dt>
                   <dd className="mt-1 text-sm text-gray-900">
@@ -978,7 +999,7 @@ export default function ClientProfilePage({
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                  <dt className="text-[11px] font-semibold text-[#333333]">
                     Business Name
                   </dt>
                   <dd className="mt-1 text-sm text-gray-900">
@@ -1000,7 +1021,7 @@ export default function ClientProfilePage({
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                  <dt className="text-[11px] font-semibold text-[#333333]">
                     Status
                   </dt>
                   <dd className="mt-1 text-sm text-gray-900">
@@ -1042,7 +1063,7 @@ export default function ClientProfilePage({
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                  <dt className="text-[11px] font-semibold text-[#333333]">
                     Work Type
                   </dt>
                   <dd className="mt-1 text-sm text-gray-900">
@@ -1068,7 +1089,7 @@ export default function ClientProfilePage({
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                  <dt className="text-[11px] font-semibold text-[#333333]">
                     Price Quote
                   </dt>
                   <dd className="mt-1 text-sm text-gray-900">
@@ -1090,7 +1111,7 @@ export default function ClientProfilePage({
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                  <dt className="text-[11px] font-semibold text-[#333333]">
                     Source
                   </dt>
                   <dd className="mt-1 text-sm text-gray-900">
@@ -1126,7 +1147,7 @@ export default function ClientProfilePage({
                   </dd>
                 </div>
                 <div className="md:col-span-2">
-                  <dt className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                  <dt className="text-[11px] font-semibold text-[#333333]">
                     Address
                   </dt>
                   <dd className="mt-1 text-sm text-gray-900 whitespace-pre-line">
@@ -1149,7 +1170,7 @@ export default function ClientProfilePage({
                   </dd>
                 </div>
                 <div className="md:col-span-2">
-                  <dt className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                  <dt className="text-[11px] font-semibold text-[#333333]">
                     Websites & Social Links
                   </dt>
                   <dd className="mt-1 text-sm text-gray-900">
@@ -1222,7 +1243,7 @@ export default function ClientProfilePage({
                   </dd>
                 </div>
                 <div className="md:col-span-2">
-                  <dt className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                  <dt className="text-[11px] font-semibold text-[#333333]">
                     Summary of scope of work & rates
                   </dt>
                   <dd className="mt-1 text-sm text-gray-900 whitespace-pre-line">
