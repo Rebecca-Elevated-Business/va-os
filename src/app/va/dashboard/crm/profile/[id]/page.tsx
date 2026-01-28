@@ -969,7 +969,7 @@ export default function ClientProfilePage({
 
       {/* 2. CLIENT INFORMATION (Horizontal Layout) */}
       {activeTab === "overview" && (
-        <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-visible">
           <form onSubmit={handleUpdateClient}>
             <div className="p-6">
               <div className="flex items-center justify-end gap-2 pb-4">
