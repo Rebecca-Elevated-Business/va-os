@@ -85,7 +85,7 @@ export default function ClientProfilePage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const { confirm } = usePrompt();
+  const { confirm, alert } = usePrompt();
   const {
     activeClientId,
     activeEntry,
@@ -126,6 +126,7 @@ export default function ClientProfilePage({
   const [summaryDraft, setSummaryDraft] = useState("");
   const [draftClient, setDraftClient] = useState<Client | null>(null);
   const [websiteLinks, setWebsiteLinks] = useState<string[]>([]);
+  const [isSavingOverview, setIsSavingOverview] = useState(false);
   const [isTaskManagerOpen, setIsTaskManagerOpen] = useState(true);
   const [isDocsOpen, setIsDocsOpen] = useState(true);
   const [isNotesOpen, setIsNotesOpen] = useState(true);
@@ -284,40 +285,60 @@ export default function ClientProfilePage({
   // 4. Update Client Info
   const handleUpdateClient = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!client || !draftClient) return;
+    if (!client) return;
+    const workingClient = draftClient ?? client;
+    const nextWebsiteLinks =
+      draftClient !== null ? websiteLinks : client.website_links ?? [];
+    setIsSavingOverview(true);
     const { error } = await supabase
       .from("clients")
       .update({
-        first_name: draftClient.first_name,
-        surname: draftClient.surname,
-        job_title: draftClient.job_title || null,
-        business_name: draftClient.business_name,
-        email: draftClient.email,
-        phone: draftClient.phone,
-        address: draftClient.address || null,
-        source: draftClient.source || null,
-        status: draftClient.status,
-        work_type: draftClient.work_type,
-        website_links: websiteLinks.filter((link) => link.trim().length > 0),
+        first_name: workingClient.first_name,
+        surname: workingClient.surname,
+        job_title: workingClient.job_title || null,
+        business_name: workingClient.business_name,
+        email: workingClient.email,
+        phone: workingClient.phone,
+        address: workingClient.address || null,
+        source: workingClient.source || null,
+        status: workingClient.status,
+        work_type: workingClient.work_type,
+        website_links: nextWebsiteLinks.filter((link) => link.trim().length > 0),
       })
       .eq("id", id);
-    if (!error) {
-      const normalizedSummary = summaryDraft.trim();
-      const currentSummary = (notes[0]?.content || "").trim();
-      if (normalizedSummary && normalizedSummary !== currentSummary) {
-        const { data: userData } = await supabase.auth.getUser();
-        await supabase.from("client_notes").insert([
-          {
-            client_id: id,
-            va_id: userData.user?.id,
-            content: normalizedSummary,
-          },
-        ]);
-      }
-      setIsEditing(false);
-      setDraftClient(null);
-      refreshData();
+    if (error) {
+      await alert({
+        title: "Error saving client",
+        message: error.message,
+        tone: "danger",
+      });
+      setIsSavingOverview(false);
+      return;
     }
+
+    const normalizedSummary = summaryDraft.trim();
+    const currentSummary = (notes[0]?.content || "").trim();
+    if (normalizedSummary && normalizedSummary !== currentSummary) {
+      const { data: userData } = await supabase.auth.getUser();
+      const { error: noteError } = await supabase.from("client_notes").insert([
+        {
+          client_id: id,
+          va_id: userData.user?.id,
+          content: normalizedSummary,
+        },
+      ]);
+      if (noteError) {
+        await alert({
+          title: "Saved client, but note failed",
+          message: noteError.message,
+          tone: "danger",
+        });
+      }
+    }
+    setIsEditing(false);
+    setDraftClient(null);
+    setIsSavingOverview(false);
+    refreshData();
   };
 
   // 5. Add Internal Note
@@ -874,9 +895,10 @@ export default function ClientProfilePage({
                   <>
                     <button
                       type="submit"
-                      className="bg-[#9d4edd] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#7b2cbf]"
+                      disabled={isSavingOverview}
+                      className="bg-[#9d4edd] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#7b2cbf] disabled:opacity-60"
                     >
-                      Save
+                      {isSavingOverview ? "Saving..." : "Save"}
                     </button>
                     <button
                       type="button"
