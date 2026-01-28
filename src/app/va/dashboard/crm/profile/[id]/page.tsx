@@ -212,11 +212,6 @@ export default function ClientProfilePage({
     fetchDocuments();
   }, [id]);
 
-  useEffect(() => {
-    if (!client || isEditing) return;
-    setWebsiteLinks(client.website_links ?? []);
-    setSummaryDraft(notes[0]?.content || "");
-  }, [client, isEditing, notes]);
 
   // --- GLOBAL TICKER ---
   // Updates the UI every second so any running tasks show their time ticking up
@@ -734,6 +729,8 @@ export default function ClientProfilePage({
   const hasAgreements = filteredAgreements.length > 0;
   const summaryValue = notes[0]?.content || "";
   const displayClient = (isEditing ? draftClient : client) || client;
+  const websiteDisplayLinks =
+    (isEditing ? websiteLinks : client?.website_links) ?? [];
   const startEditing = () => {
     if (!client) return;
     setDraftClient({ ...client });
@@ -894,7 +891,8 @@ export default function ClientProfilePage({
                 )}
               </div>
               {displayClient && (
-                <dl className="grid gap-x-8 gap-y-5 md:grid-cols-2">
+                <>
+                  <dl className="grid gap-x-8 gap-y-5 md:grid-cols-2">
                 <div>
                   <dt className="text-[11px] font-semibold text-[#333333]">
                     Client Name
@@ -1229,9 +1227,9 @@ export default function ClientProfilePage({
                           </div>
                         ))}
                       </div>
-                    ) : websiteLinks.length ? (
+                    ) : websiteDisplayLinks.length ? (
                       <div className="flex flex-col gap-1">
-                        {websiteLinks.map((link, index) => (
+                        {websiteDisplayLinks.map((link, index) => (
                           <span key={`website-${index}`} className="text-sm">
                             {link}
                           </span>
@@ -1261,37 +1259,40 @@ export default function ClientProfilePage({
                 </div>
               </dl>
 
-              {isEditing && (
-                <div className="mt-6 border-t border-gray-200 pt-4">
-                  <p className="text-xs font-bold text-red-500 mb-1">
-                    DELETE CLIENT?
-                  </p>
-                  <p className="text-xs text-gray-500 mb-3">
-                    This permanently removes the client and related data.
-                  </p>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <input
-                      value={deleteConfirmInput}
-                      onChange={(e) => setDeleteConfirmInput(e.target.value)}
-                      placeholder="Type DELETE to confirm"
-                      className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={deleteClient}
-                      disabled={
-                        deleteConfirmInput.trim() !== "DELETE" ||
-                        deleteClientBusy
-                      }
-                      className="text-red-600 border border-red-200 px-4 py-2 rounded-lg font-bold disabled:opacity-50"
-                    >
-                      Delete Client
-                    </button>
-                  </div>
-                </div>
+                  {isEditing && (
+                    <div className="mt-6 border-t border-gray-200 pt-4">
+                      <p className="text-xs font-bold text-red-500 mb-1">
+                        DELETE CLIENT?
+                      </p>
+                      <p className="text-xs text-gray-500 mb-3">
+                        This permanently removes the client and related data.
+                      </p>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <input
+                          value={deleteConfirmInput}
+                          onChange={(e) =>
+                            setDeleteConfirmInput(e.target.value)
+                          }
+                          placeholder="Type DELETE to confirm"
+                          className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={deleteClient}
+                          disabled={
+                            deleteConfirmInput.trim() !== "DELETE" ||
+                            deleteClientBusy
+                          }
+                          className="text-red-600 border border-red-200 px-4 py-2 rounded-lg font-bold disabled:opacity-50"
+                        >
+                          Delete Client
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
-              </div>
-            )}
+            </div>
           </form>
         </section>
       )}
