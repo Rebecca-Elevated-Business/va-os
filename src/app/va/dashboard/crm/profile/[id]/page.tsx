@@ -9,6 +9,7 @@ import {
   ChevronRight,
   FileSignature,
   FileText,
+  Filter,
   MoreHorizontal,
   Edit2,
   Trash2,
@@ -1394,10 +1395,11 @@ export default function ClientProfilePage({
                     }
                     className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold hover:bg-gray-50 transition-all shadow-sm text-[#333333]"
                   >
-                    Status
+                    <Filter size={14} className="text-gray-400" />
+                    Filter by Status
                   </button>
                   {isStatusFilterOpen && (
-                    <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-xl shadow-xl z-50 p-3 animate-in fade-in slide-in-from-top-2">
+                    <div className="absolute left-0 mt-2 w-56 bg-white border border-gray-100 rounded-xl shadow-xl z-50 p-3 animate-in fade-in slide-in-from-top-2">
                       <p className="text-[10px] font-black text-[#333333] tracking-widest mb-3 ml-1">
                         Visible Statuses
                       </p>
