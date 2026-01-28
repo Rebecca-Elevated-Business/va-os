@@ -1042,9 +1042,9 @@ export default function ClientProfilePage({
                                     className="flex flex-col gap-2"
                                   >
                                     <input
-                                      type="url"
+                                      type="text"
                                       className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
-                                      placeholder="Enter URL"
+                                      placeholder="example.com or https://example.com"
                                       value={link}
                                       onChange={(event) => {
                                         const next = [...websiteLinks];

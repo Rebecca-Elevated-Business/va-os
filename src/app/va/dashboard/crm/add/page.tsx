@@ -245,9 +245,9 @@ export default function AddClientPage() {
             {websiteLinks.map((link, index) => (
               <div key={`website-${index}`} className="flex flex-col gap-2">
                 <input
-                  type="url"
+                  type="text"
                   className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#9d4edd] outline-none"
-                  placeholder="Enter URL"
+                  placeholder="example.com or https://example.com"
                   value={link}
                   onChange={(event) => {
                     const next = [...websiteLinks];
