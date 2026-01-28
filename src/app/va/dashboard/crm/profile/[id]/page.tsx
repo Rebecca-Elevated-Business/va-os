@@ -1530,7 +1530,7 @@ export default function ClientProfilePage({
                                           reorderParents(task.id);
                                         }
                                       }}
-                                      className={`group hover:bg-gray-50 transition-colors ${
+                                      className={`relative z-0 group hover:bg-gray-50 transition-colors ${
                                         statusValue === "completed"
                                           ? "bg-gray-50 opacity-60"
                                           : ""
@@ -1660,7 +1660,7 @@ export default function ClientProfilePage({
 
                                       {/* 6. ACTIONS */}
                                       <td className="px-4 py-3 text-right align-top pt-4">
-                                        <div className="relative action-menu-trigger inline-flex justify-end z-20">
+                                        <div className="relative action-menu-trigger inline-flex justify-end z-30">
                                           <button
                                             onClick={(event) => {
                                               event.stopPropagation();
@@ -1678,7 +1678,7 @@ export default function ClientProfilePage({
 
                                           {actionMenuId === task.id && (
                                             <div
-                                              className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-1"
+                                              className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-1"
                                               onClick={(event) =>
                                                 event.stopPropagation()
                                               }
@@ -1789,7 +1789,7 @@ export default function ClientProfilePage({
                                                   child.id,
                                                 );
                                               }}
-                                              className={`group hover:bg-gray-50 transition-colors ${
+                                              className={`relative z-0 group hover:bg-gray-50 transition-colors ${
                                                 childStatusValue ===
                                                 "completed"
                                                   ? "bg-gray-50 opacity-60"
@@ -1886,7 +1886,7 @@ export default function ClientProfilePage({
                                                 {formatTime(child)}
                                               </td>
                                               <td className="px-4 py-3 text-right align-top pt-4">
-                                                <div className="relative action-menu-trigger inline-flex justify-end z-20">
+                                                <div className="relative action-menu-trigger inline-flex justify-end z-30">
                                                   <button
                                                     onClick={(event) => {
                                                       event.stopPropagation();
@@ -1905,7 +1905,7 @@ export default function ClientProfilePage({
 
                                                   {actionMenuId === child.id && (
                                                     <div
-                                                      className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-1"
+                                                      className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-1"
                                                       onClick={(event) =>
                                                         event.stopPropagation()
                                                       }
