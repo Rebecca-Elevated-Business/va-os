@@ -94,9 +94,6 @@ export default function SOPLibraryPage() {
               <h3 className="font-bold text-sm text-[#333333] group-hover:text-[#9d4edd] transition-colors uppercase tracking-tight">
                 {template.title}
               </h3>
-              <p className="text-[11px] text-gray-500 mt-3 leading-relaxed line-clamp-2">
-                {template.description}
-              </p>
             </button>
           ))}
           <div className="text-left bg-white border border-dashed border-gray-200 rounded-2xl p-6 shadow-sm">
@@ -111,9 +108,6 @@ export default function SOPLibraryPage() {
             <h3 className="font-bold text-sm text-[#333333] uppercase tracking-tight">
               Request a Workflow
             </h3>
-            <p className="text-[11px] text-gray-500 mt-3 leading-relaxed line-clamp-2">
-              Placeholder text.
-            </p>
           </div>
         </div>
       )}
