@@ -874,11 +874,11 @@ export default function ClientProfilePage({
           </label>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
-          <div className="text-xs font-bold uppercase tracking-widest text-gray-400">
-            Client Session
-          </div>
-          <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+          <div className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+              Client Session
+            </div>
             <span className="font-mono text-sm text-[#333333]">
               {formatHms(sessionElapsedSeconds)}
             </span>
@@ -893,13 +893,10 @@ export default function ClientProfilePage({
               {isSessionRunning && activeClientId && activeClientId !== id
                 ? "Switch to this client"
                 : isSessionRunning
-                  ? "Stop session"
-                  : "Start session"}
+                  ? "Stop Session"
+                  : "Start Session"}
             </button>
           </div>
-        </div>
-
-        <div className="flex justify-end mb-6">
           <button
             onClick={() => openTaskModal()}
             className="bg-black text-white px-6 py-2 rounded font-bold hover:bg-gray-800"

@@ -227,7 +227,7 @@ export default function DashboardHeader() {
 
   const filteredClients = useMemo(() => {
     const query = clientQuery.trim().toLowerCase();
-    if (!query) return clients;
+    if (!query) return [];
     return clients.filter((client) =>
       `${client.surname} ${client.business_name}`.toLowerCase().includes(query),
     );
@@ -345,13 +345,14 @@ export default function DashboardHeader() {
               className="w-48 rounded-xl border border-gray-200 px-3 py-2 text-xs font-semibold text-[#333333] focus:ring-2 focus:ring-[#9d4edd] outline-none"
               value={clientInputValue}
               onChange={(event) => {
-                setClientQuery(event.target.value);
-                setShowClientResults(true);
-                if (!event.target.value) setSelectedClientId(null);
+                const value = event.target.value;
+                setClientQuery(value);
+                setShowClientResults(value.trim().length > 0);
+                if (!value) setSelectedClientId(null);
               }}
               onFocus={() => {
                 setIsClientFocused(true);
-                setShowClientResults(true);
+                setShowClientResults(clientQuery.trim().length > 0);
               }}
               onBlur={() => {
                 if (!clientQuery.trim()) {
@@ -359,7 +360,7 @@ export default function DashboardHeader() {
                 }
               }}
             />
-            {showClientResults && (
+            {showClientResults && clientQuery.trim().length > 0 && (
               <div className="absolute z-40 mt-2 w-full rounded-xl border border-gray-100 bg-white shadow-xl max-h-60 overflow-auto">
                 {filteredClients.length === 0 ? (
                   <div className="px-3 py-2 text-xs text-gray-400">

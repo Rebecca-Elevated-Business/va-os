@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { Circle, Play, Search, Timer } from "lucide-react";
+import { Circle, Play, Search } from "lucide-react";
 import TaskModal from "../tasks/TaskModal";
 import { Task } from "../tasks/types";
 import { useClientSession } from "../ClientSessionContext";
@@ -75,6 +75,7 @@ export default function TimeTrackingPage() {
   const [now, setNow] = useState(0);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [loadingEntries, setLoadingEntries] = useState(true);
+  const [isEntriesOpen, setIsEntriesOpen] = useState(true);
 
   const [filterStart, setFilterStart] = useState(getTodayDateString());
   const [filterEnd, setFilterEnd] = useState(getTodayDateString());
@@ -105,7 +106,7 @@ export default function TimeTrackingPage() {
 
   const sessionClientOptions = useMemo(() => {
     const query = sessionClientQuery.trim().toLowerCase();
-    if (!query) return clients;
+    if (!query) return [];
     return clients.filter((client) =>
       `${client.surname} ${client.business_name || ""}`
         .toLowerCase()
@@ -433,101 +434,111 @@ export default function TimeTrackingPage() {
         </div>
       </header>
 
-      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6 mb-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
-          <div className="w-full lg:w-3/5" ref={sessionDropdownRef}>
-            <label className="text-[11px] font-bold text-gray-400 tracking-widest uppercase block mb-2">
-              Client Session
-            </label>
-            <div className="relative">
-              <Search
-                size={16}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-              />
-              <input
-                type="text"
-                placeholder="Select a client to track"
-                className="w-full pl-11 pr-10 py-3.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold focus:ring-2 focus:ring-[#9d4edd] outline-none"
-                value={sessionInputValue}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  setSessionClientQuery(value);
-                  setIsSessionDropdownOpen(true);
-                  if (!value) setSessionClientId(null);
-                }}
-                onFocus={() => {
-                  setIsSessionClientFocused(true);
-                  setIsSessionDropdownOpen(true);
-                }}
-                onBlur={() => {
-                  if (!sessionClientQuery.trim()) {
-                    setIsSessionClientFocused(false);
-                  }
-                }}
-              />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
+          <div className="flex flex-col gap-4">
+            <div className="w-full" ref={sessionDropdownRef}>
+              <label className="text-[11px] font-bold text-gray-400 tracking-widest uppercase block mb-2">
+                Client Session
+              </label>
+              <div className="relative">
+                <Search
+                  size={16}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                />
+                <input
+                  type="text"
+                  placeholder="Select a client to track"
+                  className="w-full pl-11 pr-10 py-3.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold focus:ring-2 focus:ring-[#9d4edd] outline-none"
+                  value={sessionInputValue}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setSessionClientQuery(value);
+                    setIsSessionDropdownOpen(value.trim().length > 0);
+                    if (!value) setSessionClientId(null);
+                  }}
+                  onFocus={() => {
+                    setIsSessionClientFocused(true);
+                    setIsSessionDropdownOpen(
+                      sessionClientQuery.trim().length > 0,
+                    );
+                  }}
+                  onBlur={() => {
+                    if (!sessionClientQuery.trim()) {
+                      setIsSessionClientFocused(false);
+                    }
+                  }}
+                />
 
-              {isSessionDropdownOpen && (
-                <div className="absolute z-30 mt-2 w-full rounded-xl border border-gray-100 bg-white shadow-xl max-h-72 overflow-auto">
-                  {sessionClientOptions.length === 0 ? (
-                    <div className="px-4 py-3 text-sm text-gray-400">
-                      No clients found.
-                    </div>
-                  ) : (
-                    sessionClientOptions.map((client) => (
-                      <button
-                        key={client.id}
-                        onClick={() => {
-                          setSessionClientId(client.id);
-                          setSessionClientQuery(
-                            `${client.surname}${client.business_name ? ` (${client.business_name})` : ""}`,
-                          );
-                          setIsSessionDropdownOpen(false);
-                          setIsSessionClientFocused(false);
-                        }}
-                        className="w-full text-left px-4 py-3 text-sm font-semibold text-[#333333] hover:bg-gray-50 transition-colors"
-                      >
-                        {client.surname}
-                        {client.business_name ? ` (${client.business_name})` : ""}
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
+                {isSessionDropdownOpen &&
+                  sessionClientQuery.trim().length > 0 && (
+                  <div className="absolute z-30 mt-2 w-full rounded-xl border border-gray-100 bg-white shadow-xl max-h-72 overflow-auto">
+                    {sessionClientOptions.length === 0 ? (
+                      <div className="px-4 py-3 text-sm text-gray-400">
+                        No clients found.
+                      </div>
+                    ) : (
+                      sessionClientOptions.map((client) => (
+                        <button
+                          key={client.id}
+                          onClick={() => {
+                            setSessionClientId(client.id);
+                            setSessionClientQuery(
+                              `${client.surname}${client.business_name ? ` (${client.business_name})` : ""}`,
+                            );
+                            setIsSessionDropdownOpen(false);
+                            setIsSessionClientFocused(false);
+                          }}
+                          className="w-full text-left px-4 py-3 text-sm font-semibold text-[#333333] hover:bg-gray-50 transition-colors"
+                        >
+                          {client.surname}
+                          {client.business_name
+                            ? ` (${client.business_name})`
+                            : ""}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
 
-          <div className="flex-1 flex items-center justify-between gap-6">
-            <div className="text-3xl font-black tracking-widest text-[#333333] font-mono">
-              {formatHms(sessionElapsedSeconds)}
+            <div className="flex items-center justify-between gap-6">
+              <div className="text-3xl font-black tracking-widest text-[#333333] font-mono">
+                {formatHms(sessionElapsedSeconds)}
+              </div>
+              <button
+                onClick={handleToggleSession}
+                disabled={!sessionClientId && !isSessionRunning}
+                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm shadow-lg transition-all ${
+                  isSessionRunning
+                    ? "bg-red-500 text-white hover:bg-red-600"
+                    : "bg-[#9d4edd] text-white hover:bg-[#7b2cbf]"
+                } ${
+                  !sessionClientId && !isSessionRunning
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed shadow-none"
+                    : ""
+                }`}
+              >
+                {isSessionRunning ? (
+                  <Circle size={14} fill="currentColor" />
+                ) : (
+                  <Play size={14} fill="currentColor" />
+                )}
+                {isSessionRunning &&
+                sessionClientId &&
+                sessionClientId !== activeClientId
+                  ? "Switch"
+                  : isSessionRunning
+                    ? "Stop"
+                    : "Start"}
+              </button>
             </div>
-            <button
-              onClick={handleToggleSession}
-              disabled={!sessionClientId && !isSessionRunning}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm shadow-lg transition-all ${
-                isSessionRunning
-                  ? "bg-red-500 text-white hover:bg-red-600"
-                  : "bg-[#9d4edd] text-white hover:bg-[#7b2cbf]"
-              } ${
-                !sessionClientId && !isSessionRunning
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed shadow-none"
-                  : ""
-              }`}
-            >
-              <Timer size={14} fill="currentColor" />
-              {isSessionRunning &&
-              sessionClientId &&
-              sessionClientId !== activeClientId
-                ? "Switch"
-                : isSessionRunning
-                  ? "Stop"
-                  : "Start"}
-            </button>
           </div>
         </div>
-      </div>
 
-      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
           <div className="w-full lg:w-3/5" ref={dropdownRef}>
             <label className="text-[11px] font-bold text-gray-400 tracking-widest uppercase block mb-2">
               Task
@@ -636,13 +647,23 @@ export default function TimeTrackingPage() {
             </button>
           </div>
         </div>
+        </div>
       </div>
 
       <div className="mt-8 bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <h2 className="text-sm font-black tracking-widest text-gray-500 uppercase">
-            Recent time entries
-          </h2>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsEntriesOpen((prev) => !prev)}
+              className="text-xs font-bold text-[#333333] hover:text-[#9d4edd]"
+            >
+              {isEntriesOpen ? "Hide" : "Show"}
+            </button>
+            <h2 className="text-sm font-black tracking-widest text-gray-500 uppercase">
+              Recent time entries
+            </h2>
+          </div>
           <div className="flex flex-wrap items-end gap-3">
             <div className="flex flex-col text-xs font-semibold text-gray-500">
               Start date
@@ -679,46 +700,48 @@ export default function TimeTrackingPage() {
           </div>
         </div>
 
-        <div className="mt-6">
-          {loadingEntries ? (
-            <div className="text-sm text-gray-400 italic">
-              Loading entries...
-            </div>
-          ) : timeEntries.length === 0 ? (
-            <div className="text-sm text-gray-400 italic py-8 text-center">
-              No time entries. Start tracking to see your history.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {timeEntries.map((entry) => (
-                <div
-                  key={entry.id}
-                  className="flex flex-col gap-2 rounded-xl border border-gray-100 px-4 py-3 shadow-sm"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-bold text-[#333333]">
-                        {entryTaskLabel(entry)}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        {entryClientLabel(entry)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs font-bold text-gray-500">
-                        {formatEntryTime(entry.started_at)} -{" "}
-                        {formatEntryTime(entry.ended_at)}
-                      </p>
-                      <p className="text-sm font-mono text-[#333333]">
-                        {formatHms(entry.duration_minutes * 60)}
-                      </p>
+        {isEntriesOpen && (
+          <div className="mt-6">
+            {loadingEntries ? (
+              <div className="text-sm text-gray-400 italic">
+                Loading entries...
+              </div>
+            ) : timeEntries.length === 0 ? (
+              <div className="text-sm text-gray-400 italic py-8 text-center">
+                No time entries. Start tracking to see your history.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {timeEntries.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="flex flex-col gap-2 rounded-xl border border-gray-100 px-4 py-3 shadow-sm"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-bold text-[#333333]">
+                          {entryTaskLabel(entry)}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {entryClientLabel(entry)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs font-bold text-gray-500">
+                          {formatEntryTime(entry.started_at)} -{" "}
+                          {formatEntryTime(entry.ended_at)}
+                        </p>
+                        <p className="text-sm font-mono text-[#333333]">
+                          {formatHms(entry.duration_minutes * 60)}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <TaskModal
