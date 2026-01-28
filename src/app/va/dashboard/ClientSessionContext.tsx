@@ -61,7 +61,7 @@ export function ClientSessionProvider({ children }: { children: React.ReactNode 
   const [activeSession, setActiveSession] = useState<ClientSession | null>(null);
   const [activeEntry, setActiveEntry] = useState<ClientSessionEntry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(0);
 
   const lastClosedEntryRef = useRef<ClientSessionEntry | null>(null);
 
@@ -113,8 +113,10 @@ export function ClientSessionProvider({ children }: { children: React.ReactNode 
 
   useEffect(() => {
     if (!userId) return;
-    setIsLoading(true);
-    loadActiveSession(userId).finally(() => setIsLoading(false));
+    const timer = setTimeout(() => {
+      setIsLoading(true);
+      loadActiveSession(userId).finally(() => setIsLoading(false));
+    }, 0);
 
     const sessionChannel = supabase
       .channel("client-sessions")
@@ -133,6 +135,7 @@ export function ClientSessionProvider({ children }: { children: React.ReactNode 
       .subscribe();
 
     return () => {
+      clearTimeout(timer);
       supabase.removeChannel(sessionChannel);
     };
   }, [loadActiveSession, userId]);
