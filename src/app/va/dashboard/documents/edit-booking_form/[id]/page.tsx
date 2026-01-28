@@ -291,10 +291,10 @@ export default function EditBookingFormPage({
       </div>
 
       <div className="space-y-8">
-        <section className="space-y-4">
-          <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">
-            Hero Section
-          </label>
+        <section className="rounded-3xl border border-gray-100 bg-gray-50 p-6 space-y-6">
+          <h2 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">
+            HERO SECTION
+          </h2>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-3">
               <input
@@ -356,22 +356,21 @@ export default function EditBookingFormPage({
               onChange={(e) => updateContent({ prepared_date: e.target.value })}
             />
           </div>
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
+              Warm Welcome
+            </label>
+            <textarea
+              className="w-full p-6 bg-white border-2 border-gray-50 rounded-4xl outline-none focus:border-purple-100 min-h-25 leading-relaxed shadow-sm text-sm"
+              value={doc.content.warm_welcome_text || ""}
+              onChange={(e) =>
+                updateContent({ warm_welcome_text: e.target.value })
+              }
+            />
+          </div>
         </section>
 
-        <section className="space-y-3">
-          <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">
-            Warm Welcome
-          </label>
-          <textarea
-            className="w-full p-6 bg-white border-2 border-gray-50 rounded-4xl outline-none focus:border-purple-100 min-h-25 leading-relaxed shadow-sm text-sm"
-            value={doc.content.warm_welcome_text || ""}
-            onChange={(e) =>
-              updateContent({ warm_welcome_text: e.target.value })
-            }
-          />
-        </section>
-
-        <section className="space-y-4">
+        <section className="rounded-3xl border border-gray-100 bg-gray-50 p-6 space-y-4">
           <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
             1. About you and your business
           </h2>
@@ -451,7 +450,7 @@ export default function EditBookingFormPage({
           </div>
         </section>
 
-        <section className="space-y-4">
+        <section className="rounded-3xl border border-gray-100 bg-gray-50 p-6 space-y-4">
           <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
             2. About us
           </h2>
@@ -507,7 +506,7 @@ export default function EditBookingFormPage({
           </div>
         </section>
 
-        <section className="space-y-5">
+        <section className="rounded-3xl border border-gray-100 bg-gray-50 p-6 space-y-5">
           <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
             3. About the work
           </h2>
@@ -617,7 +616,7 @@ export default function EditBookingFormPage({
           />
         </section>
 
-        <section className="space-y-4">
+        <section className="rounded-3xl border border-gray-100 bg-gray-50 p-6 space-y-4">
           <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
             4. About payments
           </h2>
@@ -675,7 +674,7 @@ export default function EditBookingFormPage({
           </div>
         </section>
 
-        <section className="space-y-4">
+        <section className="rounded-3xl border border-gray-100 bg-gray-50 p-6 space-y-4">
           <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
             5. Final important subjects
           </h2>
@@ -703,7 +702,7 @@ export default function EditBookingFormPage({
             />
           </div>
 
-          <div className="rounded-3xl border border-gray-100 bg-gray-50 p-5 space-y-3">
+          <div className="space-y-3">
             <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
               29. Our main terms can be found at this link:
             </p>
@@ -740,7 +739,7 @@ export default function EditBookingFormPage({
           </div>
         </section>
 
-        <section className="space-y-4">
+        <section className="rounded-3xl border border-gray-100 bg-gray-50 p-6 space-y-4">
           <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
             6. Client
           </h2>
@@ -796,7 +795,7 @@ export default function EditBookingFormPage({
           </div>
         </section>
 
-        <section className="space-y-4">
+        <section className="rounded-3xl border border-gray-100 bg-gray-50 p-6 space-y-4">
           <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
             7. Us
           </h2>
