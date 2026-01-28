@@ -16,6 +16,7 @@ type Client = {
   status: string;
   has_access: boolean;
   portal_access_enabled?: boolean | null;
+  portal_invite_link?: string | null;
   created_at: string;
 };
 
@@ -178,16 +179,16 @@ export default function CRMPage() {
                 Email
               </th>
               <th className="px-6 py-4 text-sm font-semibold text-gray-700">
-                Source
+                Phone
               </th>
               <th className="px-6 py-4 text-sm font-semibold text-gray-700">
                 Status
               </th>
               <th className="px-6 py-4 text-sm font-semibold text-gray-700">
-                Access
+                Portal Access
               </th>
               <th className="px-6 py-4 text-sm font-semibold text-gray-700 text-right">
-                Action
+                Access
               </th>
             </tr>
           </thead>
@@ -222,7 +223,9 @@ export default function CRMPage() {
                   <td className="px-6 py-4 text-gray-600 text-sm">
                     {client.email}
                   </td>
-                  <td className="px-6 py-4 text-gray-600">{client.source}</td>
+                  <td className="px-6 py-4 text-gray-600 text-sm">
+                    {client.phone || "-"}
+                  </td>
                   <td className="px-6 py-4">
                     <span
                       className={`px-3 py-1 rounded-full text-[10px] uppercase tracking-wider font-black ${
@@ -239,13 +242,23 @@ export default function CRMPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <div
-                      className={`w-2.5 h-2.5 rounded-full mx-auto ${
-                        client.portal_access_enabled ?? client.has_access
-                          ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"
-                          : "bg-gray-300"
-                      }`}
-                    />
+                    {(() => {
+                      const issued = Boolean(
+                        client.portal_access_enabled ||
+                          client.portal_invite_link?.trim(),
+                      );
+                      const accessed = Boolean(client.has_access);
+                      const dotClass = accessed
+                        ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"
+                        : issued
+                          ? "bg-orange-400 shadow-[0_0_8px_rgba(251,146,60,0.45)]"
+                          : "bg-gray-300";
+                      return (
+                        <div
+                          className={`w-2.5 h-2.5 rounded-full mx-auto ${dotClass}`}
+                        />
+                      );
+                    })()}
                   </td>
                   <td className="px-6 py-4 text-right">
                     <Link
