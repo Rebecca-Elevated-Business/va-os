@@ -5,7 +5,6 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, Plus, Trash2 } from "lucide-react";
-import { DOCUMENT_TEMPLATES } from "@/lib/documentTemplates";
 import {
   mergeBookingContent,
   type BookingServiceItem,
