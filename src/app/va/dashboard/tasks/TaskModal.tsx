@@ -15,6 +15,7 @@ type TaskModalPrefill = {
   status?: string;
   category?: "client" | "business" | "personal";
   clientId?: string;
+  parentTaskId?: string | null;
   startDate?: string;
   startTime?: string;
   endDate?: string;
@@ -184,6 +185,7 @@ export default function TaskModal({
       task_name: formTaskName,
       details: detailsValue ? detailsValue : null,
       client_id: clientId,
+      parent_task_id: task?.parent_task_id ?? prefill?.parentTaskId ?? null,
       status: formStatus,
       is_completed: isCompleted,
       due_date: dueDate,

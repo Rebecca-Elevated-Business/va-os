@@ -12,6 +12,7 @@ export interface Task {
   is_completed?: boolean;
   start_time: string | null;
   end_time?: string | null;
+  parent_task_id?: string | null;
   details?: string;
   category?: string; // <--- This is the magic line that fixes the errors
   clients?: {

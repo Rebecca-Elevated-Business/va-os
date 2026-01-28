@@ -1,10 +1,16 @@
 "use client";
 
-import { useState, useEffect, use, useCallback } from "react";
+import { useState, useEffect, use, useCallback, Fragment } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { usePrompt } from "@/components/ui/PromptProvider";
-import { FileSignature, FileText, ReceiptText } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  FileSignature,
+  FileText,
+  ReceiptText,
+} from "lucide-react";
 import TaskModal from "../../../tasks/TaskModal";
 import { Task } from "../../../tasks/types";
 import { useClientSession } from "../../../ClientSessionContext";
@@ -92,10 +98,10 @@ export default function ClientProfilePage({
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
   const [now, setNow] = useState(0); // Initialize with 0 to satisfy React Purity
-  // NEW: State for Editing Tasks
-  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [editTaskName, setEditTaskName] = useState("");
-  const [editTaskDate, setEditTaskDate] = useState("");
+  const [taskModalTask, setTaskModalTask] = useState<Task | null>(null);
+  const [taskModalPrefill, setTaskModalPrefill] = useState<{
+    parentTaskId?: string | null;
+  } | null>(null);
   // UI States
   const [isEditing, setIsEditing] = useState(false);
   const [portalManageOpen, setPortalManageOpen] = useState(false);
@@ -105,6 +111,14 @@ export default function ClientProfilePage({
   const [deleteClientBusy, setDeleteClientBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [newNote, setNewNote] = useState("");
+  const [docTypeFilter, setDocTypeFilter] = useState("all");
+  const [docStartDate, setDocStartDate] = useState("");
+  const [docEndDate, setDocEndDate] = useState("");
+  const [expandedParents, setExpandedParents] = useState<Record<string, boolean>>(
+    {},
+  );
+  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
 
   // --- DATA FETCHING ---
   const refreshData = useCallback(async () => {
@@ -373,30 +387,16 @@ export default function ClientProfilePage({
     }
   };
 
-  // 7. Start Editing
-  const startEditing = (task: Task) => {
-    setEditingTaskId(task.id);
-    setEditTaskName(task.task_name);
-    setEditTaskDate(task.due_date ? task.due_date.split("T")[0] : "");
-    void startTaskEntry(task.id, task.client_id);
-  };
-
-  const maybeCloseEditing = async () => {
-    if (!editingTaskId || activeEntry?.task_id !== editingTaskId) return true;
-    const duration = getActiveEntryDurationSeconds();
-    if (duration < 5) {
-      const dismiss = await confirm({
-        title: "Dismiss task from timer report?",
-        message: "Close task and dismiss from timer report?",
-        confirmLabel: "Dismiss",
-        cancelLabel: "Keep open",
-      });
-      if (!dismiss) return false;
-      await dismissActiveTaskEntry();
-      return true;
+  const openTaskModal = (
+    task?: Task,
+    options?: { parentTaskId?: string | null },
+  ) => {
+    setTaskModalTask(task || null);
+    setTaskModalPrefill(options || null);
+    setIsTaskModalOpen(true);
+    if (task) {
+      void startTaskEntry(task.id, task.client_id);
     }
-    await stopActiveTaskEntry();
-    return true;
   };
 
   const handleToggleSession = async () => {
@@ -412,25 +412,51 @@ export default function ClientProfilePage({
     await startSession(client.id);
   };
 
-  // 8. Save Edited Task
-  const saveTask = async () => {
-    if (!editingTaskId || !editTaskName.trim()) return;
+  const toggleParentExpanded = (taskId: string) => {
+    setExpandedParents((prev) => ({ ...prev, [taskId]: !prev[taskId] }));
+  };
 
-    const { error } = await supabase
+  const handleDropOnParent = async (parentId: string) => {
+    if (!draggingTaskId || draggingTaskId === parentId) return;
+    await supabase
       .from("tasks")
-      .update({
-        task_name: editTaskName,
-        due_date: editTaskDate || null,
-      })
-      .eq("id", editingTaskId);
+      .update({ parent_task_id: parentId })
+      .eq("id", draggingTaskId);
+    setDraggingTaskId(null);
+    setDropTargetId(null);
+    refreshData();
+  };
 
-    if (!error) {
-      const shouldClose = await maybeCloseEditing();
-      if (shouldClose) {
-        setEditingTaskId(null);
+  const handleDropToTopLevel = async () => {
+    if (!draggingTaskId) return;
+    await supabase
+      .from("tasks")
+      .update({ parent_task_id: null })
+      .eq("id", draggingTaskId);
+    setDraggingTaskId(null);
+    setDropTargetId(null);
+    refreshData();
+  };
+
+  const handleCloseTaskModal = async () => {
+    if (taskModalTask && activeEntry?.task_id === taskModalTask.id) {
+      const duration = getActiveEntryDurationSeconds();
+      if (duration < 5) {
+        const dismiss = await confirm({
+          title: "Dismiss task from timer report?",
+          message: "Close task and dismiss from timer report?",
+          confirmLabel: "Dismiss",
+          cancelLabel: "Keep open",
+        });
+        if (!dismiss) return;
+        await dismissActiveTaskEntry();
+      } else {
+        await stopActiveTaskEntry();
       }
-      refreshData();
     }
+    setIsTaskModalOpen(false);
+    setTaskModalTask(null);
+    setTaskModalPrefill(null);
   };
   const issuePortalAccess = async () => {
     if (!client) return;
@@ -547,15 +573,50 @@ export default function ClientProfilePage({
   const visibleTasks = tasks.filter((t) =>
     showCompleted ? true : !t.is_completed,
   );
+  const topLevelTasks = visibleTasks.filter((task) => !task.parent_task_id);
+  const subtasksByParent = visibleTasks.reduce<Record<string, Task[]>>(
+    (acc, task) => {
+      if (!task.parent_task_id) return acc;
+      if (!acc[task.parent_task_id]) acc[task.parent_task_id] = [];
+      acc[task.parent_task_id].push(task);
+      return acc;
+    },
+    {},
+  );
+  const hasSubtasks = (taskId: string) =>
+    Boolean(subtasksByParent[taskId]?.length);
   const portalInviteLink = client.portal_invite_link?.trim() || "";
   const portalAccessEnabled = client.portal_access_enabled ?? client.has_access;
+  const inDateRange = (value: string) => {
+    if (!docStartDate && !docEndDate) return true;
+    const dateValue = new Date(value);
+    if (docStartDate) {
+      const start = new Date(`${docStartDate}T00:00:00`);
+      if (dateValue < start) return false;
+    }
+    if (docEndDate) {
+      const end = new Date(`${docEndDate}T23:59:59.999`);
+      if (dateValue > end) return false;
+    }
+    return true;
+  };
+  const filteredDocuments = clientDocuments.filter(
+    (doc) =>
+      (docTypeFilter === "all" || docTypeFilter === doc.type) &&
+      inDateRange(doc.created_at),
+  );
+  const filteredAgreements = clientAgreements.filter(
+    (ag) =>
+      (docTypeFilter === "all" || docTypeFilter === "workflow") &&
+      inDateRange(ag.last_updated_at),
+  );
   const documentIcon = (type: string) => {
     if (type === "invoice") return ReceiptText;
     if (type === "booking_form") return FileSignature;
     return FileText;
   };
-  const hasDocuments = clientDocuments.length > 0;
-  const hasAgreements = clientAgreements.length > 0;
+  const hasDocuments = filteredDocuments.length > 0;
+  const hasAgreements = filteredAgreements.length > 0;
 
   return (
     <div className="flex flex-col h-full text-black space-y-8 pb-20">
@@ -840,7 +901,7 @@ export default function ClientProfilePage({
 
         <div className="flex justify-end mb-6">
           <button
-            onClick={() => setIsTaskModalOpen(true)}
+            onClick={() => openTaskModal()}
             className="bg-black text-white px-6 py-2 rounded font-bold hover:bg-gray-800"
           >
             Add Task
@@ -880,149 +941,310 @@ export default function ClientProfilePage({
                   </td>
                 </tr>
               ) : (
-                visibleTasks.map((task) => {
-                  const isEditing = editingTaskId === task.id;
+                <>
+                  <tr
+                    onDragOver={(event) => {
+                      if (!draggingTaskId) return;
+                      event.preventDefault();
+                      setDropTargetId("top-level");
+                    }}
+                    onDragLeave={() => setDropTargetId(null)}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      handleDropToTopLevel();
+                    }}
+                    className={`text-[10px] font-bold uppercase tracking-widest text-gray-400 ${
+                      dropTargetId === "top-level"
+                        ? "bg-purple-50 text-[#9d4edd]"
+                        : ""
+                    }`}
+                  >
+                    <td className="px-4 py-2" colSpan={5}>
+                      Drag here to make top-level
+                    </td>
+                  </tr>
+                  {topLevelTasks.map((task) => {
+                    const childTasks = subtasksByParent[task.id] || [];
+                    const isExpanded = expandedParents[task.id] ?? true;
+                    const dueDate = task.scheduled_start || task.due_date;
 
-                  return (
-                    <tr
-                      key={task.id}
-                      className={`group hover:bg-gray-50 transition-colors ${
-                        task.is_completed ? "bg-gray-50 opacity-60" : ""
-                      }`}
-                    >
-                      {/* 1. CHECKBOX */}
-                      <td className="px-4 py-3 text-center">
-                        <input
-                          type="checkbox"
-                          checked={task.is_completed}
-                          onChange={() => toggleComplete(task)}
-                          disabled={isEditing}
-                          className="w-5 h-5 text-[#9d4edd] rounded focus:ring-[#9d4edd] cursor-pointer"
-                        />
-                      </td>
-
-                      {/* 2. TASK NAME (Editable) */}
-                      <td className="px-4 py-3">
-                        {isEditing ? (
-                          <div className="flex flex-col gap-2">
+                    return (
+                      <Fragment key={task.id}>
+                        <tr
+                          draggable
+                          onDragStart={() => setDraggingTaskId(task.id)}
+                          onDragEnd={() => {
+                            setDraggingTaskId(null);
+                            setDropTargetId(null);
+                          }}
+                          onDragOver={(event) => {
+                            if (!draggingTaskId || draggingTaskId === task.id)
+                              return;
+                            event.preventDefault();
+                            setDropTargetId(task.id);
+                          }}
+                          onDragLeave={() => {
+                            if (dropTargetId === task.id) {
+                              setDropTargetId(null);
+                            }
+                          }}
+                          onDrop={(event) => {
+                            event.preventDefault();
+                            handleDropOnParent(task.id);
+                          }}
+                          className={`group hover:bg-gray-50 transition-colors ${
+                            task.is_completed ? "bg-gray-50 opacity-60" : ""
+                          } ${
+                            dropTargetId === task.id
+                              ? "bg-purple-50/80 ring-1 ring-purple-100"
+                              : ""
+                          }`}
+                          onClick={() => openTaskModal(task)}
+                        >
+                          {/* 1. CHECKBOX */}
+                          <td className="px-4 py-3 text-center">
                             <input
-                              className="border p-1 rounded w-full text-black focus:ring-2 focus:ring-[#9d4edd] outline-none"
-                              value={editTaskName}
-                              onChange={(e) => setEditTaskName(e.target.value)}
-                              autoFocus
+                              type="checkbox"
+                              checked={task.is_completed}
+                              onChange={(event) => {
+                                event.stopPropagation();
+                                toggleComplete(task);
+                              }}
+                              className="w-5 h-5 text-[#9d4edd] rounded focus:ring-[#9d4edd] cursor-pointer"
                             />
-                            <div className="flex gap-2">
+                          </td>
+
+                          {/* 2. TASK NAME */}
+                          <td className="px-4 py-3">
+                            <div className="flex items-start gap-2">
+                              {hasSubtasks(task.id) ? (
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    toggleParentExpanded(task.id);
+                                  }}
+                                  className="mt-1 text-gray-400 hover:text-gray-600"
+                                >
+                                  {isExpanded ? (
+                                    <ChevronDown size={14} />
+                                  ) : (
+                                    <ChevronRight size={14} />
+                                  )}
+                                </button>
+                              ) : (
+                                <div className="w-4" />
+                              )}
+                              <div>
+                                <div
+                                  className={`font-medium ${
+                                    task.is_completed
+                                      ? "line-through text-gray-400"
+                                      : ""
+                                  }`}
+                                >
+                                  {task.task_name}
+                                </div>
+                                <div className="flex gap-3 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      openTaskModal(task);
+                                    }}
+                                    className="text-[10px] font-bold text-gray-400 hover:text-[#9d4edd] case tracking-wider"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      openTaskModal(undefined, {
+                                        parentTaskId: task.id,
+                                      });
+                                    }}
+                                    className="text-[10px] font-bold text-gray-400 hover:text-[#9d4edd] case tracking-wider"
+                                  >
+                                    Add subtask
+                                  </button>
+                                  <button
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      deleteTask(task.id);
+                                    }}
+                                    className="text-[10px] font-bold text-gray-400 hover:text-red-500 case tracking-wider"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* 3. DATE */}
+                          <td className="px-4 py-3 text-sm text-gray-500 align-top pt-4">
+                            {dueDate
+                              ? new Date(dueDate).toLocaleDateString("en-GB")
+                              : "-"}
+                          </td>
+
+                          {/* 4. TIMER BUTTON */}
+                          <td className="px-4 py-3 text-center align-top pt-4">
+                            {!task.is_completed && (
                               <button
-                                onClick={saveTask}
-                                className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-bold hover:bg-green-200"
-                              >
-                                Save
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  const shouldClose = await maybeCloseEditing();
-                                  if (shouldClose) {
-                                    setEditingTaskId(null);
-                                  }
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  if (isSessionRunning) return;
+                                  toggleTimer(task);
                                 }}
-                                className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded font-bold hover:bg-gray-200"
+                                disabled={isSessionRunning}
+                                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all mx-auto ${
+                                  isSessionRunning
+                                    ? "bg-gray-100 text-gray-300 cursor-not-allowed"
+                                    : task.is_running
+                                      ? "bg-red-100 text-red-600 hover:bg-red-200 animate-pulse"
+                                      : "bg-green-100 text-green-600 hover:bg-green-200"
+                                }`}
                               >
-                                Cancel
+                                {task.is_running && !isSessionRunning ? (
+                                  <div className="w-3 h-3 bg-current rounded-sm" />
+                                ) : (
+                                  <div className="w-0 h-0 border-t-[5px] border-t-transparent border-l-8 border-l-current border-b-[5px] border-b-transparent ml-1" />
+                                )}
                               </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div>
-                            <div
-                              className={`font-medium ${
-                                task.is_completed
-                                  ? "line-through text-gray-400"
-                                  : ""
-                              }`}
-                            >
-                              {task.task_name}
-                            </div>
-                            {/* THE NEW EDIT/DELETE ACTIONS */}
-                            <div className="flex gap-3 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button
-                                onClick={() => startEditing(task)}
-                                className="text-[10px] font-bold text-gray-400 hover:text-[#9d4edd] case tracking-wider"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => deleteTask(task.id)}
-                                className="text-[10px] font-bold text-gray-400 hover:text-red-500 case tracking-wider"
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </td>
-
-                      {/* 3. DATE (Editable) */}
-                      <td className="px-4 py-3 text-sm text-gray-500 align-top pt-4">
-                        {isEditing ? (
-                          <input
-                            type="date"
-                            className="border p-1 rounded w-full focus:ring-2 focus:ring-[#9d4edd] outline-none text-black"
-                            value={editTaskDate}
-                            onChange={(e) => setEditTaskDate(e.target.value)}
-                          />
-                        ) : task.scheduled_start ? (
-                          new Date(task.scheduled_start).toLocaleDateString(
-                            "en-GB",
-                          )
-                        ) : task.due_date ? (
-                          new Date(task.due_date).toLocaleDateString("en-GB")
-                        ) : (
-                          "-"
-                        )}
-                      </td>
-
-                      {/* 4. TIMER BUTTON */}
-                      <td className="px-4 py-3 text-center align-top pt-4">
-                        {!task.is_completed && !isEditing && (
-                          <button
-                            onClick={() => {
-                              if (isSessionRunning) return;
-                              toggleTimer(task);
-                            }}
-                            disabled={isSessionRunning}
-                            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all mx-auto ${
-                              isSessionRunning
-                                ? "bg-gray-100 text-gray-300 cursor-not-allowed"
-                                : task.is_running
-                                ? "bg-red-100 text-red-600 hover:bg-red-200 animate-pulse"
-                                : "bg-green-100 text-green-600 hover:bg-green-200"
-                            }`}
-                          >
-                            {task.is_running && !isSessionRunning ? (
-                              <div className="w-3 h-3 bg-current rounded-sm" />
-                            ) : (
-                              <div className="w-0 h-0 border-t-[5px] border-t-transparent border-l-8 border-l-current border-b-[5px] border-b-transparent ml-1" />
                             )}
-                          </button>
-                        )}
-                      </td>
+                          </td>
 
-                      {/* 5. TIME DISPLAY */}
-                      <td className="px-4 py-3 text-right font-mono font-bold text-[#9d4edd] align-top pt-4">
-                        {formatTime(task)}
-                      </td>
-                    </tr>
-                  );
-                })
+                          {/* 5. TIME DISPLAY */}
+                          <td className="px-4 py-3 text-right font-mono font-bold text-[#9d4edd] align-top pt-4">
+                            {formatTime(task)}
+                          </td>
+                        </tr>
+                        {hasSubtasks(task.id) && isExpanded && (
+                          <>
+                            {childTasks.map((child) => {
+                              const childDue =
+                                child.scheduled_start || child.due_date;
+                              return (
+                                <tr
+                                  key={child.id}
+                                  draggable
+                                  onDragStart={() =>
+                                    setDraggingTaskId(child.id)
+                                  }
+                                  onDragEnd={() => {
+                                    setDraggingTaskId(null);
+                                    setDropTargetId(null);
+                                  }}
+                                  className={`group hover:bg-gray-50 transition-colors ${
+                                    child.is_completed
+                                      ? "bg-gray-50 opacity-60"
+                                      : ""
+                                  }`}
+                                  onClick={() => openTaskModal(child)}
+                                >
+                                  <td className="px-4 py-3 text-center">
+                                    <input
+                                      type="checkbox"
+                                      checked={child.is_completed}
+                                      onChange={(event) => {
+                                        event.stopPropagation();
+                                        toggleComplete(child);
+                                      }}
+                                      className="w-5 h-5 text-[#9d4edd] rounded focus:ring-[#9d4edd] cursor-pointer"
+                                    />
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <div className="flex items-center gap-2 pl-6">
+                                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                        Subtask
+                                      </span>
+                                      <span
+                                        className={`font-medium ${
+                                          child.is_completed
+                                            ? "line-through text-gray-400"
+                                            : ""
+                                        }`}
+                                      >
+                                        {child.task_name}
+                                      </span>
+                                    </div>
+                                    <div className="flex gap-3 mt-1 pl-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <button
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+                                          openTaskModal(child);
+                                        }}
+                                        className="text-[10px] font-bold text-gray-400 hover:text-[#9d4edd] case tracking-wider"
+                                      >
+                                        Edit
+                                      </button>
+                                      <button
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+                                          deleteTask(child.id);
+                                        }}
+                                        className="text-[10px] font-bold text-gray-400 hover:text-red-500 case tracking-wider"
+                                      >
+                                        Delete
+                                      </button>
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-500 align-top pt-4">
+                                    {childDue
+                                      ? new Date(childDue).toLocaleDateString(
+                                          "en-GB",
+                                        )
+                                      : "-"}
+                                  </td>
+                                  <td className="px-4 py-3 text-center align-top pt-4">
+                                    {!child.is_completed && (
+                                      <button
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+                                          if (isSessionRunning) return;
+                                          toggleTimer(child);
+                                        }}
+                                        disabled={isSessionRunning}
+                                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all mx-auto ${
+                                          isSessionRunning
+                                            ? "bg-gray-100 text-gray-300 cursor-not-allowed"
+                                            : child.is_running
+                                              ? "bg-red-100 text-red-600 hover:bg-red-200 animate-pulse"
+                                              : "bg-green-100 text-green-600 hover:bg-green-200"
+                                        }`}
+                                      >
+                                        {child.is_running &&
+                                        !isSessionRunning ? (
+                                          <div className="w-3 h-3 bg-current rounded-sm" />
+                                        ) : (
+                                          <div className="w-0 h-0 border-t-[5px] border-t-transparent border-l-8 border-l-current border-b-[5px] border-b-transparent ml-1" />
+                                        )}
+                                      </button>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3 text-right font-mono font-bold text-[#9d4edd] align-top pt-4">
+                                    {formatTime(child)}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </>
+                        )}
+                      </Fragment>
+                    );
+                  })}
+                </>
               )}
             </tbody>
           </table>
         </div>
       </section>
       <TaskModal
-        key={`${client.id}-${isTaskModalOpen ? "open" : "closed"}`}
+        key={`${client.id}-${taskModalTask?.id || "new"}-${
+          isTaskModalOpen ? "open" : "closed"
+        }`}
         isOpen={isTaskModalOpen}
-        onClose={() => setIsTaskModalOpen(false)}
+        onClose={handleCloseTaskModal}
         clients={[
           {
             id: client.id,
@@ -1031,7 +1253,12 @@ export default function ClientProfilePage({
           },
         ]}
         lockClient
-        prefill={{ clientId: client.id, category: "client" }}
+        task={taskModalTask}
+        prefill={{
+          clientId: client.id,
+          category: "client",
+          parentTaskId: taskModalPrefill?.parentTaskId,
+        }}
         variant="side"
         onSaved={() => refreshData()}
         onFallbackRefresh={refreshData}
@@ -1039,11 +1266,46 @@ export default function ClientProfilePage({
 
       {/* SERVICE AGREEMENTS SECTION */}
       <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+        <div className="p-6 border-b border-gray-100 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between bg-gray-50">
           <h2 className="text-xl font-bold text-gray-800">
             Documents & Workflows
           </h2>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
+              <label htmlFor="doc-type-filter">Type</label>
+              <select
+                id="doc-type-filter"
+                value={docTypeFilter}
+                onChange={(event) => setDocTypeFilter(event.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-[#333333] focus:ring-2 focus:ring-[#9d4edd] outline-none"
+              >
+                <option value="all">All</option>
+                <option value="proposal">Proposal</option>
+                <option value="booking_form">Booking Form</option>
+                <option value="invoice">Invoice</option>
+                <option value="workflow">Workflows</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
+              <label htmlFor="doc-start">From</label>
+              <input
+                id="doc-start"
+                type="date"
+                value={docStartDate}
+                onChange={(event) => setDocStartDate(event.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-[#333333] focus:ring-2 focus:ring-[#9d4edd] outline-none"
+              />
+            </div>
+            <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
+              <label htmlFor="doc-end">To</label>
+              <input
+                id="doc-end"
+                type="date"
+                value={docEndDate}
+                onChange={(event) => setDocEndDate(event.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-[#333333] focus:ring-2 focus:ring-[#9d4edd] outline-none"
+              />
+            </div>
             <button
               onClick={() => router.push("/va/dashboard/documents")}
               className="text-sm border border-[#9d4edd] text-[#9d4edd] px-4 py-2 rounded-lg font-bold hover:bg-purple-50 transition-all"
@@ -1063,7 +1325,7 @@ export default function ClientProfilePage({
             <tbody className="divide-y divide-gray-100">
               {/* --- NEW DOCUMENTS LIST --- */}
               {hasDocuments &&
-                clientDocuments.map((doc) => {
+                filteredDocuments.map((doc) => {
                   const DocIcon = documentIcon(doc.type);
                   return (
                     <tr
@@ -1156,7 +1418,7 @@ export default function ClientProfilePage({
                   );
                 })}
               {hasAgreements &&
-                clientAgreements.map((ag) => (
+                filteredAgreements.map((ag) => (
                   <tr
                     key={ag.id}
                     className="hover:bg-gray-50 transition-colors"
