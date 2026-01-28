@@ -4,7 +4,7 @@ import { useState, useEffect, use, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import {
   mergeProposalContent,
   type ProposalContent,
@@ -275,15 +275,14 @@ export default function EditProposalPage({
             onClick={() =>
               window.open(`/va/dashboard/documents/preview/${id}`, "_blank")
             }
-            className="px-6 py-2 border-2 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all flex items-center gap-2"
+            className="px-6 py-2 border rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
           >
-            <Eye className="h-4 w-4" />
             Preview
           </button>
           <button
             onClick={() => persistDoc({ issue: false })}
             disabled={saving}
-            className="px-6 py-2 border-2 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
+            className="px-6 py-2 border rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
           >
             {saving ? "Saving..." : "Save Draft"}
           </button>
