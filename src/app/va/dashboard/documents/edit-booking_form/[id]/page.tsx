@@ -74,6 +74,7 @@ export default function EditBookingFormPage({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [autosaving, setAutosaving] = useState(false);
+  const [warmWelcomeRemoved, setWarmWelcomeRemoved] = useState(false);
   const [doc, setDoc] = useState<ClientDoc | null>(null);
   const lastSavedRef = useRef<string>("");
 
@@ -356,16 +357,38 @@ export default function EditBookingFormPage({
             />
           </div>
           <div className="space-y-3">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
-              Warm Welcome
-            </label>
-            <textarea
-              className="w-full p-6 bg-white border-2 border-gray-50 rounded-4xl outline-none focus:border-purple-100 min-h-25 leading-relaxed shadow-sm text-sm"
-              value={doc.content.warm_welcome_text || ""}
-              onChange={(e) =>
-                updateContent({ warm_welcome_text: e.target.value })
-              }
-            />
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
+                Warm Welcome
+              </label>
+              {!warmWelcomeRemoved && (
+                <button
+                  type="button"
+                  onClick={() => setWarmWelcomeRemoved(true)}
+                  className="text-[#9d4edd] hover:text-red-500 transition-colors"
+                  aria-label="Remove warm welcome section"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            {warmWelcomeRemoved ? (
+              <button
+                type="button"
+                onClick={() => setWarmWelcomeRemoved(false)}
+                className="w-full text-left p-4 border-2 border-dashed border-gray-200 rounded-2xl text-xs font-bold text-gray-400 hover:border-[#9d4edd] hover:text-[#9d4edd] transition-all"
+              >
+                Section removed. Reinstate?
+              </button>
+            ) : (
+              <textarea
+                className="w-full p-6 bg-white border-2 border-gray-50 rounded-4xl outline-none focus:border-purple-100 min-h-25 leading-relaxed shadow-sm text-sm"
+                value={doc.content.warm_welcome_text || ""}
+                onChange={(e) =>
+                  updateContent({ warm_welcome_text: e.target.value })
+                }
+              />
+            )}
           </div>
         </section>
 
@@ -526,7 +549,7 @@ export default function EditBookingFormPage({
                       updated.splice(index, 1);
                       updateServices(updated);
                     }}
-                    className="absolute top-4 right-4 text-gray-300 hover:text-red-500"
+                    className="absolute top-4 right-4 text-[#9d4edd] hover:text-red-500 transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
