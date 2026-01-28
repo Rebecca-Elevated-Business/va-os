@@ -12,6 +12,84 @@ type SOPTemplate = {
   category: string;
 };
 
+const WORKFLOW_OVERVIEWS: Record<
+  string,
+  { summary: string; bullets: string[] }
+> = {
+  "Inbox Management": {
+    summary:
+      "A structured process for managing client inboxes efficiently and consistently. Designed to ensure messages are handled promptly, prioritised correctly, and responded to in line with agreed expectations.",
+    bullets: [
+      "Clear steps for triaging and responding to messages",
+      "Helps maintain consistent communication standards",
+      "Reduces missed or delayed client correspondence",
+    ],
+  },
+  "Diary & Calendar Management": {
+    summary:
+      "A clear, repeatable process for managing client calendars, appointments, and scheduling requests. Designed to keep diaries organised and prevent clashes or missed commitments.",
+    bullets: [
+      "Guides appointment booking and updates",
+      "Supports proactive calendar organisation",
+      "Helps maintain control over busy schedules",
+    ],
+  },
+  "Social Media Scheduling": {
+    summary:
+      "A defined workflow for preparing, scheduling, and managing social media content on behalf of clients. Designed to ensure posts are published accurately and on time.",
+    bullets: [
+      "Outlines steps from content preparation to scheduling",
+      "Helps maintain posting consistency",
+      "Reduces last-minute or ad-hoc publishing",
+    ],
+  },
+  "Invoice & Payment Administration": {
+    summary:
+      "A step-by-step process for issuing invoices, tracking payments, and following up where needed. Designed to keep client finances organised and reduce payment delays.",
+    bullets: [
+      "Supports consistent invoicing practices",
+      "Helps track outstanding and completed payments",
+      "Reduces admin time around billing",
+    ],
+  },
+  "Documentation Creation": {
+    summary:
+      "A structured approach to creating, reviewing, and issuing client documents. Designed to ensure documents are accurate, consistent, and professionally presented.",
+    bullets: [
+      "Guides document preparation and checks",
+      "Supports consistent formatting and standards",
+      "Keeps client paperwork organised",
+    ],
+  },
+  "Website Build & Maintenance": {
+    summary:
+      "A repeatable process for managing website updates, builds, and ongoing maintenance tasks. Designed to ensure changes are completed methodically and without disruption.",
+    bullets: [
+      "Outlines steps for updates and checks",
+      "Helps track ongoing website tasks",
+      "Reduces risk of missed actions or errors",
+    ],
+  },
+  "Content Publishing": {
+    summary:
+      "A clear workflow for publishing approved content across relevant platforms. Designed to ensure content goes live accurately and in line with agreed schedules.",
+    bullets: [
+      "Supports consistent publishing routines",
+      "Helps manage approvals and timing",
+      "Reduces publishing errors or omissions",
+    ],
+  },
+  "Request a Workflow": {
+    summary:
+      "Create a custom workflow to document a specific process unique to your client or service offering. Designed to capture your way of working and make it easy for others to follow.",
+    bullets: [
+      "Allows flexibility for bespoke client needs",
+      "Helps document undocumented processes",
+      "Supports continuity and consistency",
+    ],
+  },
+};
+
 export default function SOPLibraryPage() {
   const router = useRouter();
   const [templates, setTemplates] = useState<SOPTemplate[]>([]);
@@ -130,23 +208,22 @@ export default function SOPLibraryPage() {
             <div className="p-6 grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
               <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
                 <h2 className="text-lg font-bold mb-4 uppercase text-[#333333] tracking-tight">
-                  Workflow Summary
+                  Workflow Overview
                 </h2>
                 <p className="text-gray-700 leading-relaxed mb-6">
-                  This workflow template defines scope, response standards, and
-                  delivery responsibilities for the selected client. Customize
-                  the clauses during deployment to match each engagement.
+                  {WORKFLOW_OVERVIEWS[selectedTemplate.title]?.summary ||
+                    "This workflow template defines scope, response standards, and delivery responsibilities for the selected client. Customize the clauses during deployment to match each engagement."}
                 </p>
                 <ul className="space-y-3 text-sm text-gray-600">
-                  <li className="flex items-center gap-2">
-                    • Core responsibilities and service boundaries
-                  </li>
-                  <li className="flex items-center gap-2">
-                    • Response times and escalation rules
-                  </li>
-                  <li className="flex items-center gap-2">
-                    • Reporting cadence and communication channels
-                  </li>
+                  {(WORKFLOW_OVERVIEWS[selectedTemplate.title]?.bullets || [
+                    "Core responsibilities and service boundaries",
+                    "Response times and escalation rules",
+                    "Reporting cadence and communication channels",
+                  ]).map((item) => (
+                    <li key={item} className="flex items-center gap-2">
+                      • {item}
+                    </li>
+                  ))}
                 </ul>
               </div>
 
