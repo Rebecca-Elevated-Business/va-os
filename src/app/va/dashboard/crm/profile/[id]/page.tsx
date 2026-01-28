@@ -54,6 +54,15 @@ type Agreement = {
   last_updated_at: string;
 };
 
+const CRM_TABS = [
+  { id: "overview", label: "Overview" },
+  { id: "tasks", label: "Task Manager" },
+  { id: "docs", label: "Documents & Workflows" },
+  { id: "notes", label: "Internal Notes" },
+] as const;
+
+type CrmTabId = (typeof CRM_TABS)[number]["id"];
+
 const formatHms = (totalSeconds: number) => {
   const safeSeconds = Math.max(0, Math.floor(totalSeconds));
   const hours = Math.floor(safeSeconds / 3600);
@@ -124,6 +133,7 @@ export default function ClientProfilePage({
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [draggingParentId, setDraggingParentId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<CrmTabId>("overview");
 
   // --- DATA FETCHING ---
   const refreshData = useCallback(async () => {
@@ -697,12 +707,14 @@ export default function ClientProfilePage({
       {/* 1. HEADER */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">
-            {client.first_name} {client.surname}
+          <h1 className="text-3xl font-bold flex flex-wrap items-baseline gap-x-3">
+            <span>
+              Viewing Client: {client.first_name} {client.surname}
+            </span>
+            <span className="text-sm font-medium text-gray-500">
+              {client.business_name || "No Business Name"}
+            </span>
           </h1>
-          <p className="text-gray-500">
-            {client.business_name || "No Business Name"}
-          </p>
         </div>
         <div className="flex gap-3">
           <button
@@ -737,6 +749,31 @@ export default function ClientProfilePage({
           )}
         </div>
       </div>
+
+      <nav className="bg-white rounded-xl shadow-sm border border-gray-100 px-4">
+        <div className="flex flex-wrap gap-6 border-b border-gray-100">
+          {CRM_TABS.map((tab) => {
+            const isActive = tab.id === activeTab;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={[
+                  "py-4 text-sm font-semibold transition-colors",
+                  isActive
+                    ? "text-[#9d4edd] border-b-2 border-[#9d4edd]"
+                    : "text-gray-500 hover:text-gray-800",
+                ].join(" ")}
+                aria-current={isActive ? "page" : undefined}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
       {portalAccessEnabled && portalManageOpen && (
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
@@ -787,29 +824,30 @@ export default function ClientProfilePage({
       )}
 
       {/* 2. CLIENT INFORMATION (Horizontal Layout) */}
-      <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 bg-gray-50 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setIsClientInfoOpen((prev) => !prev)}
-            className="text-[#333333] hover:text-[#333333] transition-colors"
-          >
-            <ChevronDown
-              size={16}
-              className={`transition-transform ${
-                isClientInfoOpen ? "rotate-0" : "-rotate-90"
-              }`}
-            />
-          </button>
-          <h2 className="text-lg font-bold">Client Information</h2>
-        </div>
-        {isClientInfoOpen && (
-          <div className="p-6">
-            {isEditing ? (
-              <form
-                onSubmit={handleUpdateClient}
-                className="flex flex-wrap gap-4 items-end"
-              >
+      {activeTab === "overview" && (
+        <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-6 border-b border-gray-100 bg-gray-50 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsClientInfoOpen((prev) => !prev)}
+              className="text-[#333333] hover:text-[#333333] transition-colors"
+            >
+              <ChevronDown
+                size={16}
+                className={`transition-transform ${
+                  isClientInfoOpen ? "rotate-0" : "-rotate-90"
+                }`}
+              />
+            </button>
+            <h2 className="text-lg font-bold">Client Information</h2>
+          </div>
+          {isClientInfoOpen && (
+            <div className="p-6">
+              {isEditing ? (
+                <form
+                  onSubmit={handleUpdateClient}
+                  className="flex flex-wrap gap-4 items-end"
+                >
             <div className="flex flex-col">
               <label className="text-xs font-bold text-gray-400">
                 FIRST NAME
@@ -945,167 +983,173 @@ export default function ClientProfilePage({
             </div>
           </div>
         )}
-          </div>
-        )}
-      </section>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* 3. TASK MANAGER (Table Layout) */}
-      <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 bg-gray-50 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setIsTaskManagerOpen((prev) => !prev)}
-              className="text-[#333333] hover:text-[#333333] transition-colors"
-            >
-              <ChevronDown
-                size={16}
-                className={`transition-transform ${
-                  isTaskManagerOpen ? "rotate-0" : "-rotate-90"
-                }`}
-              />
-            </button>
-            <h2 className="text-xl font-bold">Task Manager</h2>
-          </div>
-          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={showCompleted}
-              onChange={(e) => setShowCompleted(e.target.checked)}
-              className="rounded text-[#9d4edd] focus:ring-[#9d4edd]"
-            />
-            Show Completed
-          </label>
-        </div>
-
-        {isTaskManagerOpen && (
-          <div className="p-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
-              <div className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
-                <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                  Client Session
-                </div>
-                <span className="font-mono text-sm text-[#333333]">
-                  {formatHms(sessionElapsedSeconds)}
-                </span>
-                <button
-                  onClick={handleToggleSession}
-                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                    isSessionRunning
-                      ? "bg-red-500 text-white hover:bg-red-600"
-                      : "bg-[#9d4edd] text-white hover:bg-[#7b2cbf]"
+      {activeTab === "tasks" && (
+        <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-6 border-b border-gray-100 bg-gray-50 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsTaskManagerOpen((prev) => !prev)}
+                className="text-[#333333] hover:text-[#333333] transition-colors"
+              >
+                <ChevronDown
+                  size={16}
+                  className={`transition-transform ${
+                    isTaskManagerOpen ? "rotate-0" : "-rotate-90"
                   }`}
+                />
+              </button>
+              <h2 className="text-xl font-bold">Task Manager</h2>
+            </div>
+            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showCompleted}
+                onChange={(e) => setShowCompleted(e.target.checked)}
+                className="rounded text-[#9d4edd] focus:ring-[#9d4edd]"
+              />
+              Show Completed
+            </label>
+          </div>
+
+          {isTaskManagerOpen && (
+            <div className="p-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+                <div className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                    Client Session
+                  </div>
+                  <span className="font-mono text-sm text-[#333333]">
+                    {formatHms(sessionElapsedSeconds)}
+                  </span>
+                  <button
+                    onClick={handleToggleSession}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                      isSessionRunning
+                        ? "bg-red-500 text-white hover:bg-red-600"
+                        : "bg-[#9d4edd] text-white hover:bg-[#7b2cbf]"
+                    }`}
+                  >
+                    {isSessionRunning && activeClientId && activeClientId !== id
+                      ? "Switch to this client"
+                      : isSessionRunning
+                        ? "Stop Session"
+                        : "Start Session"}
+                  </button>
+                </div>
+                <button
+                  onClick={() => openTaskModal()}
+                  className="bg-black text-white px-6 py-2 rounded font-bold hover:bg-gray-800"
                 >
-                  {isSessionRunning && activeClientId && activeClientId !== id
-                    ? "Switch to this client"
-                    : isSessionRunning
-                      ? "Stop Session"
-                      : "Start Session"}
+                  Add Task
                 </button>
               </div>
-              <button
-                onClick={() => openTaskModal()}
-                className="bg-black text-white px-6 py-2 rounded font-bold hover:bg-gray-800"
-              >
-                Add Task
-              </button>
-            </div>
 
-            {/* Tasks Table */}
-            <div className="overflow-hidden border border-gray-200 rounded-lg">
-              <table className="w-full text-left">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-12 text-center">
-                      Done
-                    </th>
-                    <th className="px-4 py-3 text-xs font-bold text-gray-400 case">
-                      Task
-                    </th>
-                    <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-32">
-                      Start Date
-                    </th>
-                    <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-24 text-center">
-                      Timer
-                    </th>
-                    <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-24 text-right">
-                      Time
-                    </th>
-                  </tr>
-                </thead>
-                <tbody
-                  className="divide-y divide-gray-100"
-                  onDragOver={(event) => {
-                    if (!draggingTaskId || !draggingParentId) return;
-                    event.preventDefault();
-                  }}
-                  onDrop={(event) => {
-                    if (!draggingTaskId || !draggingParentId) return;
-                    event.preventDefault();
-                    handleDropToTopLevel();
-                  }}
-                >
-                  {visibleTasks.length === 0 ? (
+              {/* Tasks Table */}
+              <div className="overflow-hidden border border-gray-200 rounded-lg">
+                <table className="w-full text-left">
+                  <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <td
-                        colSpan={5}
-                        className="p-8 text-center text-gray-400 italic"
-                      >
-                        No tasks found.
-                      </td>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-12 text-center">
+                        Done
+                      </th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-400 case">
+                        Task
+                      </th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-32">
+                        Start Date
+                      </th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-24 text-center">
+                        Timer
+                      </th>
+                      <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-24 text-right">
+                        Time
+                      </th>
                     </tr>
-                  ) : (
-                    <>
-                      {topLevelTasks.map((task) => {
-                        const childTasks = subtasksByParent[task.id] || [];
-                        const isExpanded = expandedParents[task.id] ?? true;
-                        const dueDate = task.scheduled_start || task.due_date;
+                  </thead>
+                  <tbody
+                    className="divide-y divide-gray-100"
+                    onDragOver={(event) => {
+                      if (!draggingTaskId || !draggingParentId) return;
+                      event.preventDefault();
+                    }}
+                    onDrop={(event) => {
+                      if (!draggingTaskId || !draggingParentId) return;
+                      event.preventDefault();
+                      handleDropToTopLevel();
+                    }}
+                  >
+                    {visibleTasks.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={5}
+                          className="p-8 text-center text-gray-400 italic"
+                        >
+                          No tasks found.
+                        </td>
+                      </tr>
+                    ) : (
+                      <>
+                        {topLevelTasks.map((task) => {
+                          const childTasks = subtasksByParent[task.id] || [];
+                          const isExpanded = expandedParents[task.id] ?? true;
+                          const dueDate = task.scheduled_start || task.due_date;
 
-                        return (
-                          <Fragment key={task.id}>
-                            <tr
-                              draggable
-                              onDragStart={() => {
-                                setDraggingTaskId(task.id);
-                                setDraggingParentId(task.parent_task_id || null);
-                              }}
-                              onDragEnd={() => {
-                                setDraggingTaskId(null);
-                                setDraggingParentId(null);
-                                setDropTargetId(null);
-                              }}
-                              onDragOver={(event) => {
-                                if (
-                                  !draggingTaskId ||
-                                  draggingTaskId === task.id
-                                )
-                                  return;
-                                if (draggingParentId) return;
-                                event.preventDefault();
-                                setDropTargetId(task.id);
-                              }}
-                              onDragLeave={() => {
-                                if (dropTargetId === task.id) {
+                          return (
+                            <Fragment key={task.id}>
+                              <tr
+                                draggable
+                                onDragStart={() => {
+                                  setDraggingTaskId(task.id);
+                                  setDraggingParentId(
+                                    task.parent_task_id || null,
+                                  );
+                                }}
+                                onDragEnd={() => {
+                                  setDraggingTaskId(null);
+                                  setDraggingParentId(null);
                                   setDropTargetId(null);
-                                }
-                              }}
-                              onDrop={(event) => {
-                                event.preventDefault();
-                                if (draggingParentId) {
-                                  handleDropOnParent(task.id);
-                                } else {
-                                  reorderParents(task.id);
-                                }
-                              }}
-                              className={`group hover:bg-gray-50 transition-colors ${
-                                task.is_completed ? "bg-gray-50 opacity-60" : ""
-                              } ${
-                                dropTargetId === task.id
-                                  ? "bg-purple-50/80 ring-1 ring-purple-100"
-                                  : ""
-                              }`}
-                              onClick={() => openTaskModal(task)}
-                            >
+                                }}
+                                onDragOver={(event) => {
+                                  if (
+                                    !draggingTaskId ||
+                                    draggingTaskId === task.id
+                                  )
+                                    return;
+                                  if (draggingParentId) return;
+                                  event.preventDefault();
+                                  setDropTargetId(task.id);
+                                }}
+                                onDragLeave={() => {
+                                  if (dropTargetId === task.id) {
+                                    setDropTargetId(null);
+                                  }
+                                }}
+                                onDrop={(event) => {
+                                  event.preventDefault();
+                                  if (draggingParentId) {
+                                    handleDropOnParent(task.id);
+                                  } else {
+                                    reorderParents(task.id);
+                                  }
+                                }}
+                                className={`group hover:bg-gray-50 transition-colors ${
+                                  task.is_completed
+                                    ? "bg-gray-50 opacity-60"
+                                    : ""
+                                } ${
+                                  dropTargetId === task.id
+                                    ? "bg-purple-50/80 ring-1 ring-purple-100"
+                                    : ""
+                                }`}
+                                onClick={() => openTaskModal(task)}
+                              >
                               {/* 1. CHECKBOX */}
                               <td className="px-4 py-3 text-center">
                                 <input
@@ -1382,6 +1426,7 @@ export default function ClientProfilePage({
           </div>
         )}
       </section>
+      )}
       <TaskModal
         key={`${client.id}-${taskModalTask?.id || "new"}-${
           isTaskModalOpen ? "open" : "closed"
@@ -1408,154 +1453,236 @@ export default function ClientProfilePage({
       />
 
       {/* SERVICE AGREEMENTS SECTION */}
-      <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b border-gray-100 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between bg-gray-50">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setIsDocsOpen((prev) => !prev)}
-              className="text-[#333333] hover:text-[#333333] transition-colors"
-            >
-              <ChevronDown
-                size={16}
-                className={`transition-transform ${
-                  isDocsOpen ? "rotate-0" : "-rotate-90"
-                }`}
-              />
-            </button>
-            <h2 className="text-xl font-bold text-gray-800">
-              Documents & Workflows
-            </h2>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
-              <label htmlFor="doc-type-filter">Type</label>
-              <select
-                id="doc-type-filter"
-                value={docTypeFilter}
-                onChange={(event) => setDocTypeFilter(event.target.value)}
-                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-[#333333] focus:ring-2 focus:ring-[#9d4edd] outline-none"
+      {activeTab === "docs" && (
+        <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-6 border-b border-gray-100 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between bg-gray-50">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsDocsOpen((prev) => !prev)}
+                className="text-[#333333] hover:text-[#333333] transition-colors"
               >
-                <option value="all">All</option>
-                <option value="proposal">Proposal</option>
-                <option value="booking_form">Booking Form</option>
-                <option value="invoice">Invoice</option>
-                <option value="workflow">Workflows</option>
-              </select>
+                <ChevronDown
+                  size={16}
+                  className={`transition-transform ${
+                    isDocsOpen ? "rotate-0" : "-rotate-90"
+                  }`}
+                />
+              </button>
+              <h2 className="text-xl font-bold text-gray-800">
+                Documents & Workflows
+              </h2>
             </div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
-              <label htmlFor="doc-start">From</label>
-              <input
-                id="doc-start"
-                type="date"
-                value={docStartDate}
-                onChange={(event) => setDocStartDate(event.target.value)}
-                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-[#333333] focus:ring-2 focus:ring-[#9d4edd] outline-none"
-              />
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
+                <label htmlFor="doc-type-filter">Type</label>
+                <select
+                  id="doc-type-filter"
+                  value={docTypeFilter}
+                  onChange={(event) => setDocTypeFilter(event.target.value)}
+                  className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-[#333333] focus:ring-2 focus:ring-[#9d4edd] outline-none"
+                >
+                  <option value="all">All</option>
+                  <option value="proposal">Proposal</option>
+                  <option value="booking_form">Booking Form</option>
+                  <option value="invoice">Invoice</option>
+                  <option value="workflow">Workflows</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
+                <label htmlFor="doc-start">From</label>
+                <input
+                  id="doc-start"
+                  type="date"
+                  value={docStartDate}
+                  onChange={(event) => setDocStartDate(event.target.value)}
+                  className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-[#333333] focus:ring-2 focus:ring-[#9d4edd] outline-none"
+                />
+              </div>
+              <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
+                <label htmlFor="doc-end">To</label>
+                <input
+                  id="doc-end"
+                  type="date"
+                  value={docEndDate}
+                  onChange={(event) => setDocEndDate(event.target.value)}
+                  className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-[#333333] focus:ring-2 focus:ring-[#9d4edd] outline-none"
+                />
+              </div>
+              <button
+                onClick={() => router.push("/va/dashboard/documents")}
+                className="text-sm border border-[#9d4edd] text-[#9d4edd] px-4 py-2 rounded-lg font-bold hover:bg-purple-50 transition-all"
+              >
+                + New Document
+              </button>
+              <button
+                onClick={() => router.push("/va/dashboard/workflows")}
+                className="text-sm bg-[#9d4edd] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#7b2cbf] transition-all shadow-sm"
+              >
+                + New Workflow
+              </button>
             </div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
-              <label htmlFor="doc-end">To</label>
-              <input
-                id="doc-end"
-                type="date"
-                value={docEndDate}
-                onChange={(event) => setDocEndDate(event.target.value)}
-                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-[#333333] focus:ring-2 focus:ring-[#9d4edd] outline-none"
-              />
-            </div>
-            <button
-              onClick={() => router.push("/va/dashboard/documents")}
-              className="text-sm border border-[#9d4edd] text-[#9d4edd] px-4 py-2 rounded-lg font-bold hover:bg-purple-50 transition-all"
-            >
-              + New Document
-            </button>
-            <button
-              onClick={() => router.push("/va/dashboard/workflows")}
-              className="text-sm bg-[#9d4edd] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#7b2cbf] transition-all shadow-sm"
-            >
-              + New Workflow
-            </button>
           </div>
-        </div>
-        {isDocsOpen && (
-          <div className="p-0">
-            <table className="w-full text-left">
-              <tbody className="divide-y divide-gray-100">
-                {/* --- NEW DOCUMENTS LIST --- */}
-                {hasDocuments &&
-                  filteredDocuments.map((doc) => {
-                    const DocIcon = documentIcon(doc.type);
-                    return (
-                      <tr
-                        key={doc.id}
-                        className="hover:bg-purple-50/30 transition-colors"
-                      >
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <DocIcon size={18} className="text-[#333333]" />
-                            <div>
-                              <div className="font-bold text-black">
-                                {doc.title}
-                              </div>
-                              <div className="text-[10px] text-gray-400 case tracking-widest">
-                                {doc.type.replace("_", " ")}
+          {isDocsOpen && (
+            <div className="p-0">
+              <table className="w-full text-left">
+                <tbody className="divide-y divide-gray-100">
+                  {/* --- NEW DOCUMENTS LIST --- */}
+                  {hasDocuments &&
+                    filteredDocuments.map((doc) => {
+                      const DocIcon = documentIcon(doc.type);
+                      return (
+                        <tr
+                          key={doc.id}
+                          className="hover:bg-purple-50/30 transition-colors"
+                        >
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <DocIcon size={18} className="text-[#333333]" />
+                              <div>
+                                <div className="font-bold text-black">
+                                  {doc.title}
+                                </div>
+                                <div className="text-[10px] text-gray-400 case tracking-widest">
+                                  {doc.type.replace("_", " ")}
+                                </div>
                               </div>
                             </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className={`w-3 h-3 rounded-full ${
+                                  doc.status === "draft"
+                                    ? "bg-red-500"
+                                    : "bg-green-500"
+                                }`}
+                              />
+                              <span className="text-[10px] font-black case text-gray-600">
+                                {doc.status}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-right flex justify-end gap-4 items-center">
+                            {/* REVOKE LINK: Only shows if NOT a draft */}
+                            {doc.status !== "draft" && (
+                              <button
+                                onClick={() => revokeDocument(doc.id)}
+                                className="text-[10px] font-bold text-orange-500 hover:underline case"
+                              >
+                                Revoke
+                              </button>
+                            )}
+
+                            <button
+                              onClick={() => {
+                                const routeSuffix =
+                                  doc.type === "proposal"
+                                    ? "proposal"
+                                    : doc.type === "invoice"
+                                      ? "invoice"
+                                      : doc.type === "booking_form"
+                                        ? "booking_form"
+                                        : doc.type === "upload"
+                                          ? "upload"
+                                          : "";
+                                router.push(
+                                  routeSuffix
+                                    ? `/va/dashboard/documents/edit-${routeSuffix}/${doc.id}`
+                                    : `/va/dashboard/documents/edit/${doc.id}`,
+                                );
+                              }}
+                              className="text-xs font-bold text-[#9d4edd] hover:underline"
+                            >
+                              {doc.status === "draft" ? "Edit & Issue" : "View"}
+                            </button>
+
+                            {/* RUBBISH BIN ICON */}
+                            <button
+                              onClick={() => deleteDocument(doc.id)}
+                              className="text-gray-300 hover:text-red-500 transition-colors"
+                              title="Delete Document"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                              </svg>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  {hasAgreements &&
+                    filteredAgreements.map((ag) => (
+                      <tr
+                        key={ag.id}
+                        className="hover:bg-gray-50 transition-colors"
+                      >
+                        <td className="px-6 py-4">
+                          <div className="font-bold text-black">{ag.title}</div>
+                          <div className="text-xs text-gray-500">
+                            Updated:{" "}
+                            {new Date(ag.last_updated_at).toLocaleDateString(
+                              "en-GB",
+                            )}
                           </div>
                         </td>
                         <td className="px-6 py-4">
+                          {/* TRAFFIC LIGHT STATUS INDICATORS */}
                           <div className="flex items-center gap-2">
                             <div
                               className={`w-3 h-3 rounded-full ${
-                                doc.status === "draft"
+                                ag.status === "draft"
                                   ? "bg-red-500"
-                                  : "bg-green-500"
+                                  : ag.status === "pending_client"
+                                    ? "bg-yellow-400"
+                                    : "bg-green-500"
                               }`}
                             />
-                            <span className="text-[10px] font-black case text-gray-600">
-                              {doc.status}
+                            <span className="text-[10px] font-black case tracking-tighter text-gray-600">
+                              {ag.status === "draft"
+                                ? "Draft"
+                                : ag.status === "pending_client"
+                                  ? "Issued - Pending"
+                                  : "Authorised"}
                             </span>
                           </div>
                         </td>
                         <td className="px-6 py-4 text-right flex justify-end gap-4 items-center">
                           {/* REVOKE LINK: Only shows if NOT a draft */}
-                          {doc.status !== "draft" && (
+                          {ag.status !== "draft" && (
                             <button
-                              onClick={() => revokeDocument(doc.id)}
+                              onClick={() => revokeAgreement(ag.id)}
                               className="text-[10px] font-bold text-orange-500 hover:underline case"
                             >
                               Revoke
                             </button>
                           )}
-
                           <button
-                            onClick={() => {
-                              const routeSuffix =
-                                doc.type === "proposal"
-                                  ? "proposal"
-                                  : doc.type === "invoice"
-                                    ? "invoice"
-                                    : doc.type === "booking_form"
-                                      ? "booking_form"
-                                      : doc.type === "upload"
-                                        ? "upload"
-                                        : "";
+                            onClick={() =>
                               router.push(
-                                routeSuffix
-                                  ? `/va/dashboard/documents/edit-${routeSuffix}/${doc.id}`
-                                  : `/va/dashboard/documents/edit/${doc.id}`,
-                              );
-                            }}
+                                `/va/dashboard/workflows/portal-view/${ag.id}`,
+                              )
+                            }
                             className="text-xs font-bold text-[#9d4edd] hover:underline"
                           >
-                            {doc.status === "draft" ? "Edit & Issue" : "View"}
+                            {ag.status === "draft"
+                              ? "Review & Issue"
+                              : "View Document"}
                           </button>
-
-                          {/* RUBBISH BIN ICON */}
                           <button
-                            onClick={() => deleteDocument(doc.id)}
+                            onClick={() => deleteAgreement(ag.id)}
                             className="text-gray-300 hover:text-red-500 transition-colors"
-                            title="Delete Document"
+                            title="Delete Agreement"
                           >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
@@ -1573,148 +1700,70 @@ export default function ClientProfilePage({
                           </button>
                         </td>
                       </tr>
-                    );
-                  })}
-                {hasAgreements &&
-                  filteredAgreements.map((ag) => (
-                    <tr
-                      key={ag.id}
-                      className="hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="px-6 py-4">
-                        <div className="font-bold text-black">{ag.title}</div>
-                        <div className="text-xs text-gray-500">
-                          Updated:{" "}
-                          {new Date(ag.last_updated_at).toLocaleDateString(
-                            "en-GB",
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        {/* TRAFFIC LIGHT STATUS INDICATORS */}
-                        <div className="flex items-center gap-2">
-                          <div
-                            className={`w-3 h-3 rounded-full ${
-                              ag.status === "draft"
-                                ? "bg-red-500"
-                                : ag.status === "pending_client"
-                                  ? "bg-yellow-400"
-                                  : "bg-green-500"
-                            }`}
-                          />
-                          <span className="text-[10px] font-black case tracking-tighter text-gray-600">
-                            {ag.status === "draft"
-                              ? "Draft"
-                              : ag.status === "pending_client"
-                                ? "Issued - Pending"
-                                : "Authorised"}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-right flex justify-end gap-4 items-center">
-                        {/* REVOKE LINK: Only shows if NOT a draft */}
-                        {ag.status !== "draft" && (
-                          <button
-                            onClick={() => revokeAgreement(ag.id)}
-                            className="text-[10px] font-bold text-orange-500 hover:underline case"
-                          >
-                            Revoke
-                          </button>
-                        )}
-                        <button
-                          onClick={() =>
-                            router.push(
-                              `/va/dashboard/workflows/portal-view/${ag.id}`,
-                            )
-                          }
-                          className="text-xs font-bold text-[#9d4edd] hover:underline"
-                        >
-                          {ag.status === "draft"
-                            ? "Review & Issue"
-                            : "View Document"}
-                        </button>
-                        <button
-                          onClick={() => deleteAgreement(ag.id)}
-                          className="text-gray-300 hover:text-red-500 transition-colors"
-                          title="Delete Agreement"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                          </svg>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* 4. NOTES (Sticky Bottom) */}
-      <section
-        className={`bg-white rounded-xl shadow-lg border-t-4 border-[#9d4edd] flex flex-col overflow-hidden ${
-          isNotesOpen ? "h-96" : "h-auto"
-        }`}
-      >
-        <div className="p-6 border-b border-gray-100 bg-gray-50 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setIsNotesOpen((prev) => !prev)}
-            className="text-[#333333] hover:text-[#333333] transition-colors"
-          >
-            <ChevronDown
-              size={16}
-              className={`transition-transform ${
-                isNotesOpen ? "rotate-0" : "-rotate-90"
-              }`}
-            />
-          </button>
-          <h2 className="text-lg font-bold">Internal Notes</h2>
-        </div>
-        {isNotesOpen && (
-          <div className="p-6 flex flex-col flex-1">
-            <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-2">
-              {notes.map((note) => (
-                <div
-                  key={note.id}
-                  className="bg-gray-50 p-3 rounded-lg border border-gray-100"
-                >
-                  <p className="text-sm text-gray-800">{note.content}</p>
-                  <span className="text-[10px] text-gray-400 mt-2 block">
-                    {new Date(note.created_at).toLocaleString("en-GB")}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <input
-                className="flex-1 border rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-[#9d4edd] text-black"
-                placeholder="Type a new internal note..."
-                value={newNote}
-                onChange={(e) => setNewNote(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addNote()}
+      {activeTab === "notes" && (
+        <section
+          className={`bg-white rounded-xl shadow-lg border-t-4 border-[#9d4edd] flex flex-col overflow-hidden ${
+            isNotesOpen ? "h-96" : "h-auto"
+          }`}
+        >
+          <div className="p-6 border-b border-gray-100 bg-gray-50 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsNotesOpen((prev) => !prev)}
+              className="text-[#333333] hover:text-[#333333] transition-colors"
+            >
+              <ChevronDown
+                size={16}
+                className={`transition-transform ${
+                  isNotesOpen ? "rotate-0" : "-rotate-90"
+                }`}
               />
-              <button
-                onClick={addNote}
-                className="bg-[#9d4edd] text-white px-6 py-2 rounded-lg font-bold hover:bg-[#7b2cbf]"
-              >
-                Save Note
-              </button>
-            </div>
+            </button>
+            <h2 className="text-lg font-bold">Internal Notes</h2>
           </div>
-        )}
-      </section>
+          {isNotesOpen && (
+            <div className="p-6 flex flex-col flex-1">
+              <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-2">
+                {notes.map((note) => (
+                  <div
+                    key={note.id}
+                    className="bg-gray-50 p-3 rounded-lg border border-gray-100"
+                  >
+                    <p className="text-sm text-gray-800">{note.content}</p>
+                    <span className="text-[10px] text-gray-400 mt-2 block">
+                      {new Date(note.created_at).toLocaleString("en-GB")}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  className="flex-1 border rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-[#9d4edd] text-black"
+                  placeholder="Type a new internal note..."
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addNote()}
+                />
+                <button
+                  onClick={addNote}
+                  className="bg-[#9d4edd] text-white px-6 py-2 rounded-lg font-bold hover:bg-[#7b2cbf]"
+                >
+                  Save Note
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }
