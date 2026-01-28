@@ -13,6 +13,7 @@ export default function AddClientPage() {
   const [formData, setFormData] = useState({
     first_name: "",
     surname: "",
+    job_title: "",
     business_name: "",
     email: "",
     phone: "",
@@ -38,6 +39,7 @@ export default function AddClientPage() {
           va_id: userData.user.id,
           first_name: formData.first_name,
           surname: formData.surname,
+          job_title: formData.job_title,
           business_name: formData.business_name,
           email: formData.email,
           phone: formData.phone,
@@ -141,6 +143,33 @@ export default function AddClientPage() {
           </div>
         </div>
 
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Job Title
+            </label>
+            <input
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#9d4edd] outline-none"
+              value={formData.job_title}
+              onChange={(e) =>
+                setFormData({ ...formData, job_title: e.target.value })
+              }
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Business Name
+            </label>
+            <input
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#9d4edd] outline-none"
+              value={formData.business_name}
+              onChange={(e) =>
+                setFormData({ ...formData, business_name: e.target.value })
+              }
+            />
+          </div>
+        </div>
+
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-1">
             Address
@@ -148,7 +177,6 @@ export default function AddClientPage() {
           <textarea
             rows={3}
             className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#9d4edd] outline-none"
-            placeholder="Street, City, Postcode, Country"
             value={formData.address}
             onChange={(e) =>
               setFormData({ ...formData, address: e.target.value })
@@ -159,7 +187,7 @@ export default function AddClientPage() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Source *
+              Source
             </label>
             <select
               className="w-full px-4 py-2 border rounded-lg outline-none bg-white"
@@ -193,24 +221,11 @@ export default function AddClientPage() {
                 setFormData({ ...formData, work_type: e.target.value })
               }
             >
-              <option value="Ad-hoc">Ad-hoc</option>
               <option value="Retainer">Retainer</option>
               <option value="Hourly">Hourly</option>
+              <option value="Ad-hoc">Ad-hoc</option>
             </select>
           </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">
-            Business Name
-          </label>
-          <input
-            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#9d4edd] outline-none"
-            value={formData.business_name}
-            onChange={(e) =>
-              setFormData({ ...formData, business_name: e.target.value })
-            }
-          />
         </div>
 
         <div>
@@ -232,7 +247,7 @@ export default function AddClientPage() {
                 <input
                   type="url"
                   className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-[#9d4edd] outline-none"
-                  placeholder="Web page URL"
+                  placeholder="Enter URL"
                   value={link}
                   onChange={(event) => {
                     const next = [...websiteLinks];
