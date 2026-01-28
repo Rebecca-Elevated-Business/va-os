@@ -1443,21 +1443,27 @@ export default function ClientProfilePage({
 
               {/* Tasks Table */}
               <div className="space-y-4">
-                <div className="rounded-lg border border-gray-200 bg-white px-4 py-2">
-                  <div
-                    className="grid items-center gap-x-4 text-[10px] font-semibold tracking-widest text-gray-500 uppercase"
-                    style={{
-                      gridTemplateColumns:
-                        "minmax(240px, 1fr) 8rem 8rem 6rem 6rem 2rem",
-                    }}
-                  >
-                    <div>Task</div>
-                    <div className="text-right">Start Date</div>
-                    <div className="text-right">End Date</div>
-                    <div className="text-center">Timer</div>
-                    <div className="text-right">Time Count</div>
-                    <div />
-                  </div>
+                <div className="rounded-lg border border-gray-200 bg-white">
+                  <table className="w-full table-fixed text-left">
+                    <colgroup>
+                      <col />
+                      <col className="w-32" />
+                      <col className="w-32" />
+                      <col className="w-24" />
+                      <col className="w-24" />
+                      <col className="w-8" />
+                    </colgroup>
+                    <thead>
+                      <tr className="text-[10px] font-semibold tracking-widest text-gray-500 uppercase">
+                        <th className="px-4 py-2 text-left">Task</th>
+                        <th className="px-4 py-2 text-right">Start Date</th>
+                        <th className="px-4 py-2 text-right">End Date</th>
+                        <th className="px-4 py-2 text-center">Timer</th>
+                        <th className="px-4 py-2 text-right">Time Count</th>
+                        <th className="px-4 py-2" />
+                      </tr>
+                    </thead>
+                  </table>
                 </div>
                 {groupedTasks.length === 0 ? (
                   <div className="rounded-lg border border-gray-200 bg-white p-8 text-center text-gray-400 italic">
@@ -1506,7 +1512,15 @@ export default function ClientProfilePage({
                           </button>
                         </div>
                         {!isCollapsed && (
-                          <table className="w-full text-left">
+                          <table className="w-full table-fixed text-left">
+                            <colgroup>
+                              <col />
+                              <col className="w-32" />
+                              <col className="w-32" />
+                              <col className="w-24" />
+                              <col className="w-24" />
+                              <col className="w-8" />
+                            </colgroup>
                             <tbody
                               className="divide-y divide-gray-100"
                               onDragOver={(event) => {
