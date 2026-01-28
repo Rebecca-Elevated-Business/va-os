@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, use, useCallback, useRef, Fragment } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { usePrompt } from "@/components/ui/PromptProvider";
@@ -148,6 +149,12 @@ export default function ClientProfilePage({
   const [docEndDate, setDocEndDate] = useState("");
   const [isDocTypeFilterOpen, setIsDocTypeFilterOpen] = useState(false);
   const docTypeFilterRef = useRef<HTMLDivElement>(null);
+  const docTypeMenuRef = useRef<HTMLDivElement>(null);
+  const [docTypeMenuPosition, setDocTypeMenuPosition] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
   const [expandedParents, setExpandedParents] = useState<Record<string, boolean>>(
     {},
   );
@@ -209,11 +216,16 @@ export default function ClientProfilePage({
       ) {
         setIsStatusFilterOpen(false);
       }
-      if (
-        docTypeFilterRef.current &&
-        !docTypeFilterRef.current.contains(event.target as Node)
-      ) {
-        setIsDocTypeFilterOpen(false);
+      if (isDocTypeFilterOpen) {
+        const target = event.target as Node;
+        const clickedTrigger =
+          docTypeFilterRef.current &&
+          docTypeFilterRef.current.contains(target);
+        const clickedMenu =
+          docTypeMenuRef.current && docTypeMenuRef.current.contains(target);
+        if (!clickedTrigger && !clickedMenu) {
+          setIsDocTypeFilterOpen(false);
+        }
       }
       if (!(event.target as Element).closest(".action-menu-trigger")) {
         setActionMenuId(null);
@@ -222,6 +234,29 @@ export default function ClientProfilePage({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!isDocTypeFilterOpen) return;
+    const updatePosition = () => {
+      const trigger = docTypeFilterRef.current;
+      if (!trigger) return;
+      const button = trigger.querySelector("button");
+      if (!button) return;
+      const rect = button.getBoundingClientRect();
+      setDocTypeMenuPosition({
+        top: rect.bottom + 8,
+        left: rect.left,
+        width: rect.width,
+      });
+    };
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [isDocTypeFilterOpen]);
 
   const handleDocTypeFilterChange = (nextType: string) => {
     setDocTypeFilter(nextType);
@@ -2089,17 +2124,24 @@ export default function ClientProfilePage({
             <div className="flex flex-wrap items-center gap-3">
               <div className="relative" ref={docTypeFilterRef}>
                 <button
-                  onClick={() =>
-                    setIsDocTypeFilterOpen((prev) => !prev)
-                  }
+                  onClick={() => setIsDocTypeFilterOpen((prev) => !prev)}
                   className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold hover:bg-gray-50 transition-all shadow-sm text-[#333333]"
                 >
                   <Filter size={14} className="text-gray-400" />
                   {docTypeFilterLabel}
                 </button>
-
-                {isDocTypeFilterOpen && (
-                  <div className="absolute left-0 mt-2 w-56 bg-white border border-gray-100 rounded-xl shadow-xl z-50 p-3 animate-in fade-in slide-in-from-top-2">
+              </div>
+              {isDocTypeFilterOpen &&
+                docTypeMenuPosition &&
+                createPortal(
+                  <div
+                    ref={docTypeMenuRef}
+                    className="fixed w-56 bg-white border border-gray-100 rounded-xl shadow-xl z-[100] p-3 animate-in fade-in slide-in-from-top-2"
+                    style={{
+                      top: docTypeMenuPosition.top,
+                      left: docTypeMenuPosition.left,
+                    }}
+                  >
                     <p className="text-[10px] font-black text-[#333333] tracking-widest mb-3 ml-1">
                       Document Type
                     </p>
@@ -2126,9 +2168,9 @@ export default function ClientProfilePage({
                         </button>
                       ))}
                     </div>
-                  </div>
+                  </div>,
+                  document.body,
                 )}
-              </div>
               <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
                 <label htmlFor="doc-start">From</label>
                 <input
@@ -2348,11 +2390,9 @@ export default function ClientProfilePage({
 
       {/* 4. NOTES (Sticky Bottom) */}
       {activeTab === "notes" && (
-        <section
-          className="bg-white rounded-xl shadow-lg flex flex-col overflow-hidden h-96"
-        >
-          <div className="p-6 flex flex-col flex-1">
-            <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-2">
+        <section className="bg-white rounded-xl shadow-lg flex flex-col overflow-hidden">
+          <div className="p-6 flex flex-col">
+            <div className="space-y-3 mb-4 pr-2 max-h-80 overflow-y-auto">
               {notes.map((note) => (
                 <div
                   key={note.id}
