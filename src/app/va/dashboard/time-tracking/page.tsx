@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { Circle, Play, Search } from "lucide-react";
+import { Circle, Play, Search, Timer } from "lucide-react";
 import TaskModal from "../tasks/TaskModal";
 import { Task } from "../tasks/types";
+import { useClientSession } from "../ClientSessionContext";
 
 type TimeEntry = {
   id: string;
@@ -46,6 +47,13 @@ const isEntryInRange = (entry: TimeEntry, start: string, end: string) => {
 };
 
 export default function TimeTrackingPage() {
+  const {
+    activeClientId,
+    isRunning: isSessionRunning,
+    sessionElapsedSeconds,
+    startSession,
+    stopSession,
+  } = useClientSession();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [clients, setClients] = useState<
     { id: string; business_name: string; surname: string }[]
@@ -58,6 +66,11 @@ export default function TimeTrackingPage() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [sessionClientQuery, setSessionClientQuery] = useState("");
+  const [sessionClientId, setSessionClientId] = useState<string | null>(null);
+  const [isSessionDropdownOpen, setIsSessionDropdownOpen] = useState(false);
+  const [isSessionClientFocused, setIsSessionClientFocused] = useState(false);
+  const sessionDropdownRef = useRef<HTMLDivElement>(null);
 
   const [now, setNow] = useState(0);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
@@ -89,6 +102,16 @@ export default function TimeTrackingPage() {
       );
     });
   }, [searchValue, tasks]);
+
+  const sessionClientOptions = useMemo(() => {
+    const query = sessionClientQuery.trim().toLowerCase();
+    if (!query) return clients;
+    return clients.filter((client) =>
+      `${client.surname} ${client.business_name || ""}`
+        .toLowerCase()
+        .includes(query),
+    );
+  }, [clients, sessionClientQuery]);
 
   const totalSeconds = useMemo(() => {
     if (!selectedTask) return 0;
@@ -211,6 +234,12 @@ export default function TimeTrackingPage() {
       ) {
         setIsDropdownOpen(false);
       }
+      if (
+        sessionDropdownRef.current &&
+        !sessionDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsSessionDropdownOpen(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -234,6 +263,17 @@ export default function TimeTrackingPage() {
 
     return () => clearTimeout(timer);
   }, [isFilterActive]);
+
+  const activeClientLabel = useMemo(() => {
+    if (!activeClientId) return "";
+    const activeClient = clients.find((client) => client.id === activeClientId);
+    if (!activeClient) return "";
+    return `${activeClient.surname}${activeClient.business_name ? ` (${activeClient.business_name})` : ""}`;
+  }, [activeClientId, clients]);
+
+  const sessionInputValue = isSessionClientFocused
+    ? sessionClientQuery
+    : sessionClientQuery || activeClientLabel;
 
   const applyFilter = () => {
     if (!filterStart || !filterEnd) return;
@@ -271,7 +311,21 @@ export default function TimeTrackingPage() {
     setIsDropdownOpen(false);
   };
 
+  const handleToggleSession = async () => {
+    if (isSessionRunning) {
+      if (sessionClientId && sessionClientId !== activeClientId) {
+        await startSession(sessionClientId);
+        return;
+      }
+      await stopSession();
+      return;
+    }
+    if (!sessionClientId) return;
+    await startSession(sessionClientId);
+  };
+
   const handleToggleTimer = async () => {
+    if (isSessionRunning) return;
     if (!selectedTask) return;
     if (selectedTask.is_running) {
       if (!selectedTask.start_time) return;
@@ -379,6 +433,99 @@ export default function TimeTrackingPage() {
         </div>
       </header>
 
+      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6 mb-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+          <div className="w-full lg:w-3/5" ref={sessionDropdownRef}>
+            <label className="text-[11px] font-bold text-gray-400 tracking-widest uppercase block mb-2">
+              Client Session
+            </label>
+            <div className="relative">
+              <Search
+                size={16}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+              />
+              <input
+                type="text"
+                placeholder="Select a client to track"
+                className="w-full pl-11 pr-10 py-3.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold focus:ring-2 focus:ring-[#9d4edd] outline-none"
+                value={sessionInputValue}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setSessionClientQuery(value);
+                  setIsSessionDropdownOpen(true);
+                  if (!value) setSessionClientId(null);
+                }}
+                onFocus={() => {
+                  setIsSessionClientFocused(true);
+                  setIsSessionDropdownOpen(true);
+                }}
+                onBlur={() => {
+                  if (!sessionClientQuery.trim()) {
+                    setIsSessionClientFocused(false);
+                  }
+                }}
+              />
+
+              {isSessionDropdownOpen && (
+                <div className="absolute z-30 mt-2 w-full rounded-xl border border-gray-100 bg-white shadow-xl max-h-72 overflow-auto">
+                  {sessionClientOptions.length === 0 ? (
+                    <div className="px-4 py-3 text-sm text-gray-400">
+                      No clients found.
+                    </div>
+                  ) : (
+                    sessionClientOptions.map((client) => (
+                      <button
+                        key={client.id}
+                        onClick={() => {
+                          setSessionClientId(client.id);
+                          setSessionClientQuery(
+                            `${client.surname}${client.business_name ? ` (${client.business_name})` : ""}`,
+                          );
+                          setIsSessionDropdownOpen(false);
+                          setIsSessionClientFocused(false);
+                        }}
+                        className="w-full text-left px-4 py-3 text-sm font-semibold text-[#333333] hover:bg-gray-50 transition-colors"
+                      >
+                        {client.surname}
+                        {client.business_name ? ` (${client.business_name})` : ""}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex-1 flex items-center justify-between gap-6">
+            <div className="text-3xl font-black tracking-widest text-[#333333] font-mono">
+              {formatHms(sessionElapsedSeconds)}
+            </div>
+            <button
+              onClick={handleToggleSession}
+              disabled={!sessionClientId && !isSessionRunning}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm shadow-lg transition-all ${
+                isSessionRunning
+                  ? "bg-red-500 text-white hover:bg-red-600"
+                  : "bg-[#9d4edd] text-white hover:bg-[#7b2cbf]"
+              } ${
+                !sessionClientId && !isSessionRunning
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed shadow-none"
+                  : ""
+              }`}
+            >
+              <Timer size={14} fill="currentColor" />
+              {isSessionRunning &&
+              sessionClientId &&
+              sessionClientId !== activeClientId
+                ? "Switch"
+                : isSessionRunning
+                  ? "Stop"
+                  : "Start"}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
           <div className="w-full lg:w-3/5" ref={dropdownRef}>
@@ -471,9 +618,9 @@ export default function TimeTrackingPage() {
             </div>
             <button
               onClick={handleToggleTimer}
-              disabled={!selectedTask}
+              disabled={!selectedTask || isSessionRunning}
               className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm shadow-lg transition-all ${
-                !selectedTask
+                !selectedTask || isSessionRunning
                   ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                   : selectedTask.is_running
                     ? "bg-red-500 text-white hover:bg-red-600"

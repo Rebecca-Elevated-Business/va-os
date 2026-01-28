@@ -4,6 +4,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   useRef,
   type DragEvent,
 } from "react";
@@ -24,11 +25,14 @@ import {
   Square,
   Edit2,
   Trash2,
+  Search,
+  Timer,
 } from "lucide-react";
 import CalendarView from "./CalendarView";
 import KanbanView from "./KanbanView";
 import { STATUS_CONFIG, Task } from "./types"; // Ensure this type has 'category' if possible, or we cast below
 import TaskModal from "./TaskModal";
+import { useClientSession } from "../ClientSessionContext";
 
 type CategoryOption = {
   id: string;
@@ -91,8 +95,31 @@ const normalizeStatusOrder = (order: string[]) => {
   return [...unique, ...missing];
 };
 
+const formatHms = (totalSeconds: number) => {
+  const safeSeconds = Math.max(0, Math.floor(totalSeconds));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const seconds = safeSeconds % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
+    2,
+    "0",
+  )}:${String(seconds).padStart(2, "0")}`;
+};
+
 export default function TaskCentrePage() {
   const { confirm } = usePrompt();
+  const {
+    activeClientId,
+    activeEntry,
+    isRunning: isSessionRunning,
+    sessionElapsedSeconds,
+    startSession,
+    stopSession,
+    startTaskEntry,
+    stopActiveTaskEntry,
+    dismissActiveTaskEntry,
+    getActiveEntryDurationSeconds,
+  } = useClientSession();
   // --- STATE ---
   const [tasks, setTasks] = useState<Task[]>([]);
   const [clients, setClients] = useState<
@@ -121,6 +148,11 @@ export default function TaskCentrePage() {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [isColumnsOpen, setIsColumnsOpen] = useState(false);
   const columnsRef = useRef<HTMLDivElement>(null);
+  const [sessionClientQuery, setSessionClientQuery] = useState("");
+  const [sessionClientId, setSessionClientId] = useState<string | null>(null);
+  const [isSessionDropdownOpen, setIsSessionDropdownOpen] = useState(false);
+  const [isSessionClientFocused, setIsSessionClientFocused] = useState(false);
+  const sessionDropdownRef = useRef<HTMLDivElement>(null);
 
   const [statusOrder, setStatusOrder] = useState<string[]>(
     normalizeStatusOrder(DEFAULT_STATUS_ORDER),
@@ -336,6 +368,41 @@ export default function TaskCentrePage() {
     setIsAdding(true);
     setModalPrefill(null);
     setActionMenuId(null); // Close the inline menu
+    void startTaskEntry(task.id, task.client_id);
+  };
+
+  const handleCloseTaskModal = async () => {
+    if (selectedTask && activeEntry?.task_id === selectedTask.id) {
+      const duration = getActiveEntryDurationSeconds();
+      if (duration < 5) {
+        const dismiss = await confirm({
+          title: "Dismiss task from timer report?",
+          message: "Close task and dismiss from timer report?",
+          confirmLabel: "Dismiss",
+          cancelLabel: "Keep open",
+        });
+        if (!dismiss) return;
+        await dismissActiveTaskEntry();
+      } else {
+        await stopActiveTaskEntry();
+      }
+    }
+    setIsAdding(false);
+    setSelectedTask(null);
+    setModalPrefill(null);
+  };
+
+  const handleToggleSession = async () => {
+    if (isSessionRunning) {
+      if (sessionClientId && sessionClientId !== activeClientId) {
+        await startSession(sessionClientId);
+        return;
+      }
+      await stopSession();
+      return;
+    }
+    if (!sessionClientId) return;
+    await startSession(sessionClientId);
   };
 
   const updateTaskStatus = async (taskId: string, newStatus: string) => {
@@ -607,6 +674,39 @@ export default function TaskCentrePage() {
       })
     : [];
 
+  const sessionClientOptions = sessionClientQuery.trim()
+    ? clients.filter((client) => {
+        const name = `${client.surname} ${client.business_name || ""}`
+          .trim()
+          .toLowerCase();
+        return name.includes(sessionClientQuery.toLowerCase().trim());
+      })
+    : clients;
+
+  const activeClientLabel = useMemo(() => {
+    if (!activeClientId) return "";
+    const activeClient = clients.find((client) => client.id === activeClientId);
+    if (!activeClient) return "";
+    return `${activeClient.surname}${activeClient.business_name ? ` (${activeClient.business_name})` : ""}`;
+  }, [activeClientId, clients]);
+
+  const sessionInputValue = isSessionClientFocused
+    ? sessionClientQuery
+    : sessionClientQuery || activeClientLabel;
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        sessionDropdownRef.current &&
+        !sessionDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsSessionDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   if (loading)
     return (
       <div className="p-10 italic text-gray-400">Loading Task Centre...</div>
@@ -624,6 +724,95 @@ export default function TaskCentrePage() {
       <header className="mb-8">
         <h1>Task Centre</h1>
       </header>
+
+      <div className="mb-6 bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-3 text-sm font-semibold text-gray-500">
+            <Timer size={16} className="text-[#9d4edd]" />
+            Client Session Timer
+          </div>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
+            <div className="relative w-full lg:w-72" ref={sessionDropdownRef}>
+              <label className="sr-only" htmlFor="task-centre-client-session">
+                Select client to track
+              </label>
+              <Search
+                size={14}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+              />
+              <input
+                id="task-centre-client-session"
+                type="text"
+                placeholder="Select a client to track"
+                className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-white text-sm font-semibold focus:ring-2 focus:ring-[#9d4edd] outline-none"
+                value={sessionInputValue}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setSessionClientQuery(value);
+                  setIsSessionDropdownOpen(true);
+                  if (!value) setSessionClientId(null);
+                }}
+                onFocus={() => {
+                  setIsSessionClientFocused(true);
+                  setIsSessionDropdownOpen(true);
+                }}
+                onBlur={() => {
+                  if (!sessionClientQuery.trim()) {
+                    setIsSessionClientFocused(false);
+                  }
+                }}
+              />
+              {isSessionDropdownOpen && (
+                <div className="absolute z-40 mt-2 w-full rounded-xl border border-gray-100 bg-white shadow-xl max-h-60 overflow-auto">
+                  {sessionClientOptions.length === 0 ? (
+                    <div className="px-4 py-3 text-sm text-gray-400">
+                      No clients found.
+                    </div>
+                  ) : (
+                    sessionClientOptions.map((client) => (
+                      <button
+                        key={client.id}
+                        onClick={() => {
+                          setSessionClientId(client.id);
+                          setSessionClientQuery(
+                            `${client.surname}${client.business_name ? ` (${client.business_name})` : ""}`,
+                          );
+                          setIsSessionDropdownOpen(false);
+                          setIsSessionClientFocused(false);
+                        }}
+                        className="w-full text-left px-4 py-3 text-sm font-semibold text-[#333333] hover:bg-gray-50 transition-colors"
+                      >
+                        {client.surname}
+                        {client.business_name ? ` (${client.business_name})` : ""}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="font-mono text-lg text-[#333333] tracking-widest">
+              {formatHms(sessionElapsedSeconds)}
+            </div>
+            <button
+              onClick={handleToggleSession}
+              disabled={!sessionClientId && !isSessionRunning}
+              className={`px-6 py-3 rounded-xl font-bold text-sm shadow-lg transition-all ${
+                isSessionRunning
+                  ? "bg-red-500 text-white hover:bg-red-600"
+                  : "bg-[#9d4edd] text-white hover:bg-[#7b2cbf]"
+              } ${!sessionClientId && !isSessionRunning ? "bg-gray-100 text-gray-400 cursor-not-allowed shadow-none" : ""}`}
+            >
+              {isSessionRunning &&
+              sessionClientId &&
+              sessionClientId !== activeClientId
+                ? "Switch"
+                : isSessionRunning
+                  ? "Stop"
+                  : "Start"}
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* CONTROL BAR */}
       <div className="flex items-center justify-between gap-4 mb-6 border-b border-gray-100 pb-6">
@@ -984,15 +1173,19 @@ export default function TaskCentrePage() {
                                       <button
                                         onClick={(event) => {
                                           event.stopPropagation();
+                                          if (isSessionRunning) return;
                                           toggleTimer(task);
                                         }}
+                                        disabled={isSessionRunning}
                                         className={`w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-sm ${
-                                          task.is_running
+                                          isSessionRunning
+                                            ? "bg-gray-100 text-gray-300 cursor-not-allowed"
+                                            : task.is_running
                                             ? "bg-red-50 text-red-500 border border-red-100 animate-pulse"
                                             : "bg-green-50 text-green-600 border border-green-100 hover:bg-green-100"
                                         }`}
                                       >
-                                        {task.is_running ? (
+                                        {task.is_running && !isSessionRunning ? (
                                           <Square
                                             size={10}
                                             fill="currentColor"
@@ -1193,11 +1386,7 @@ export default function TaskCentrePage() {
           modalPrefill?.endTime || ""
         }-${isAdding ? "open" : "closed"}`}
         isOpen={isAdding}
-        onClose={() => {
-          setIsAdding(false);
-          setSelectedTask(null);
-          setModalPrefill(null);
-        }}
+        onClose={handleCloseTaskModal}
         clients={clients}
         task={selectedTask}
         prefill={modalPrefill}
@@ -1239,7 +1428,10 @@ export default function TaskCentrePage() {
         <KanbanView
           tasks={filteredTasks}
           onUpdateStatus={handleKanbanUpdate}
-          onToggleTimer={toggleTimer}
+          onToggleTimer={async (task) => {
+            if (isSessionRunning) return;
+            await toggleTimer(task);
+          }}
           onOpenTask={openEditModal}
           onDeleteTask={deleteTask}
           onAddTask={(status: string) => {

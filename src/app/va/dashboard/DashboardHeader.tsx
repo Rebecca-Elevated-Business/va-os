@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
-import { Search, User, CheckSquare, FileText } from "lucide-react"; // Icons for categories
+import { Search, User, CheckSquare, FileText, Timer } from "lucide-react"; // Icons for categories
+import { useClientSession } from "./ClientSessionContext";
 
 type UserProfile = {
   id?: string;
@@ -20,16 +21,49 @@ type SearchResult = {
   subtitle?: string;
 };
 
+type ClientOption = {
+  id: string;
+  business_name: string;
+  surname: string;
+};
+
+const formatHms = (totalSeconds: number) => {
+  const safeSeconds = Math.max(0, Math.floor(totalSeconds));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const seconds = safeSeconds % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
+    2,
+    "0",
+  )}:${String(seconds).padStart(2, "0")}`;
+};
+
 export default function DashboardHeader() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [showResults, setShowResults] = useState(false);
+  const [clients, setClients] = useState<ClientOption[]>([]);
+  const [clientQuery, setClientQuery] = useState("");
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [showClientResults, setShowClientResults] = useState(false);
+  const [isClientFocused, setIsClientFocused] = useState(false);
 
   const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
+  const clientRef = useRef<HTMLDivElement>(null);
+
+  const {
+    activeClientId,
+    activeSession,
+    isRunning,
+    isLoading,
+    sessionElapsedSeconds,
+    startSession,
+    stopSession,
+  } = useClientSession();
 
   // --- SEARCH LOGIC ---
   useEffect(() => {
@@ -109,6 +143,12 @@ export default function DashboardHeader() {
       ) {
         setShowDropdown(false);
       }
+      if (
+        clientRef.current &&
+        !clientRef.current.contains(event.target as Node)
+      ) {
+        setShowClientResults(false);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -157,6 +197,64 @@ export default function DashboardHeader() {
     };
     getUser();
   }, []);
+
+  useEffect(() => {
+    const loadClients = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from("clients")
+        .select("id, business_name, surname")
+        .eq("va_id", user.id)
+        .order("surname", { ascending: true });
+      setClients((data as ClientOption[]) || []);
+    };
+    loadClients();
+  }, []);
+
+  const activeClientLabel = useMemo(() => {
+    if (!activeClientId) return "";
+    const activeClient = clients.find((client) => client.id === activeClientId);
+    if (!activeClient) return "";
+    return `${activeClient.surname}${activeClient.business_name ? ` (${activeClient.business_name})` : ""}`;
+  }, [activeClientId, clients]);
+
+  const clientInputValue = isClientFocused
+    ? clientQuery
+    : clientQuery || activeClientLabel;
+
+  const filteredClients = useMemo(() => {
+    const query = clientQuery.trim().toLowerCase();
+    if (!query) return clients;
+    return clients.filter((client) =>
+      `${client.surname} ${client.business_name}`.toLowerCase().includes(query),
+    );
+  }, [clientQuery, clients]);
+
+  const handleSelectClient = (client: ClientOption) => {
+    setSelectedClientId(client.id);
+    setClientQuery(
+      `${client.surname}${client.business_name ? ` (${client.business_name})` : ""}`,
+    );
+    setShowClientResults(false);
+    setIsClientFocused(false);
+  };
+
+  const handleToggleClientSession = async () => {
+    if (isLoading) return;
+    if (isRunning && activeSession) {
+      if (selectedClientId && selectedClientId !== activeClientId) {
+        await startSession(selectedClientId);
+        return;
+      }
+      await stopSession();
+      return;
+    }
+    if (!selectedClientId) return;
+    await startSession(selectedClientId);
+  };
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -230,6 +328,77 @@ export default function DashboardHeader() {
 
       {/* 2. ICONS CONTAINER (Right side) */}
       <div className="flex items-center gap-4">
+        <div
+          className="hidden lg:flex items-center gap-3 border border-gray-100 rounded-2xl px-3 py-2 bg-white shadow-sm"
+          ref={clientRef}
+        >
+          <div className="flex items-center gap-2">
+            <Timer size={16} className="text-[#9d4edd]" />
+            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+              Client Session
+            </div>
+          </div>
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Select client"
+              className="w-48 rounded-xl border border-gray-200 px-3 py-2 text-xs font-semibold text-[#333333] focus:ring-2 focus:ring-[#9d4edd] outline-none"
+              value={clientInputValue}
+              onChange={(event) => {
+                setClientQuery(event.target.value);
+                setShowClientResults(true);
+                if (!event.target.value) setSelectedClientId(null);
+              }}
+              onFocus={() => {
+                setIsClientFocused(true);
+                setShowClientResults(true);
+              }}
+              onBlur={() => {
+                if (!clientQuery.trim()) {
+                  setIsClientFocused(false);
+                }
+              }}
+            />
+            {showClientResults && (
+              <div className="absolute z-40 mt-2 w-full rounded-xl border border-gray-100 bg-white shadow-xl max-h-60 overflow-auto">
+                {filteredClients.length === 0 ? (
+                  <div className="px-3 py-2 text-xs text-gray-400">
+                    No clients found.
+                  </div>
+                ) : (
+                  filteredClients.map((client) => (
+                    <button
+                      key={client.id}
+                      onClick={() => handleSelectClient(client)}
+                      className="w-full text-left px-3 py-2 text-xs font-semibold text-[#333333] hover:bg-gray-50 transition-colors"
+                    >
+                      {client.surname}
+                      {client.business_name ? ` (${client.business_name})` : ""}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+          <button
+            onClick={handleToggleClientSession}
+            disabled={isLoading || (!selectedClientId && !isRunning)}
+            className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+              isRunning
+                ? "bg-red-500 text-white hover:bg-red-600"
+                : "bg-[#9d4edd] text-white hover:bg-[#7b2cbf]"
+            } ${isLoading || (!selectedClientId && !isRunning) ? "opacity-60 cursor-not-allowed" : ""}`}
+          >
+            {isRunning && selectedClientId && selectedClientId !== activeClientId
+              ? "Switch"
+              : isRunning
+                ? "Stop"
+                : "Start"}
+          </button>
+          <div className="font-mono text-xs text-[#333333] tracking-wide">
+            {formatHms(sessionElapsedSeconds)}
+          </div>
+        </div>
         <a
           href="https://elevatedbusiness.co.uk/va-os/ticket"
           target="_blank"

@@ -7,6 +7,7 @@ import { usePrompt } from "@/components/ui/PromptProvider";
 import { FileSignature, FileText, ReceiptText } from "lucide-react";
 import TaskModal from "../../../tasks/TaskModal";
 import { Task } from "../../../tasks/types";
+import { useClientSession } from "../../../ClientSessionContext";
 
 // --- TYPES ---
 type Client = {
@@ -47,6 +48,17 @@ type Agreement = {
   last_updated_at: string;
 };
 
+const formatHms = (totalSeconds: number) => {
+  const safeSeconds = Math.max(0, Math.floor(totalSeconds));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const seconds = safeSeconds % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
+    2,
+    "0",
+  )}:${String(seconds).padStart(2, "0")}`;
+};
+
 // --- COMPONENT ---
 export default function ClientProfilePage({
   params,
@@ -56,6 +68,18 @@ export default function ClientProfilePage({
   const { id } = use(params);
   const router = useRouter();
   const { confirm } = usePrompt();
+  const {
+    activeClientId,
+    activeEntry,
+    isRunning: isSessionRunning,
+    sessionElapsedSeconds,
+    startSession,
+    stopSession,
+    startTaskEntry,
+    stopActiveTaskEntry,
+    dismissActiveTaskEntry,
+    getActiveEntryDurationSeconds,
+  } = useClientSession();
 
   // --- STATE ---
   const [client, setClient] = useState<Client | null>(null);
@@ -163,6 +187,7 @@ export default function ClientProfilePage({
 
   // 1. Toggle Timer (Play/Stop logic)
   const toggleTimer = async (task: Task) => {
+    if (isSessionRunning) return;
     if (task.is_running) {
       // STOPPING: Calculate elapsed time and add to total
       if (!task.start_time) return;
@@ -353,6 +378,38 @@ export default function ClientProfilePage({
     setEditingTaskId(task.id);
     setEditTaskName(task.task_name);
     setEditTaskDate(task.due_date ? task.due_date.split("T")[0] : "");
+    void startTaskEntry(task.id, task.client_id);
+  };
+
+  const maybeCloseEditing = async () => {
+    if (!editingTaskId || activeEntry?.task_id !== editingTaskId) return true;
+    const duration = getActiveEntryDurationSeconds();
+    if (duration < 5) {
+      const dismiss = await confirm({
+        title: "Dismiss task from timer report?",
+        message: "Close task and dismiss from timer report?",
+        confirmLabel: "Dismiss",
+        cancelLabel: "Keep open",
+      });
+      if (!dismiss) return false;
+      await dismissActiveTaskEntry();
+      return true;
+    }
+    await stopActiveTaskEntry();
+    return true;
+  };
+
+  const handleToggleSession = async () => {
+    if (!client) return;
+    if (isSessionRunning) {
+      if (activeClientId && activeClientId !== client.id) {
+        await startSession(client.id);
+        return;
+      }
+      await stopSession();
+      return;
+    }
+    await startSession(client.id);
   };
 
   // 8. Save Edited Task
@@ -368,7 +425,10 @@ export default function ClientProfilePage({
       .eq("id", editingTaskId);
 
     if (!error) {
-      setEditingTaskId(null);
+      const shouldClose = await maybeCloseEditing();
+      if (shouldClose) {
+        setEditingTaskId(null);
+      }
       refreshData();
     }
   };
@@ -753,6 +813,31 @@ export default function ClientProfilePage({
           </label>
         </div>
 
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+          <div className="text-xs font-bold uppercase tracking-widest text-gray-400">
+            Client Session
+          </div>
+          <div className="flex flex-wrap items-center gap-4">
+            <span className="font-mono text-sm text-[#333333]">
+              {formatHms(sessionElapsedSeconds)}
+            </span>
+            <button
+              onClick={handleToggleSession}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                isSessionRunning
+                  ? "bg-red-500 text-white hover:bg-red-600"
+                  : "bg-[#9d4edd] text-white hover:bg-[#7b2cbf]"
+              }`}
+            >
+              {isSessionRunning && activeClientId && activeClientId !== id
+                ? "Switch to this client"
+                : isSessionRunning
+                  ? "Stop session"
+                  : "Start session"}
+            </button>
+          </div>
+        </div>
+
         <div className="flex justify-end mb-6">
           <button
             onClick={() => setIsTaskModalOpen(true)}
@@ -834,7 +919,12 @@ export default function ClientProfilePage({
                                 Save
                               </button>
                               <button
-                                onClick={() => setEditingTaskId(null)}
+                                onClick={async () => {
+                                  const shouldClose = await maybeCloseEditing();
+                                  if (shouldClose) {
+                                    setEditingTaskId(null);
+                                  }
+                                }}
                                 className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded font-bold hover:bg-gray-200"
                               >
                                 Cancel
@@ -895,14 +985,20 @@ export default function ClientProfilePage({
                       <td className="px-4 py-3 text-center align-top pt-4">
                         {!task.is_completed && !isEditing && (
                           <button
-                            onClick={() => toggleTimer(task)}
+                            onClick={() => {
+                              if (isSessionRunning) return;
+                              toggleTimer(task);
+                            }}
+                            disabled={isSessionRunning}
                             className={`w-8 h-8 rounded-full flex items-center justify-center transition-all mx-auto ${
-                              task.is_running
+                              isSessionRunning
+                                ? "bg-gray-100 text-gray-300 cursor-not-allowed"
+                                : task.is_running
                                 ? "bg-red-100 text-red-600 hover:bg-red-200 animate-pulse"
                                 : "bg-green-100 text-green-600 hover:bg-green-200"
                             }`}
                           >
-                            {task.is_running ? (
+                            {task.is_running && !isSessionRunning ? (
                               <div className="w-3 h-3 bg-current rounded-sm" />
                             ) : (
                               <div className="w-0 h-0 border-t-[5px] border-t-transparent border-l-8 border-l-current border-b-[5px] border-b-transparent ml-1" />

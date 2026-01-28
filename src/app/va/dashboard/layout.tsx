@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useEffect, useState, useCallback } from "react";
 import DashboardHeader from "./DashboardHeader";
+import { ClientSessionProvider } from "./ClientSessionContext";
 import ImpersonationBanner from "@/components/ImpersonationBanner";
 import {
   LayoutDashboard,
@@ -230,8 +231,10 @@ export default function VADashboardLayout({
         }`}
       >
         <ImpersonationBanner />
-        <DashboardHeader />
-        <div className="p-8 print:p-0">{children}</div>
+        <ClientSessionProvider>
+          <DashboardHeader />
+          <div className="p-8 print:p-0">{children}</div>
+        </ClientSessionProvider>
       </main>
     </div>
   );
