@@ -8,13 +8,10 @@ import { usePrompt } from "@/components/ui/PromptProvider";
 import {
   ChevronDown,
   ChevronRight,
-  FileSignature,
-  FileText,
   Filter,
   MoreHorizontal,
   Edit2,
   Trash2,
-  ReceiptText,
 } from "lucide-react";
 import { format } from "date-fns";
 import TaskModal from "../../../tasks/TaskModal";
@@ -175,6 +172,13 @@ export default function ClientProfilePage({
   const [collapsedStatus, setCollapsedStatus] = useState<Record<string, boolean>>(
     { completed: true },
   );
+  const [docsCollapsed, setDocsCollapsed] = useState<{
+    workflows: boolean;
+    documents: boolean;
+  }>({
+    workflows: false,
+    documents: false,
+  });
   const [activeTab, setActiveTab] = useState<CrmTabId>("overview");
 
   // --- DATA FETCHING ---
@@ -903,11 +907,6 @@ export default function ClientProfilePage({
       (docTypeFilter === "all" || docTypeFilter === "workflow") &&
       inDateRange(ag.last_updated_at),
   );
-  const documentIcon = (type: string) => {
-    if (type === "invoice") return ReceiptText;
-    if (type === "booking_form") return FileSignature;
-    return FileText;
-  };
   const summaryValue = notes[0]?.content || "";
   const displayClient = (isEditing ? draftClient : client) || client;
   const websiteDisplayLinks =
@@ -2278,187 +2277,244 @@ export default function ClientProfilePage({
             </div>
 
             <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-100 text-xs font-bold uppercase tracking-widest text-gray-400">
+              <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-100">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDocsCollapsed((prev) => ({
+                      ...prev,
+                      workflows: !prev.workflows,
+                    }))
+                  }
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  aria-label="Toggle workflows"
+                >
+                  {docsCollapsed.workflows ? (
+                    <ChevronRight size={14} />
+                  ) : (
+                    <ChevronDown size={14} />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDocsCollapsed((prev) => ({
+                      ...prev,
+                      workflows: !prev.workflows,
+                    }))
+                  }
+                  className="text-left text-xs font-semibold text-gray-600"
+                >
                 Workflows ({filteredAgreements.length})
+                </button>
               </div>
-              {filteredAgreements.length === 0 ? (
-                <div className="p-6 text-sm text-gray-400 italic">
-                  No workflows found.
-                </div>
-              ) : (
-                <table className="w-full table-fixed text-left">
-                  <colgroup>
-                    <col />
-                    <col className="w-32" />
-                    <col className="w-32" />
-                    <col className="w-48" />
-                  </colgroup>
-                  <tbody className="divide-y divide-gray-100">
-                    {filteredAgreements.map((ag) => (
-                      <tr key={ag.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <FileSignature size={18} className="text-[#333333]" />
-                            <div>
-                              <div className="font-bold text-black">{ag.title}</div>
-                              <div className="text-[10px] text-gray-400 tracking-widest">
-                                Workflow
+              {!docsCollapsed.workflows && (
+                <>
+                  {filteredAgreements.length === 0 ? (
+                    <div className="p-6 text-sm text-gray-400 italic">
+                      No workflows found.
+                    </div>
+                  ) : (
+                    <table className="w-full table-fixed text-left">
+                      <colgroup>
+                        <col />
+                        <col className="w-32" />
+                        <col className="w-32" />
+                        <col className="w-48" />
+                      </colgroup>
+                      <tbody className="divide-y divide-gray-100">
+                        {filteredAgreements.map((ag) => (
+                          <tr key={ag.id} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-4 py-3">
+                              <div>
+                                <div className="text-sm font-semibold text-[#333333]">
+                                  {ag.title}
+                                </div>
+                                <div className="text-[10px] text-gray-400 tracking-widest">
+                                  Workflow
+                                </div>
                               </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-xs font-semibold text-gray-600">
-                          {formatDocStatus(ag.status)}
-                        </td>
-                        <td className="px-4 py-3 text-xs text-gray-600">
-                          {formatDateCell(ag.last_updated_at)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center justify-end gap-4">
-                            {ag.status !== "draft" && (
-                              <button
-                                onClick={() => revokeAgreement(ag.id)}
-                                className="text-[10px] font-bold text-red-500 hover:underline"
-                              >
-                                Revoke
-                              </button>
-                            )}
-                            <button
-                              onClick={() =>
-                                router.push(
-                                  `/va/dashboard/workflows/portal-view/${ag.id}`,
-                                )
-                              }
-                              className="text-xs font-bold text-[#9d4edd] hover:underline"
-                            >
-                              {ag.status === "draft" ? "Edit & Issue" : "View"}
-                            </button>
-                            <button
-                              onClick={() => deleteAgreement(ag.id)}
-                              className="text-gray-300 hover:text-red-500 transition-colors"
-                              title="Delete Agreement"
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="16"
-                                height="16"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                              </svg>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                            </td>
+                            <td className="px-4 py-3 text-xs font-semibold text-gray-600">
+                              {formatDocStatus(ag.status)}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-gray-600">
+                              {formatDateCell(ag.last_updated_at)}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center justify-end gap-4">
+                                {ag.status !== "draft" && (
+                                  <button
+                                    onClick={() => revokeAgreement(ag.id)}
+                                    className="text-[10px] font-bold text-red-500 hover:underline"
+                                  >
+                                    Revoke
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() =>
+                                    router.push(
+                                      `/va/dashboard/workflows/portal-view/${ag.id}`,
+                                    )
+                                  }
+                                  className="text-xs font-bold text-[#9d4edd] hover:underline"
+                                >
+                                  {ag.status === "draft" ? "Edit & Issue" : "View"}
+                                </button>
+                                <button
+                                  onClick={() => deleteAgreement(ag.id)}
+                                  className="text-gray-300 hover:text-red-500 transition-colors"
+                                  title="Delete Agreement"
+                                >
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                                  </svg>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </>
               )}
             </div>
 
             <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-100 text-xs font-bold uppercase tracking-widest text-gray-400">
+              <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-100">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDocsCollapsed((prev) => ({
+                      ...prev,
+                      documents: !prev.documents,
+                    }))
+                  }
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  aria-label="Toggle documents"
+                >
+                  {docsCollapsed.documents ? (
+                    <ChevronRight size={14} />
+                  ) : (
+                    <ChevronDown size={14} />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDocsCollapsed((prev) => ({
+                      ...prev,
+                      documents: !prev.documents,
+                    }))
+                  }
+                  className="text-left text-xs font-semibold text-gray-600"
+                >
                 Documents ({filteredDocuments.length})
+                </button>
               </div>
-              {filteredDocuments.length === 0 ? (
-                <div className="p-6 text-sm text-gray-400 italic">
-                  No documents found.
-                </div>
-              ) : (
-                <table className="w-full table-fixed text-left">
-                  <colgroup>
-                    <col />
-                    <col className="w-32" />
-                    <col className="w-32" />
-                    <col className="w-48" />
-                  </colgroup>
-                  <tbody className="divide-y divide-gray-100">
-                    {filteredDocuments.map((doc) => {
-                      const DocIcon = documentIcon(doc.type);
-                      return (
-                        <tr key={doc.id} className="hover:bg-purple-50/30 transition-colors">
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-3">
-                              <DocIcon size={18} className="text-[#333333]" />
+              {!docsCollapsed.documents && (
+                <>
+                  {filteredDocuments.length === 0 ? (
+                    <div className="p-6 text-sm text-gray-400 italic">
+                      No documents found.
+                    </div>
+                  ) : (
+                    <table className="w-full table-fixed text-left">
+                      <colgroup>
+                        <col />
+                        <col className="w-32" />
+                        <col className="w-32" />
+                        <col className="w-48" />
+                      </colgroup>
+                      <tbody className="divide-y divide-gray-100">
+                        {filteredDocuments.map((doc) => (
+                          <tr key={doc.id} className="hover:bg-purple-50/30 transition-colors">
+                            <td className="px-4 py-3">
                               <div>
-                                <div className="font-bold text-black">
+                                <div className="text-sm font-semibold text-[#333333]">
                                   {doc.title}
                                 </div>
                                 <div className="text-[10px] text-gray-400 tracking-widest">
                                   {doc.type.replace("_", " ")}
                                 </div>
                               </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-xs font-semibold text-gray-600">
-                            {formatDocStatus(doc.status)}
-                          </td>
-                          <td className="px-4 py-3 text-xs text-gray-600">
-                            {formatDateCell(doc.created_at)}
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center justify-end gap-4">
-                              {doc.status !== "draft" && (
+                            </td>
+                            <td className="px-4 py-3 text-xs font-semibold text-gray-600">
+                              {formatDocStatus(doc.status)}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-gray-600">
+                              {formatDateCell(doc.created_at)}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center justify-end gap-4">
+                                {doc.status !== "draft" && (
+                                  <button
+                                    onClick={() => revokeDocument(doc.id)}
+                                    className="text-[10px] font-bold text-red-500 hover:underline"
+                                  >
+                                    Revoke
+                                  </button>
+                                )}
                                 <button
-                                  onClick={() => revokeDocument(doc.id)}
-                                  className="text-[10px] font-bold text-red-500 hover:underline"
+                                  onClick={() => {
+                                    const routeSuffix =
+                                      doc.type === "proposal"
+                                        ? "proposal"
+                                        : doc.type === "invoice"
+                                          ? "invoice"
+                                          : doc.type === "booking_form"
+                                            ? "booking_form"
+                                            : doc.type === "upload"
+                                              ? "upload"
+                                              : "";
+                                    router.push(
+                                      routeSuffix
+                                        ? `/va/dashboard/documents/edit-${routeSuffix}/${doc.id}`
+                                        : `/va/dashboard/documents/edit/${doc.id}`,
+                                    );
+                                  }}
+                                  className="text-xs font-bold text-[#9d4edd] hover:underline"
                                 >
-                                  Revoke
+                                  {doc.status === "draft" ? "Edit & Issue" : "View"}
                                 </button>
-                              )}
-                              <button
-                                onClick={() => {
-                                  const routeSuffix =
-                                    doc.type === "proposal"
-                                      ? "proposal"
-                                      : doc.type === "invoice"
-                                        ? "invoice"
-                                        : doc.type === "booking_form"
-                                          ? "booking_form"
-                                          : doc.type === "upload"
-                                            ? "upload"
-                                            : "";
-                                  router.push(
-                                    routeSuffix
-                                      ? `/va/dashboard/documents/edit-${routeSuffix}/${doc.id}`
-                                      : `/va/dashboard/documents/edit/${doc.id}`,
-                                  );
-                                }}
-                                className="text-xs font-bold text-[#9d4edd] hover:underline"
-                              >
-                                {doc.status === "draft" ? "Edit & Issue" : "View"}
-                              </button>
-                              <button
-                                onClick={() => deleteDocument(doc.id)}
-                                className="text-[#333333] hover:text-red-500 transition-colors"
-                                title="Delete Document"
-                              >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="16"
-                                  height="16"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
+                                <button
+                                  onClick={() => deleteDocument(doc.id)}
+                                  className="text-[#333333] hover:text-red-500 transition-colors"
+                                  title="Delete Document"
                                 >
-                                  <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                                </svg>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                                  </svg>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </>
               )}
             </div>
           </div>
