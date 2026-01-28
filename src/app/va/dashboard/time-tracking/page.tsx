@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { Circle, Play, Search } from "lucide-react";
+import { ChevronDown, Circle, Play, Search } from "lucide-react";
 import TaskModal from "../tasks/TaskModal";
 import { Task } from "../tasks/types";
 import { useClientSession } from "../ClientSessionContext";
@@ -652,13 +652,18 @@ export default function TimeTrackingPage() {
 
       <div className="mt-8 bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setIsEntriesOpen((prev) => !prev)}
-              className="text-xs font-bold text-[#333333] hover:text-[#9d4edd]"
+              className="text-[#333333] hover:text-[#333333] transition-colors"
             >
-              {isEntriesOpen ? "Hide" : "Show"}
+              <ChevronDown
+                size={16}
+                className={`transition-transform ${
+                  isEntriesOpen ? "rotate-0" : "-rotate-90"
+                }`}
+              />
             </button>
             <h2 className="text-sm font-black tracking-widest text-gray-500 uppercase">
               Recent time entries

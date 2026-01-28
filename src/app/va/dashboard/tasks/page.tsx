@@ -26,13 +26,11 @@ import {
   Edit2,
   Trash2,
   Search,
-  Timer,
 } from "lucide-react";
 import CalendarView from "./CalendarView";
 import KanbanView from "./KanbanView";
 import { STATUS_CONFIG, Task } from "./types"; // Ensure this type has 'category' if possible, or we cast below
 import TaskModal from "./TaskModal";
-import { useClientSession } from "../ClientSessionContext";
 
 type CategoryOption = {
   id: string;
@@ -109,12 +107,8 @@ const formatHms = (totalSeconds: number) => {
 export default function TaskCentrePage() {
   const { confirm } = usePrompt();
   const {
-    activeClientId,
     activeEntry,
     isRunning: isSessionRunning,
-    sessionElapsedSeconds,
-    startSession,
-    stopSession,
     startTaskEntry,
     stopActiveTaskEntry,
     dismissActiveTaskEntry,
@@ -148,11 +142,6 @@ export default function TaskCentrePage() {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [isColumnsOpen, setIsColumnsOpen] = useState(false);
   const columnsRef = useRef<HTMLDivElement>(null);
-  const [sessionClientQuery, setSessionClientQuery] = useState("");
-  const [sessionClientId, setSessionClientId] = useState<string | null>(null);
-  const [isSessionDropdownOpen, setIsSessionDropdownOpen] = useState(false);
-  const [isSessionClientFocused, setIsSessionClientFocused] = useState(false);
-  const sessionDropdownRef = useRef<HTMLDivElement>(null);
 
   const [statusOrder, setStatusOrder] = useState<string[]>(
     normalizeStatusOrder(DEFAULT_STATUS_ORDER),
@@ -392,18 +381,6 @@ export default function TaskCentrePage() {
     setModalPrefill(null);
   };
 
-  const handleToggleSession = async () => {
-    if (isSessionRunning) {
-      if (sessionClientId && sessionClientId !== activeClientId) {
-        await startSession(sessionClientId);
-        return;
-      }
-      await stopSession();
-      return;
-    }
-    if (!sessionClientId) return;
-    await startSession(sessionClientId);
-  };
 
   const updateTaskStatus = async (taskId: string, newStatus: string) => {
     await supabase.from("tasks").update({ status: newStatus }).eq("id", taskId);
@@ -674,38 +651,6 @@ export default function TaskCentrePage() {
       })
     : [];
 
-  const sessionClientOptions = sessionClientQuery.trim()
-    ? clients.filter((client) => {
-        const name = `${client.surname} ${client.business_name || ""}`
-          .trim()
-          .toLowerCase();
-        return name.includes(sessionClientQuery.toLowerCase().trim());
-      })
-    : clients;
-
-  const activeClientLabel = useMemo(() => {
-    if (!activeClientId) return "";
-    const activeClient = clients.find((client) => client.id === activeClientId);
-    if (!activeClient) return "";
-    return `${activeClient.surname}${activeClient.business_name ? ` (${activeClient.business_name})` : ""}`;
-  }, [activeClientId, clients]);
-
-  const sessionInputValue = isSessionClientFocused
-    ? sessionClientQuery
-    : sessionClientQuery || activeClientLabel;
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        sessionDropdownRef.current &&
-        !sessionDropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsSessionDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   if (loading)
     return (
@@ -724,95 +669,6 @@ export default function TaskCentrePage() {
       <header className="mb-8">
         <h1>Task Centre</h1>
       </header>
-
-      <div className="mb-6 bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-3 text-sm font-semibold text-gray-500">
-            <Timer size={16} className="text-[#9d4edd]" />
-            Client Session Timer
-          </div>
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
-            <div className="relative w-full lg:w-72" ref={sessionDropdownRef}>
-              <label className="sr-only" htmlFor="task-centre-client-session">
-                Select client to track
-              </label>
-              <Search
-                size={14}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-              />
-              <input
-                id="task-centre-client-session"
-                type="text"
-                placeholder="Select a client to track"
-                className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-white text-sm font-semibold focus:ring-2 focus:ring-[#9d4edd] outline-none"
-                value={sessionInputValue}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  setSessionClientQuery(value);
-                  setIsSessionDropdownOpen(true);
-                  if (!value) setSessionClientId(null);
-                }}
-                onFocus={() => {
-                  setIsSessionClientFocused(true);
-                  setIsSessionDropdownOpen(true);
-                }}
-                onBlur={() => {
-                  if (!sessionClientQuery.trim()) {
-                    setIsSessionClientFocused(false);
-                  }
-                }}
-              />
-              {isSessionDropdownOpen && (
-                <div className="absolute z-40 mt-2 w-full rounded-xl border border-gray-100 bg-white shadow-xl max-h-60 overflow-auto">
-                  {sessionClientOptions.length === 0 ? (
-                    <div className="px-4 py-3 text-sm text-gray-400">
-                      No clients found.
-                    </div>
-                  ) : (
-                    sessionClientOptions.map((client) => (
-                      <button
-                        key={client.id}
-                        onClick={() => {
-                          setSessionClientId(client.id);
-                          setSessionClientQuery(
-                            `${client.surname}${client.business_name ? ` (${client.business_name})` : ""}`,
-                          );
-                          setIsSessionDropdownOpen(false);
-                          setIsSessionClientFocused(false);
-                        }}
-                        className="w-full text-left px-4 py-3 text-sm font-semibold text-[#333333] hover:bg-gray-50 transition-colors"
-                      >
-                        {client.surname}
-                        {client.business_name ? ` (${client.business_name})` : ""}
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
-            <div className="font-mono text-lg text-[#333333] tracking-widest">
-              {formatHms(sessionElapsedSeconds)}
-            </div>
-            <button
-              onClick={handleToggleSession}
-              disabled={!sessionClientId && !isSessionRunning}
-              className={`px-6 py-3 rounded-xl font-bold text-sm shadow-lg transition-all ${
-                isSessionRunning
-                  ? "bg-red-500 text-white hover:bg-red-600"
-                  : "bg-[#9d4edd] text-white hover:bg-[#7b2cbf]"
-              } ${!sessionClientId && !isSessionRunning ? "bg-gray-100 text-gray-400 cursor-not-allowed shadow-none" : ""}`}
-            >
-              {isSessionRunning &&
-              sessionClientId &&
-              sessionClientId !== activeClientId
-                ? "Switch"
-                : isSessionRunning
-                  ? "Stop"
-                  : "Start"}
-            </button>
-          </div>
-        </div>
-      </div>
 
       {/* CONTROL BAR */}
       <div className="flex items-center justify-between gap-4 mb-6 border-b border-gray-100 pb-6">

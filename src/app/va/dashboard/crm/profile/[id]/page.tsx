@@ -439,6 +439,7 @@ export default function ClientProfilePage({
       .update({ parent_task_id: null })
       .eq("id", draggingTaskId);
     setDraggingTaskId(null);
+    setDraggingParentId(null);
     setDropTargetId(null);
     refreshData();
   };
@@ -451,6 +452,32 @@ export default function ClientProfilePage({
     const targetIndex = siblings.findIndex((task) => task.id === targetId);
     if (currentIndex === -1 || targetIndex === -1) return;
     const reordered = [...siblings];
+    const [moved] = reordered.splice(currentIndex, 1);
+    reordered.splice(targetIndex, 0, moved);
+    await Promise.all(
+      reordered.map((task, index) =>
+        supabase
+          .from("tasks")
+          .update({ sort_order: index + 1 })
+          .eq("id", task.id),
+      ),
+    );
+    setDraggingTaskId(null);
+    setDraggingParentId(null);
+    setDropTargetId(null);
+    refreshData();
+  };
+
+  const reorderParents = async (targetId: string) => {
+    if (!draggingTaskId || draggingTaskId === targetId) return;
+    const currentIndex = topLevelTasks.findIndex(
+      (task) => task.id === draggingTaskId,
+    );
+    const targetIndex = topLevelTasks.findIndex(
+      (task) => task.id === targetId,
+    );
+    if (currentIndex === -1 || targetIndex === -1) return;
+    const reordered = [...topLevelTasks];
     const [moved] = reordered.splice(currentIndex, 1);
     reordered.splice(targetIndex, 0, moved);
     await Promise.all(
@@ -758,15 +785,20 @@ export default function ClientProfilePage({
 
       {/* 2. CLIENT INFORMATION (Horizontal Layout) */}
       <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <div className="flex items-center justify-between mb-4 border-b pb-2">
-          <h2 className="text-lg font-bold">Client Information</h2>
+        <div className="flex items-center gap-3 mb-4 border-b pb-2">
           <button
             type="button"
             onClick={() => setIsClientInfoOpen((prev) => !prev)}
-            className="text-xs font-bold text-gray-500 hover:text-[#9d4edd]"
+            className="text-[#333333] hover:text-[#333333] transition-colors"
           >
-            {isClientInfoOpen ? "Hide" : "Show"}
+            <ChevronDown
+              size={16}
+              className={`transition-transform ${
+                isClientInfoOpen ? "rotate-0" : "-rotate-90"
+              }`}
+            />
           </button>
+          <h2 className="text-lg font-bold">Client Information</h2>
         </div>
         {isClientInfoOpen &&
           (isEditing ? (
@@ -914,15 +946,20 @@ export default function ClientProfilePage({
       {/* 3. TASK MANAGER (Table Layout) */}
       <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-4">
-            <h2 className="text-xl font-bold">Task Manager</h2>
+          <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => setIsTaskManagerOpen((prev) => !prev)}
-              className="text-xs font-bold text-gray-500 hover:text-[#9d4edd]"
+              className="text-[#333333] hover:text-[#333333] transition-colors"
             >
-              {isTaskManagerOpen ? "Hide" : "Show"}
+              <ChevronDown
+                size={16}
+                className={`transition-transform ${
+                  isTaskManagerOpen ? "rotate-0" : "-rotate-90"
+                }`}
+              />
             </button>
+            <h2 className="text-xl font-bold">Task Manager</h2>
           </div>
           <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
             <input
@@ -1037,6 +1074,7 @@ export default function ClientProfilePage({
                                   draggingTaskId === task.id
                                 )
                                   return;
+                                if (draggingParentId) return;
                                 event.preventDefault();
                                 setDropTargetId(task.id);
                               }}
@@ -1047,7 +1085,11 @@ export default function ClientProfilePage({
                               }}
                               onDrop={(event) => {
                                 event.preventDefault();
-                                handleDropOnParent(task.id);
+                                if (draggingParentId) {
+                                  handleDropOnParent(task.id);
+                                } else {
+                                  reorderParents(task.id);
+                                }
                               }}
                               className={`group hover:bg-gray-50 transition-colors ${
                                 task.is_completed ? "bg-gray-50 opacity-60" : ""
@@ -1362,17 +1404,22 @@ export default function ClientProfilePage({
       {/* SERVICE AGREEMENTS SECTION */}
       <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-6 border-b border-gray-100 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between bg-gray-50">
-          <div className="flex items-center gap-4">
-            <h2 className="text-xl font-bold text-gray-800">
-              Documents & Workflows
-            </h2>
+          <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => setIsDocsOpen((prev) => !prev)}
-              className="text-xs font-bold text-gray-500 hover:text-[#9d4edd]"
+              className="text-[#333333] hover:text-[#333333] transition-colors"
             >
-              {isDocsOpen ? "Hide" : "Show"}
+              <ChevronDown
+                size={16}
+                className={`transition-transform ${
+                  isDocsOpen ? "rotate-0" : "-rotate-90"
+                }`}
+              />
             </button>
+            <h2 className="text-xl font-bold text-gray-800">
+              Documents & Workflows
+            </h2>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
@@ -1610,15 +1657,20 @@ export default function ClientProfilePage({
 
       {/* 4. NOTES (Sticky Bottom) */}
       <section className="bg-white p-6 rounded-xl shadow-lg border-t-4 border-[#9d4edd] flex flex-col h-96">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold">Internal Notes</h2>
+        <div className="flex items-center gap-3 mb-4">
           <button
             type="button"
             onClick={() => setIsNotesOpen((prev) => !prev)}
-            className="text-xs font-bold text-gray-500 hover:text-[#9d4edd]"
+            className="text-[#333333] hover:text-[#333333] transition-colors"
           >
-            {isNotesOpen ? "Hide" : "Show"}
+            <ChevronDown
+              size={16}
+              className={`transition-transform ${
+                isNotesOpen ? "rotate-0" : "-rotate-90"
+              }`}
+            />
           </button>
+          <h2 className="text-lg font-bold">Internal Notes</h2>
         </div>
         {isNotesOpen && (
           <>
