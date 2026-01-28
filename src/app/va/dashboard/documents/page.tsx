@@ -129,26 +129,107 @@ export default function DocumentLibraryPage() {
             <div className="p-6 grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
               <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
                 <h2 className="text-lg font-bold mb-4 uppercase text-[#9d4edd] tracking-tight">
-                  {selectedType.id === "upload"
-                    ? "Upload Instructions"
-                    : "Document Overview"}
+                  Document Overview
                 </h2>
-                <p className="text-gray-700 leading-relaxed mb-6">
-                  {selectedType.id === "upload"
-                    ? "Upload your custom files (PDF, Docx) to share them directly with your client via their secure portal. You can add a personal note before sending."
-                    : `This ${selectedType.title} will be pre-populated with your standard VA-OS branding. After clicking generate, you will select your client and enter the specific operational or financial details required.`}
-                </p>
-                <ul className="space-y-3 text-sm text-gray-600">
-                  <li className="flex items-center gap-2">
-                    ✅ Automatically stored in Client Vault
-                  </li>
-                  <li className="flex items-center gap-2">
-                    ✅ Instant notification to client
-                  </li>
-                  <li className="flex items-center gap-2">
-                    ✅ Secure SSL protected delivery
-                  </li>
-                </ul>
+                {selectedType.id === "proposal" && (
+                  <>
+                    <p className="text-gray-700 leading-relaxed mb-6">
+                      Create a polished, personalised proposal that clearly
+                      outlines how you&apos;ll support your client and what
+                      working together will look like. Designed to help you
+                      present your services with clarity, confidence, and
+                      credibility.
+                    </p>
+                    <ul className="space-y-3 text-sm text-gray-600">
+                      <li className="flex items-center gap-2">
+                        <span className="text-[#9d4edd]">✓</span>
+                        Professionally structured and client-ready
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-[#9d4edd]">✓</span>
+                        Easy to tailor to each client&apos;s needs
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-[#9d4edd]">✓</span>
+                        Helps set expectations and build trust from the start
+                      </li>
+                    </ul>
+                  </>
+                )}
+                {selectedType.id === "booking_form" && (
+                  <>
+                    <p className="text-gray-700 leading-relaxed mb-6">
+                      Create a clear, professional booking form to gather key
+                      client details and confirm how you&apos;ll be working
+                      together. Designed to help you start projects smoothly,
+                      set expectations, and keep everything organised from day
+                      one.
+                    </p>
+                    <ul className="space-y-3 text-sm text-gray-600">
+                      <li className="flex items-center gap-2">
+                        <span className="text-[#9d4edd]">✓</span>
+                        Collect essential client and project information
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-[#9d4edd]">✓</span>
+                        Simple for clients to complete and sign
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-[#9d4edd]">✓</span>
+                        Supports a confident, well-structured onboarding
+                        experience
+                      </li>
+                    </ul>
+                  </>
+                )}
+                {selectedType.id === "invoice" && (
+                  <>
+                    <p className="text-gray-700 leading-relaxed mb-6">
+                      Create a clear, professional invoice to request payment
+                      for your services and keep client finances organised.
+                      Designed to help you bill with confidence and present your
+                      work in a way that feels straightforward and polished.
+                    </p>
+                    <ul className="space-y-3 text-sm text-gray-600">
+                      <li className="flex items-center gap-2">
+                        <span className="text-[#9d4edd]">✓</span>
+                        Clearly itemise services and amounts
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-[#9d4edd]">✓</span>
+                        Simple for clients to review and process
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-[#9d4edd]">✓</span>
+                        Supports a professional, stress-free payment experience
+                      </li>
+                    </ul>
+                  </>
+                )}
+                {selectedType.id === "upload" && (
+                  <>
+                    <p className="text-gray-700 leading-relaxed mb-6">
+                      Upload and share documents securely with your client,
+                      keeping everything related to their work in one central
+                      place. Designed to reduce back-and-forth and ensure
+                      important files are always easy to find.
+                    </p>
+                    <ul className="space-y-3 text-sm text-gray-600">
+                      <li className="flex items-center gap-2">
+                        <span className="text-[#9d4edd]">✓</span>
+                        Secure document sharing in one location
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-[#9d4edd]">✓</span>
+                        Keeps client information organised and accessible
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-[#9d4edd]">✓</span>
+                        Supports smooth, transparent collaboration
+                      </li>
+                    </ul>
+                  </>
+                )}
               </div>
 
               <div className="bg-purple-50 rounded-xl border border-purple-100 p-6 text-center flex flex-col justify-between gap-6">
