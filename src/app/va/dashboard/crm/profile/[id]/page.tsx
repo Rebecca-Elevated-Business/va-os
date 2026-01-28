@@ -1489,9 +1489,9 @@ export default function ClientProfilePage({
                                   )}
                                   <div>
                                     <div
-                                      className={`font-medium ${
+                                      className={`text-sm font-semibold text-[#333333] ${
                                         task.is_completed
-                                          ? "line-through text-gray-400"
+                                          ? "line-through opacity-50"
                                           : ""
                                       }`}
                                     >
@@ -1533,7 +1533,7 @@ export default function ClientProfilePage({
                               </td>
 
                               {/* 3. DATE */}
-                              <td className="px-4 py-3 text-sm text-gray-500 align-top pt-4">
+                              <td className="px-4 py-3 text-xs font-medium text-gray-600 align-top pt-4">
                                 {dueDate
                                   ? new Date(dueDate).toLocaleDateString("en-GB")
                                   : "-"}
@@ -1567,7 +1567,7 @@ export default function ClientProfilePage({
                               </td>
 
                               {/* 5. TIME DISPLAY */}
-                              <td className="px-4 py-3 text-right font-mono font-bold text-[#9d4edd] align-top pt-4">
+                              <td className="px-4 py-3 text-right font-mono text-xs text-[#333333] align-top pt-4">
                                 {formatTime(task)}
                               </td>
                             </tr>
@@ -1647,9 +1647,9 @@ export default function ClientProfilePage({
                                             Subtask
                                           </span>
                                           <span
-                                            className={`font-medium ${
+                                            className={`text-sm font-semibold text-[#333333] ${
                                               child.is_completed
-                                                ? "line-through text-gray-400"
+                                                ? "line-through opacity-50"
                                                 : ""
                                             }`}
                                           >
@@ -1677,7 +1677,7 @@ export default function ClientProfilePage({
                                           </button>
                                         </div>
                                       </td>
-                                      <td className="px-4 py-3 text-sm text-gray-500 align-top pt-4">
+                                      <td className="px-4 py-3 text-xs font-medium text-gray-600 align-top pt-4">
                                         {childDue
                                           ? new Date(
                                               childDue,
@@ -1710,7 +1710,7 @@ export default function ClientProfilePage({
                                           </button>
                                         )}
                                       </td>
-                                      <td className="px-4 py-3 text-right font-mono font-bold text-[#9d4edd] align-top pt-4">
+                                      <td className="px-4 py-3 text-right font-mono text-xs text-[#333333] align-top pt-4">
                                         {formatTime(child)}
                                       </td>
                                     </tr>
