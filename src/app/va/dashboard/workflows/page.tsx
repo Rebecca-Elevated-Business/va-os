@@ -186,12 +186,9 @@ export default function SOPLibraryPage() {
 
       {selectedTemplate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-          <div className="w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-300">
-            <div className="flex items-start justify-between p-6 border-b border-gray-100">
+          <div className="w-full max-w-4xl bg-white rounded-2xl shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-300">
+            <div className="flex items-start justify-between p-4 border-b border-gray-100">
               <div>
-                <span className="text-xs font-bold text-[#333333] uppercase tracking-widest">
-                  {selectedTemplate.category}
-                </span>
                 <h1 className="text-2xl font-bold text-[#333333]">
                   {selectedTemplate.title}
                 </h1>
@@ -205,7 +202,7 @@ export default function SOPLibraryPage() {
               </button>
             </div>
 
-            <div className="p-6 grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
+            <div className="p-6">
               <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
                 <h2 className="text-lg font-bold mb-4 uppercase text-[#333333] tracking-tight">
                   Workflow Overview
@@ -225,32 +222,14 @@ export default function SOPLibraryPage() {
                     </li>
                   ))}
                 </ul>
-              </div>
-
-              <div className="bg-gray-50 rounded-xl border border-gray-100 p-6 flex flex-col justify-between gap-6">
-                <div>
-                  <p className="text-[#333333] font-medium">
-                    What you will set up
-                  </p>
-                  <p className="text-sm text-gray-600 mt-2">
-                    Configure the workflow details, assign the client, and
-                    deploy the final version to their portal.
-                  </p>
-                </div>
-                <div className="flex items-center justify-between">
-                  <button
-                    onClick={() => setSelectedTemplate(null)}
-                    className="px-4 py-2 text-sm font-bold text-gray-400 hover:text-black"
-                  >
-                    Back
-                  </button>
+                <div className="mt-6 flex justify-center">
                   <button
                     onClick={() =>
                       router.push(
                         `/va/dashboard/workflows/deploy/${selectedTemplate.id}`
                       )
                     }
-                    className="bg-[#9d4edd] text-white px-6 py-3 rounded-xl font-bold shadow-md hover:bg-[#7b2cbf] transition-all"
+                    className="bg-[#9d4edd] text-white px-10 py-3 rounded-xl font-bold shadow-md hover:bg-[#7b2cbf] transition-all"
                   >
                     Deploy / Set Up for Client
                   </button>

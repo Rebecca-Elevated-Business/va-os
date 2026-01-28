@@ -189,7 +189,7 @@ export default function DocumentLibraryPage() {
       {selectedType && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
           <div className="w-full max-w-4xl bg-white rounded-2xl shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-300">
-            <div className="flex items-start justify-between p-6 border-b border-gray-100">
+            <div className="flex items-start justify-between p-4 border-b border-gray-100">
               <div>
                 <h1 className="text-2xl font-bold">{selectedType.title}</h1>
               </div>
