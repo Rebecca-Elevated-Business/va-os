@@ -4,7 +4,6 @@ import {
   useState,
   useEffect,
   useCallback,
-  useMemo,
   useRef,
   type DragEvent,
 } from "react";
@@ -25,7 +24,6 @@ import {
   Square,
   Edit2,
   Trash2,
-  Search,
 } from "lucide-react";
 import CalendarView from "./CalendarView";
 import KanbanView from "./KanbanView";
@@ -93,16 +91,7 @@ const normalizeStatusOrder = (order: string[]) => {
   return [...unique, ...missing];
 };
 
-const formatHms = (totalSeconds: number) => {
-  const safeSeconds = Math.max(0, Math.floor(totalSeconds));
-  const hours = Math.floor(safeSeconds / 3600);
-  const minutes = Math.floor((safeSeconds % 3600) / 60);
-  const seconds = safeSeconds % 60;
-  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
-    2,
-    "0",
-  )}:${String(seconds).padStart(2, "0")}`;
-};
+import { useClientSession } from "../ClientSessionContext";
 
 export default function TaskCentrePage() {
   const { confirm } = usePrompt();
