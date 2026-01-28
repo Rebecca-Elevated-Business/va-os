@@ -147,6 +147,8 @@ export default function ClientProfilePage({
   const [docTypeFilter, setDocTypeFilter] = useState("all");
   const [docStartDate, setDocStartDate] = useState("");
   const [docEndDate, setDocEndDate] = useState("");
+  const [isDocTypeFilterOpen, setIsDocTypeFilterOpen] = useState(false);
+  const docTypeFilterRef = useRef<HTMLDivElement>(null);
   const [expandedParents, setExpandedParents] = useState<Record<string, boolean>>(
     {},
   );
@@ -208,6 +210,12 @@ export default function ClientProfilePage({
       ) {
         setIsStatusFilterOpen(false);
       }
+      if (
+        docTypeFilterRef.current &&
+        !docTypeFilterRef.current.contains(event.target as Node)
+      ) {
+        setIsDocTypeFilterOpen(false);
+      }
       if (!(event.target as Element).closest(".action-menu-trigger")) {
         setActionMenuId(null);
       }
@@ -215,6 +223,24 @@ export default function ClientProfilePage({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const handleDocTypeFilterChange = (nextType: string) => {
+    setDocTypeFilter(nextType);
+    setIsDocTypeFilterOpen(false);
+  };
+
+  const docTypeFilterLabel =
+    docTypeFilter === "all"
+      ? "Filter by Type"
+      : `Type: ${
+          docTypeFilter === "proposal"
+            ? "Proposal"
+            : docTypeFilter === "booking_form"
+              ? "Booking Form"
+              : docTypeFilter === "invoice"
+                ? "Invoice"
+                : "Workflows"
+        }`;
 
   useEffect(() => {
     async function fetchAgreements() {
@@ -2062,20 +2088,47 @@ export default function ClientProfilePage({
         <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-6 border-b border-gray-100 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-start bg-gray-50">
             <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
-                <label htmlFor="doc-type-filter">Type</label>
-                <select
-                  id="doc-type-filter"
-                  value={docTypeFilter}
-                  onChange={(event) => setDocTypeFilter(event.target.value)}
-                  className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-[#333333] focus:ring-2 focus:ring-[#9d4edd] outline-none"
+              <div className="relative" ref={docTypeFilterRef}>
+                <button
+                  onClick={() =>
+                    setIsDocTypeFilterOpen((prev) => !prev)
+                  }
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold hover:bg-gray-50 transition-all shadow-sm text-[#333333]"
                 >
-                  <option value="all">All</option>
-                  <option value="proposal">Proposal</option>
-                  <option value="booking_form">Booking Form</option>
-                  <option value="invoice">Invoice</option>
-                  <option value="workflow">Workflows</option>
-                </select>
+                  <Filter size={14} className="text-gray-400" />
+                  {docTypeFilterLabel}
+                </button>
+
+                {isDocTypeFilterOpen && (
+                  <div className="absolute left-0 mt-2 w-56 bg-white border border-gray-100 rounded-xl shadow-xl z-50 p-3 animate-in fade-in slide-in-from-top-2">
+                    <p className="text-[10px] font-black text-[#333333] tracking-widest mb-3 ml-1">
+                      Document Type
+                    </p>
+                    <div className="space-y-1">
+                      {[
+                        { id: "all", label: "All Types" },
+                        { id: "proposal", label: "Proposal" },
+                        { id: "booking_form", label: "Booking Form" },
+                        { id: "invoice", label: "Invoice" },
+                        { id: "workflow", label: "Workflows" },
+                      ].map((option) => (
+                        <button
+                          key={option.id}
+                          onClick={() =>
+                            handleDocTypeFilterChange(option.id)
+                          }
+                          className={`w-full flex items-center justify-between p-2 rounded-lg text-xs font-semibold transition-colors ${
+                            docTypeFilter === option.id
+                              ? "bg-gray-50 text-[#333333]"
+                              : "text-gray-500 hover:bg-gray-50 hover:text-[#333333]"
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
                 <label htmlFor="doc-start">From</label>
@@ -2187,7 +2240,7 @@ export default function ClientProfilePage({
                           {/* RUBBISH BIN ICON */}
                           <button
                             onClick={() => deleteDocument(doc.id)}
-                            className="text-gray-300 hover:text-red-500 transition-colors"
+                            className="text-[#333333] hover:text-red-500 transition-colors"
                             title="Delete Document"
                           >
                             <svg
