@@ -1401,365 +1401,105 @@ export default function ClientProfilePage({
             </div>
 
               {/* Tasks Table */}
-              <div className="overflow-hidden border border-gray-200 rounded-lg">
-                <table className="w-full text-left">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-400 case">
-                        Task
-                      </th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-32">
-                        Start Date
-                      </th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-32">
-                        End Date
-                      </th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-24 text-center">
-                        Timer
-                      </th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-24 text-right">
-                        Time Count
-                      </th>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-12 text-right">
-                        &nbsp;
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody
-                    className="divide-y divide-gray-100"
-                    onDragOver={(event) => {
-                      if (!draggingTaskId || !draggingParentId) return;
-                      event.preventDefault();
-                    }}
-                    onDrop={(event) => {
-                      if (!draggingTaskId || !draggingParentId) return;
-                      event.preventDefault();
-                      handleDropToTopLevel();
+              <div className="space-y-4">
+                <div className="rounded-lg border border-gray-200 bg-white px-4 py-2">
+                  <div
+                    className="grid items-center gap-x-4 text-[10px] font-semibold tracking-widest text-gray-500 uppercase"
+                    style={{
+                      gridTemplateColumns:
+                        "minmax(240px, 1fr) 8rem 8rem 6rem 6rem 2rem",
                     }}
                   >
-                    {groupedTasks.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={6}
-                          className="p-8 text-center text-gray-400 italic"
-                        >
-                          No tasks found.
-                        </td>
-                      </tr>
-                    ) : (
-                      <>
-                        {groupedTasks.map((group) => {
-                          const statusConfig =
-                            STATUS_CONFIG[group.status] ||
-                            STATUS_CONFIG["todo"];
-                          const isCollapsed =
-                            collapsedStatus[group.status] || false;
-                          return (
-                            <Fragment key={group.status}>
-                              <tr className="bg-gray-50/70">
-                                <td
-                                  colSpan={6}
-                                  className="px-4 py-2 text-xs font-semibold text-gray-600"
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        setCollapsedStatus((prev) => ({
-                                          ...prev,
-                                          [group.status]: !isCollapsed,
-                                        }))
-                                      }
-                                      className="text-gray-400 hover:text-gray-600 transition-colors"
-                                      aria-label={`Toggle ${statusConfig.label}`}
-                                    >
-                                      {isCollapsed ? (
-                                        <ChevronRight size={14} />
-                                      ) : (
-                                        <ChevronDown size={14} />
-                                      )}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        setCollapsedStatus((prev) => ({
-                                          ...prev,
-                                          [group.status]: !isCollapsed,
-                                        }))
-                                      }
-                                      className="text-left"
-                                    >
-                                      {statusConfig.label} (
-                                      {group.items.length})
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                              {!isCollapsed &&
-                                group.items.map((task) => {
-                                  const childTasks =
-                                    subtasksByParent[task.id] || [];
-                                  const isExpanded =
-                                    expandedParents[task.id] ?? true;
-                                  const dueDate =
+                    <div>Task</div>
+                    <div className="text-right">Start Date</div>
+                    <div className="text-right">End Date</div>
+                    <div className="text-center">Timer</div>
+                    <div className="text-right">Time Count</div>
+                    <div />
+                  </div>
+                </div>
+                {groupedTasks.length === 0 ? (
+                  <div className="rounded-lg border border-gray-200 bg-white p-8 text-center text-gray-400 italic">
+                    No tasks found.
+                  </div>
+                ) : (
+                  groupedTasks.map((group) => {
+                    const statusConfig =
+                      STATUS_CONFIG[group.status] || STATUS_CONFIG["todo"];
+                    const isCollapsed =
+                      collapsedStatus[group.status] || false;
+                    return (
+                      <div
+                        key={group.status}
+                        className="rounded-lg border border-gray-200 bg-white overflow-hidden"
+                      >
+                        <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-100">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setCollapsedStatus((prev) => ({
+                                ...prev,
+                                [group.status]: !isCollapsed,
+                              }))
+                            }
+                            className="text-gray-400 hover:text-gray-600 transition-colors"
+                            aria-label={`Toggle ${statusConfig.label}`}
+                          >
+                            {isCollapsed ? (
+                              <ChevronRight size={14} />
+                            ) : (
+                              <ChevronDown size={14} />
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setCollapsedStatus((prev) => ({
+                                ...prev,
+                                [group.status]: !isCollapsed,
+                              }))
+                            }
+                            className="text-left text-xs font-semibold text-gray-600"
+                          >
+                            {statusConfig.label} ({group.items.length})
+                          </button>
+                        </div>
+                        {!isCollapsed && (
+                          <table className="w-full text-left">
+                            <tbody
+                              className="divide-y divide-gray-100"
+                              onDragOver={(event) => {
+                                if (!draggingTaskId || !draggingParentId)
+                                  return;
+                                event.preventDefault();
+                              }}
+                              onDrop={(event) => {
+                                if (!draggingTaskId || !draggingParentId)
+                                  return;
+                                event.preventDefault();
+                                handleDropToTopLevel();
+                              }}
+                            >
+                              {group.items.map((task) => {
+                                const childTasks =
+                                  subtasksByParent[task.id] || [];
+                                const isExpanded =
+                                  expandedParents[task.id] ?? true;
+                                const dueDate =
                                   task.scheduled_start || task.due_date;
                                 const statusValue = getTaskStatus(task);
                                 const endDate =
                                   task.scheduled_end ||
                                   (task.scheduled_start ? null : task.due_date);
 
-                                  return (
-                                    <Fragment key={task.id}>
-                              <tr
-                                draggable
-                                onDragStart={() => {
-                                  setDraggingTaskId(task.id);
-                                  setDraggingParentId(
-                                    task.parent_task_id || null,
-                                  );
-                                }}
-                                onDragEnd={() => {
-                                  setDraggingTaskId(null);
-                                  setDraggingParentId(null);
-                                  setDropTargetId(null);
-                                }}
-                                onDragOver={(event) => {
-                                  if (
-                                    !draggingTaskId ||
-                                    draggingTaskId === task.id
-                                  )
-                                    return;
-                                  if (draggingParentId) return;
-                                  event.preventDefault();
-                                  setDropTargetId(task.id);
-                                }}
-                                onDragLeave={() => {
-                                  if (dropTargetId === task.id) {
-                                    setDropTargetId(null);
-                                  }
-                                }}
-                                onDrop={(event) => {
-                                  event.preventDefault();
-                                  if (draggingParentId) {
-                                    handleDropOnParent(task.id);
-                                  } else {
-                                    reorderParents(task.id);
-                                  }
-                                }}
-                                className={`group hover:bg-gray-50 transition-colors ${
-                                  statusValue === "completed"
-                                    ? "bg-gray-50 opacity-60"
-                                    : ""
-                                } ${
-                                  dropTargetId === task.id
-                                    ? "bg-purple-50/80 ring-1 ring-purple-100"
-                                    : ""
-                                }`}
-                                onClick={() => openTaskModal(task)}
-                              >
-                              {/* 1. TASK NAME */}
-                              <td className="px-4 py-3">
-                                <div className="flex items-start gap-2">
-                                  {hasSubtasks(task.id) ? (
-                                    <button
-                                      type="button"
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        toggleParentExpanded(task.id);
-                                      }}
-                                      className="mt-1 text-gray-400 hover:text-gray-600"
-                                    >
-                                      {isExpanded ? (
-                                        <ChevronDown size={14} />
-                                      ) : (
-                                        <ChevronRight size={14} />
-                                      )}
-                                    </button>
-                                  ) : (
-                                    <div className="w-4" />
-                                  )}
-                                  <div>
-                                    <div
-                                      className={`text-sm font-semibold text-[#333333] ${
-                                        statusValue === "completed"
-                                          ? "line-through opacity-50"
-                                          : ""
-                                      }`}
-                                    >
-                                      {task.task_name}
-                                    </div>
-                                    <div className="flex gap-3 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <button
-                                        onClick={(event) => {
-                                          event.stopPropagation();
-                                          openTaskModal(task);
-                                        }}
-                                        className="text-[10px] font-bold text-gray-400 hover:text-[#9d4edd] case tracking-wider"
-                                      >
-                                        Edit
-                                      </button>
-                                      <button
-                                        onClick={(event) => {
-                                          event.stopPropagation();
-                                          openTaskModal(undefined, {
-                                            parentTaskId: task.id,
-                                          });
-                                        }}
-                                        className="text-[10px] font-bold text-gray-400 hover:text-[#9d4edd] case tracking-wider"
-                                      >
-                                        Add subtask
-                                      </button>
-                                      <button
-                                        onClick={(event) => {
-                                          event.stopPropagation();
-                                          deleteTask(task.id);
-                                        }}
-                                        className="text-[10px] font-bold text-gray-400 hover:text-red-500 case tracking-wider"
-                                      >
-                                        Delete
-                                      </button>
-                                    </div>
-                                  </div>
-                                </div>
-                              </td>
-
-                              {/* 2. START DATE */}
-                              <td className="px-4 py-3 text-xs font-medium text-gray-600 align-top pt-4">
-                                {dueDate
-                                  ? new Date(dueDate).toLocaleDateString("en-GB")
-                                  : "-"}
-                              </td>
-
-                              {/* 3. END DATE */}
-                              <td className="px-4 py-3 text-xs font-medium text-gray-600 align-top pt-4">
-                                {endDate
-                                  ? new Date(endDate).toLocaleDateString(
-                                      "en-GB",
-                                    )
-                                  : "-"}
-                              </td>
-
-                              {/* 4. TIMER BUTTON */}
-                              <td className="px-4 py-3 text-center align-top pt-4">
-                                {statusValue !== "completed" && (
-                                  <button
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      if (isSessionRunning) return;
-                                      toggleTimer(task);
-                                    }}
-                                    disabled={isSessionRunning}
-                                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all mx-auto ${
-                                      isSessionRunning
-                                        ? "bg-gray-100 text-gray-300 cursor-not-allowed"
-                                        : task.is_running
-                                          ? "bg-red-100 text-red-600 hover:bg-red-200 animate-pulse"
-                                          : "bg-green-100 text-green-600 hover:bg-green-200"
-                                    }`}
-                                  >
-                                    {task.is_running && !isSessionRunning ? (
-                                      <div className="w-3 h-3 bg-current rounded-sm" />
-                                    ) : (
-                                      <div className="w-0 h-0 border-t-[5px] border-t-transparent border-l-8 border-l-current border-b-[5px] border-b-transparent ml-1" />
-                                    )}
-                                  </button>
-                                )}
-                              </td>
-
-                              {/* 5. TIME DISPLAY */}
-                              <td className="px-4 py-3 text-right font-mono text-xs text-[#333333] align-top pt-4">
-                                {formatTime(task)}
-                              </td>
-
-                              {/* 6. ACTIONS */}
-                              <td className="px-4 py-3 text-right align-top pt-4">
-                                <div className="relative action-menu-trigger inline-flex justify-end">
-                                  <button
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      setActionMenuId(
-                                        actionMenuId === task.id
-                                          ? null
-                                          : task.id,
-                                      );
-                                    }}
-                                    className="text-[#333333] transition-colors"
-                                    aria-label="Task actions"
-                                  >
-                                    <MoreHorizontal size={18} />
-                                  </button>
-
-                                  {actionMenuId === task.id && (
-                                    <div
-                                      className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-1"
-                                      onClick={(event) => event.stopPropagation()}
-                                    >
-                                      <button
-                                        onClick={(event) => {
-                                          event.stopPropagation();
-                                          openTaskModal(task);
-                                          setActionMenuId(null);
-                                        }}
-                                        className="w-full text-left px-4 py-3 text-xs font-bold text-[#333333] hover:bg-gray-50 flex items-center gap-2"
-                                      >
-                                        <Edit2 size={12} /> Edit
-                                      </button>
-                                      <div className="px-4 pt-3 pb-2 text-[9px] font-semibold text-gray-400 uppercase tracking-widest border-t border-gray-100">
-                                        Move to
-                                      </div>
-                                      {Object.values(STATUS_CONFIG).map(
-                                        (status) => (
-                                          <button
-                                            key={status.id}
-                                            onClick={(event) => {
-                                              event.stopPropagation();
-                                              updateTaskStatus(task, status.id);
-                                              setActionMenuId(null);
-                                            }}
-                                            className={`w-full text-left px-4 py-2 text-xs font-semibold hover:bg-gray-50 ${
-                                              statusValue === status.id
-                                                ? "text-[#333333]"
-                                                : "text-gray-600"
-                                            }`}
-                                          >
-                                            {status.label}
-                                          </button>
-                                        ),
-                                      )}
-                                      <button
-                                        onClick={(event) => {
-                                          event.stopPropagation();
-                                          deleteTask(task.id);
-                                          setActionMenuId(null);
-                                        }}
-                                        className="w-full text-left px-4 py-3 text-xs font-bold text-red-500 hover:bg-red-50 flex items-center gap-2 border-t border-gray-50"
-                                      >
-                                        <Trash2 size={12} /> Delete
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                            {hasSubtasks(task.id) && isExpanded && (
-                              <>
-                                {childTasks.map((child) => {
-                                  const childDue =
-                                    child.scheduled_start || child.due_date;
-                                  const childStatusValue = getTaskStatus(child);
-                                  const childEnd =
-                                    child.scheduled_end ||
-                                    (child.scheduled_start
-                                      ? null
-                                      : child.due_date);
-                                  return (
+                                return (
+                                  <Fragment key={task.id}>
                                     <tr
-                                      key={child.id}
                                       draggable
                                       onDragStart={() => {
-                                        setDraggingTaskId(child.id);
+                                        setDraggingTaskId(task.id);
                                         setDraggingParentId(
-                                          child.parent_task_id || null,
+                                          task.parent_task_id || null,
                                         );
                                       }}
                                       onDragEnd={() => {
@@ -1770,110 +1510,140 @@ export default function ClientProfilePage({
                                       onDragOver={(event) => {
                                         if (
                                           !draggingTaskId ||
-                                          draggingParentId !==
-                                            child.parent_task_id
+                                          draggingTaskId === task.id
                                         )
                                           return;
+                                        if (draggingParentId) return;
                                         event.preventDefault();
-                                        setDropTargetId(child.id);
+                                        setDropTargetId(task.id);
                                       }}
                                       onDragLeave={() => {
-                                        if (dropTargetId === child.id) {
+                                        if (dropTargetId === task.id) {
                                           setDropTargetId(null);
                                         }
                                       }}
                                       onDrop={(event) => {
-                                        if (
-                                          !draggingTaskId ||
-                                          draggingParentId !==
-                                            child.parent_task_id
-                                        )
-                                          return;
                                         event.preventDefault();
-                                        reorderSubtasks(
-                                          child.parent_task_id || "",
-                                          child.id,
-                                        );
+                                        if (draggingParentId) {
+                                          handleDropOnParent(task.id);
+                                        } else {
+                                          reorderParents(task.id);
+                                        }
                                       }}
                                       className={`group hover:bg-gray-50 transition-colors ${
-                                        childStatusValue === "completed"
+                                        statusValue === "completed"
                                           ? "bg-gray-50 opacity-60"
                                           : ""
                                       } ${
-                                        dropTargetId === child.id
+                                        dropTargetId === task.id
                                           ? "bg-purple-50/80 ring-1 ring-purple-100"
                                           : ""
                                       }`}
-                                      onClick={() => openTaskModal(child)}
+                                      onClick={() => openTaskModal(task)}
                                     >
+                                      {/* 1. TASK NAME */}
                                       <td className="px-4 py-3">
-                                        <div className="flex items-center gap-2 pl-6">
-                                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                                            Subtask
-                                          </span>
-                                          <span
-                                            className={`text-sm font-semibold text-[#333333] ${
-                                              childStatusValue === "completed"
-                                                ? "line-through opacity-50"
-                                                : ""
-                                            }`}
-                                          >
-                                            {child.task_name}
-                                          </span>
-                                        </div>
-                                        <div className="flex gap-3 mt-1 pl-6 opacity-0 group-hover:opacity-100 transition-opacity">
-                                          <button
-                                            onClick={(event) => {
-                                              event.stopPropagation();
-                                              openTaskModal(child);
-                                            }}
-                                            className="text-[10px] font-bold text-gray-400 hover:text-[#9d4edd] case tracking-wider"
-                                          >
-                                            Edit
-                                          </button>
-                                          <button
-                                            onClick={(event) => {
-                                              event.stopPropagation();
-                                              deleteTask(child.id);
-                                            }}
-                                            className="text-[10px] font-bold text-gray-400 hover:text-red-500 case tracking-wider"
-                                          >
-                                            Delete
-                                          </button>
+                                        <div className="flex items-start gap-2">
+                                          {hasSubtasks(task.id) ? (
+                                            <button
+                                              type="button"
+                                              onClick={(event) => {
+                                                event.stopPropagation();
+                                                toggleParentExpanded(task.id);
+                                              }}
+                                              className="mt-1 text-gray-400 hover:text-gray-600"
+                                            >
+                                              {isExpanded ? (
+                                                <ChevronDown size={14} />
+                                              ) : (
+                                                <ChevronRight size={14} />
+                                              )}
+                                            </button>
+                                          ) : (
+                                            <div className="w-4" />
+                                          )}
+                                          <div>
+                                            <div
+                                              className={`text-sm font-semibold text-[#333333] ${
+                                                statusValue === "completed"
+                                                  ? "line-through opacity-50"
+                                                  : ""
+                                              }`}
+                                            >
+                                              {task.task_name}
+                                            </div>
+                                            <div className="flex gap-3 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                              <button
+                                                onClick={(event) => {
+                                                  event.stopPropagation();
+                                                  openTaskModal(task);
+                                                }}
+                                                className="text-[10px] font-bold text-gray-400 hover:text-[#9d4edd] case tracking-wider"
+                                              >
+                                                Edit
+                                              </button>
+                                              <button
+                                                onClick={(event) => {
+                                                  event.stopPropagation();
+                                                  openTaskModal(undefined, {
+                                                    parentTaskId: task.id,
+                                                  });
+                                                }}
+                                                className="text-[10px] font-bold text-gray-400 hover:text-[#9d4edd] case tracking-wider"
+                                              >
+                                                Add subtask
+                                              </button>
+                                              <button
+                                                onClick={(event) => {
+                                                  event.stopPropagation();
+                                                  deleteTask(task.id);
+                                                }}
+                                                className="text-[10px] font-bold text-gray-400 hover:text-red-500 case tracking-wider"
+                                              >
+                                                Delete
+                                              </button>
+                                            </div>
+                                          </div>
                                         </div>
                                       </td>
-                                      <td className="px-4 py-3 text-xs font-medium text-gray-600 align-top pt-4">
-                                        {childDue
+
+                                      {/* 2. START DATE */}
+                                      <td className="px-4 py-3 text-xs font-medium text-gray-600 align-top pt-4 text-right">
+                                        {dueDate
                                           ? new Date(
-                                              childDue,
+                                              dueDate,
                                             ).toLocaleDateString("en-GB")
                                           : "-"}
                                       </td>
-                                      <td className="px-4 py-3 text-xs font-medium text-gray-600 align-top pt-4">
-                                        {childEnd
+
+                                      {/* 3. END DATE */}
+                                      <td className="px-4 py-3 text-xs font-medium text-gray-600 align-top pt-4 text-right">
+                                        {endDate
                                           ? new Date(
-                                              childEnd,
+                                              endDate,
                                             ).toLocaleDateString("en-GB")
                                           : "-"}
                                       </td>
+
+                                      {/* 4. TIMER BUTTON */}
                                       <td className="px-4 py-3 text-center align-top pt-4">
-                                        {childStatusValue !== "completed" && (
+                                        {statusValue !== "completed" && (
                                           <button
                                             onClick={(event) => {
                                               event.stopPropagation();
                                               if (isSessionRunning) return;
-                                              toggleTimer(child);
+                                              toggleTimer(task);
                                             }}
                                             disabled={isSessionRunning}
                                             className={`w-8 h-8 rounded-full flex items-center justify-center transition-all mx-auto ${
                                               isSessionRunning
                                                 ? "bg-gray-100 text-gray-300 cursor-not-allowed"
-                                                : child.is_running
+                                                : task.is_running
                                                   ? "bg-red-100 text-red-600 hover:bg-red-200 animate-pulse"
                                                   : "bg-green-100 text-green-600 hover:bg-green-200"
                                             }`}
                                           >
-                                            {child.is_running &&
+                                            {task.is_running &&
                                             !isSessionRunning ? (
                                               <div className="w-3 h-3 bg-current rounded-sm" />
                                             ) : (
@@ -1882,18 +1652,22 @@ export default function ClientProfilePage({
                                           </button>
                                         )}
                                       </td>
+
+                                      {/* 5. TIME DISPLAY */}
                                       <td className="px-4 py-3 text-right font-mono text-xs text-[#333333] align-top pt-4">
-                                        {formatTime(child)}
+                                        {formatTime(task)}
                                       </td>
+
+                                      {/* 6. ACTIONS */}
                                       <td className="px-4 py-3 text-right align-top pt-4">
                                         <div className="relative action-menu-trigger inline-flex justify-end">
                                           <button
                                             onClick={(event) => {
                                               event.stopPropagation();
                                               setActionMenuId(
-                                                actionMenuId === child.id
+                                                actionMenuId === task.id
                                                   ? null
-                                                  : child.id,
+                                                  : task.id,
                                               );
                                             }}
                                             className="text-[#333333] transition-colors"
@@ -1902,7 +1676,7 @@ export default function ClientProfilePage({
                                             <MoreHorizontal size={18} />
                                           </button>
 
-                                          {actionMenuId === child.id && (
+                                          {actionMenuId === task.id && (
                                             <div
                                               className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-1"
                                               onClick={(event) =>
@@ -1912,7 +1686,7 @@ export default function ClientProfilePage({
                                               <button
                                                 onClick={(event) => {
                                                   event.stopPropagation();
-                                                  openTaskModal(child);
+                                                  openTaskModal(task);
                                                   setActionMenuId(null);
                                                 }}
                                                 className="w-full text-left px-4 py-3 text-xs font-bold text-[#333333] hover:bg-gray-50 flex items-center gap-2"
@@ -1929,14 +1703,13 @@ export default function ClientProfilePage({
                                                     onClick={(event) => {
                                                       event.stopPropagation();
                                                       updateTaskStatus(
-                                                        child,
+                                                        task,
                                                         status.id,
                                                       );
                                                       setActionMenuId(null);
                                                     }}
                                                     className={`w-full text-left px-4 py-2 text-xs font-semibold hover:bg-gray-50 ${
-                                                      childStatusValue ===
-                                                      status.id
+                                                      statusValue === status.id
                                                         ? "text-[#333333]"
                                                         : "text-gray-600"
                                                     }`}
@@ -1948,7 +1721,7 @@ export default function ClientProfilePage({
                                               <button
                                                 onClick={(event) => {
                                                   event.stopPropagation();
-                                                  deleteTask(child.id);
+                                                  deleteTask(task.id);
                                                   setActionMenuId(null);
                                                 }}
                                                 className="w-full text-left px-4 py-3 text-xs font-bold text-red-500 hover:bg-red-50 flex items-center gap-2 border-t border-gray-50"
@@ -1960,21 +1733,252 @@ export default function ClientProfilePage({
                                         </div>
                                       </td>
                                     </tr>
-                                  );
-                                })}
-                              </>
-                            )}
-                                    </Fragment>
-                                  );
-                                })}
-                            </Fragment>
-                          );
-                        })}
-                    </>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                                    {hasSubtasks(task.id) && isExpanded && (
+                                      <>
+                                        {childTasks.map((child) => {
+                                          const childDue =
+                                            child.scheduled_start ||
+                                            child.due_date;
+                                          const childStatusValue =
+                                            getTaskStatus(child);
+                                          const childEnd =
+                                            child.scheduled_end ||
+                                            (child.scheduled_start
+                                              ? null
+                                              : child.due_date);
+                                          return (
+                                            <tr
+                                              key={child.id}
+                                              draggable
+                                              onDragStart={() => {
+                                                setDraggingTaskId(child.id);
+                                                setDraggingParentId(
+                                                  child.parent_task_id || null,
+                                                );
+                                              }}
+                                              onDragEnd={() => {
+                                                setDraggingTaskId(null);
+                                                setDraggingParentId(null);
+                                                setDropTargetId(null);
+                                              }}
+                                              onDragOver={(event) => {
+                                                if (
+                                                  !draggingTaskId ||
+                                                  draggingParentId !==
+                                                    child.parent_task_id
+                                                )
+                                                  return;
+                                                event.preventDefault();
+                                                setDropTargetId(child.id);
+                                              }}
+                                              onDragLeave={() => {
+                                                if (dropTargetId === child.id) {
+                                                  setDropTargetId(null);
+                                                }
+                                              }}
+                                              onDrop={(event) => {
+                                                if (
+                                                  !draggingTaskId ||
+                                                  draggingParentId !==
+                                                    child.parent_task_id
+                                                )
+                                                  return;
+                                                event.preventDefault();
+                                                reorderSubtasks(
+                                                  child.parent_task_id || "",
+                                                  child.id,
+                                                );
+                                              }}
+                                              className={`group hover:bg-gray-50 transition-colors ${
+                                                childStatusValue ===
+                                                "completed"
+                                                  ? "bg-gray-50 opacity-60"
+                                                  : ""
+                                              } ${
+                                                dropTargetId === child.id
+                                                  ? "bg-purple-50/80 ring-1 ring-purple-100"
+                                                  : ""
+                                              }`}
+                                              onClick={() =>
+                                                openTaskModal(child)
+                                              }
+                                            >
+                                              <td className="px-4 py-3">
+                                                <div className="flex items-center gap-2 pl-6">
+                                                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                                    Subtask
+                                                  </span>
+                                                  <span
+                                                    className={`text-sm font-semibold text-[#333333] ${
+                                                      childStatusValue ===
+                                                      "completed"
+                                                        ? "line-through opacity-50"
+                                                        : ""
+                                                    }`}
+                                                  >
+                                                    {child.task_name}
+                                                  </span>
+                                                </div>
+                                                <div className="flex gap-3 mt-1 pl-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                  <button
+                                                    onClick={(event) => {
+                                                      event.stopPropagation();
+                                                      openTaskModal(child);
+                                                    }}
+                                                    className="text-[10px] font-bold text-gray-400 hover:text-[#9d4edd] case tracking-wider"
+                                                  >
+                                                    Edit
+                                                  </button>
+                                                  <button
+                                                    onClick={(event) => {
+                                                      event.stopPropagation();
+                                                      deleteTask(child.id);
+                                                    }}
+                                                    className="text-[10px] font-bold text-gray-400 hover:text-red-500 case tracking-wider"
+                                                  >
+                                                    Delete
+                                                  </button>
+                                                </div>
+                                              </td>
+                                              <td className="px-4 py-3 text-xs font-medium text-gray-600 align-top pt-4 text-right">
+                                                {childDue
+                                                  ? new Date(
+                                                      childDue,
+                                                    ).toLocaleDateString("en-GB")
+                                                  : "-"}
+                                              </td>
+                                              <td className="px-4 py-3 text-xs font-medium text-gray-600 align-top pt-4 text-right">
+                                                {childEnd
+                                                  ? new Date(
+                                                      childEnd,
+                                                    ).toLocaleDateString("en-GB")
+                                                  : "-"}
+                                              </td>
+                                              <td className="px-4 py-3 text-center align-top pt-4">
+                                                {childStatusValue !==
+                                                  "completed" && (
+                                                  <button
+                                                    onClick={(event) => {
+                                                      event.stopPropagation();
+                                                      if (isSessionRunning)
+                                                        return;
+                                                      toggleTimer(child);
+                                                    }}
+                                                    disabled={isSessionRunning}
+                                                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all mx-auto ${
+                                                      isSessionRunning
+                                                        ? "bg-gray-100 text-gray-300 cursor-not-allowed"
+                                                        : child.is_running
+                                                          ? "bg-red-100 text-red-600 hover:bg-red-200 animate-pulse"
+                                                          : "bg-green-100 text-green-600 hover:bg-green-200"
+                                                    }`}
+                                                  >
+                                                    {child.is_running &&
+                                                    !isSessionRunning ? (
+                                                      <div className="w-3 h-3 bg-current rounded-sm" />
+                                                    ) : (
+                                                      <div className="w-0 h-0 border-t-[5px] border-t-transparent border-l-8 border-l-current border-b-[5px] border-b-transparent ml-1" />
+                                                    )}
+                                                  </button>
+                                                )}
+                                              </td>
+                                              <td className="px-4 py-3 text-right font-mono text-xs text-[#333333] align-top pt-4">
+                                                {formatTime(child)}
+                                              </td>
+                                              <td className="px-4 py-3 text-right align-top pt-4">
+                                                <div className="relative action-menu-trigger inline-flex justify-end">
+                                                  <button
+                                                    onClick={(event) => {
+                                                      event.stopPropagation();
+                                                      setActionMenuId(
+                                                        actionMenuId ===
+                                                          child.id
+                                                          ? null
+                                                          : child.id,
+                                                      );
+                                                    }}
+                                                    className="text-[#333333] transition-colors"
+                                                    aria-label="Task actions"
+                                                  >
+                                                    <MoreHorizontal size={18} />
+                                                  </button>
+
+                                                  {actionMenuId === child.id && (
+                                                    <div
+                                                      className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-1"
+                                                      onClick={(event) =>
+                                                        event.stopPropagation()
+                                                      }
+                                                    >
+                                                      <button
+                                                        onClick={(event) => {
+                                                          event.stopPropagation();
+                                                          openTaskModal(child);
+                                                          setActionMenuId(null);
+                                                        }}
+                                                        className="w-full text-left px-4 py-3 text-xs font-bold text-[#333333] hover:bg-gray-50 flex items-center gap-2"
+                                                      >
+                                                        <Edit2 size={12} /> Edit
+                                                      </button>
+                                                      <div className="px-4 pt-3 pb-2 text-[9px] font-semibold text-gray-400 uppercase tracking-widest border-t border-gray-100">
+                                                        Move to
+                                                      </div>
+                                                      {Object.values(
+                                                        STATUS_CONFIG,
+                                                      ).map((status) => (
+                                                        <button
+                                                          key={status.id}
+                                                          onClick={(event) => {
+                                                            event.stopPropagation();
+                                                            updateTaskStatus(
+                                                              child,
+                                                              status.id,
+                                                            );
+                                                            setActionMenuId(
+                                                              null,
+                                                            );
+                                                          }}
+                                                          className={`w-full text-left px-4 py-2 text-xs font-semibold hover:bg-gray-50 ${
+                                                            childStatusValue ===
+                                                            status.id
+                                                              ? "text-[#333333]"
+                                                              : "text-gray-600"
+                                                          }`}
+                                                        >
+                                                          {status.label}
+                                                        </button>
+                                                      ))}
+                                                      <button
+                                                        onClick={(event) => {
+                                                          event.stopPropagation();
+                                                          deleteTask(child.id);
+                                                          setActionMenuId(null);
+                                                        }}
+                                                        className="w-full text-left px-4 py-3 text-xs font-bold text-red-500 hover:bg-red-50 flex items-center gap-2 border-t border-gray-50"
+                                                      >
+                                                        <Trash2 size={12} />{" "}
+                                                        Delete
+                                                      </button>
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              </td>
+                                            </tr>
+                                          );
+                                        })}
+                                      </>
+                                    )}
+                                  </Fragment>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
           </div>
         </section>
       )}
