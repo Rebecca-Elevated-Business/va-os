@@ -21,8 +21,10 @@ type Client = {
   first_name: string;
   surname: string;
   business_name: string;
+  job_title?: string;
   email: string;
   phone: string;
+  address?: string;
   status: string;
   price_quoted: string;
   work_type: string;
@@ -31,6 +33,8 @@ type Client = {
   portal_access_enabled?: boolean | null;
   portal_access_revoked_at?: string | null;
   auth_user_id?: string | null;
+  source?: string | null;
+  website_links?: string[] | null;
 };
 
 type ClientDocument = {
@@ -120,6 +124,9 @@ export default function ClientProfilePage({
   const [deleteClientBusy, setDeleteClientBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [newNote, setNewNote] = useState("");
+  const [summaryDraft, setSummaryDraft] = useState("");
+  const [draftClient, setDraftClient] = useState<Client | null>(null);
+  const [websiteLinks, setWebsiteLinks] = useState<string[]>([]);
   const [isClientInfoOpen, setIsClientInfoOpen] = useState(true);
   const [isTaskManagerOpen, setIsTaskManagerOpen] = useState(true);
   const [isDocsOpen, setIsDocsOpen] = useState(true);
@@ -206,6 +213,12 @@ export default function ClientProfilePage({
     fetchDocuments();
   }, [id]);
 
+  useEffect(() => {
+    if (!client || isEditing) return;
+    setWebsiteLinks(client.website_links ?? []);
+    setSummaryDraft(notes[0]?.content || "");
+  }, [client, isEditing, notes]);
+
   // --- GLOBAL TICKER ---
   // Updates the UI every second so any running tasks show their time ticking up
   useEffect(() => {
@@ -278,20 +291,39 @@ export default function ClientProfilePage({
   // 4. Update Client Info
   const handleUpdateClient = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!client) return;
+    if (!client || !draftClient) return;
     const { error } = await supabase
       .from("clients")
       .update({
-        first_name: client.first_name,
-        surname: client.surname,
-        business_name: client.business_name,
-        email: client.email,
-        phone: client.phone,
-        status: client.status,
+        first_name: draftClient.first_name,
+        surname: draftClient.surname,
+        job_title: draftClient.job_title || null,
+        business_name: draftClient.business_name,
+        email: draftClient.email,
+        phone: draftClient.phone,
+        address: draftClient.address || null,
+        source: draftClient.source || null,
+        status: draftClient.status,
+        work_type: draftClient.work_type,
+        price_quoted: draftClient.price_quoted,
+        website_links: websiteLinks.filter((link) => link.trim().length > 0),
       })
       .eq("id", id);
     if (!error) {
+      const normalizedSummary = summaryDraft.trim();
+      const currentSummary = (notes[0]?.content || "").trim();
+      if (normalizedSummary && normalizedSummary !== currentSummary) {
+        const { data: userData } = await supabase.auth.getUser();
+        await supabase.from("client_notes").insert([
+          {
+            client_id: id,
+            va_id: userData.user?.id,
+            content: normalizedSummary,
+          },
+        ]);
+      }
       setIsEditing(false);
+      setDraftClient(null);
       refreshData();
     }
   };
@@ -701,6 +733,21 @@ export default function ClientProfilePage({
   };
   const hasDocuments = filteredDocuments.length > 0;
   const hasAgreements = filteredAgreements.length > 0;
+  const summaryValue = notes[0]?.content || "";
+  const displayClient = (isEditing ? draftClient : client) || client;
+  const startEditing = () => {
+    if (!client) return;
+    setDraftClient({ ...client });
+    setWebsiteLinks(client.website_links ?? []);
+    setSummaryDraft(summaryValue);
+    setIsEditing(true);
+  };
+  const cancelEditing = () => {
+    setIsEditing(false);
+    setDraftClient(null);
+    setWebsiteLinks(client?.website_links ?? []);
+    setSummaryDraft(summaryValue);
+  };
 
   return (
     <div className="flex flex-col h-full text-black space-y-8 pb-20">
@@ -715,12 +762,14 @@ export default function ClientProfilePage({
           </p>
         </div>
         <div className="flex gap-3">
-          <button
-            onClick={() => setIsEditing(!isEditing)}
-            className="text-sm font-semibold text-gray-500 hover:text-gray-800"
-          >
-            {isEditing ? "Cancel" : "Edit Details"}
-          </button>
+          {!isEditing && (
+            <button
+              onClick={startEditing}
+              className="text-sm font-semibold text-gray-500 hover:text-gray-800"
+            >
+              Edit Details
+            </button>
+          )}
           {!portalAccessEnabled && !portalInviteLink && (
             <button
               onClick={issuePortalAccess}
@@ -823,167 +872,407 @@ export default function ClientProfilePage({
 
       {/* 2. CLIENT INFORMATION (Horizontal Layout) */}
       {activeTab === "overview" && (
-        <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-6 border-b border-gray-100 bg-gray-50 flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setIsClientInfoOpen((prev) => !prev)}
-              className="text-[#333333] hover:text-[#333333] transition-colors"
-            >
-              <ChevronDown
-                size={16}
-                className={`transition-transform ${
-                  isClientInfoOpen ? "rotate-0" : "-rotate-90"
-                }`}
-              />
-            </button>
-            <h2 className="text-lg font-bold">Client Information</h2>
-          </div>
-          {isClientInfoOpen && (
-            <div className="p-6">
-              {isEditing ? (
-                <form
-                  onSubmit={handleUpdateClient}
-                  className="flex flex-wrap gap-4 items-end"
-                >
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-gray-400">
-                FIRST NAME
-              </label>
-              <input
-                className="border p-2 rounded text-black w-32"
-                value={client.first_name}
-                onChange={(e) =>
-                  setClient({ ...client, first_name: e.target.value })
-                }
-              />
-            </div>
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-gray-400">SURNAME</label>
-              <input
-                className="border p-2 rounded text-black w-32"
-                value={client.surname}
-                onChange={(e) =>
-                  setClient({ ...client, surname: e.target.value })
-                }
-              />
-            </div>
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-gray-400">EMAIL</label>
-              <input
-                className="border p-2 rounded text-black w-48"
-                value={client.email}
-                onChange={(e) =>
-                  setClient({ ...client, email: e.target.value })
-                }
-              />
-            </div>
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-gray-400">PHONE</label>
-              <input
-                className="border p-2 rounded text-black w-32"
-                value={client.phone}
-                onChange={(e) =>
-                  setClient({ ...client, phone: e.target.value })
-                }
-              />
-            </div>
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-gray-400">STATUS</label>
-              <select
-                className="border p-2 rounded text-black bg-white"
-                value={client.status}
-                onChange={(e) =>
-                  setClient({ ...client, status: e.target.value })
-                }
+      <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <form onSubmit={handleUpdateClient}>
+          <div className="p-6 border-b border-gray-100 bg-gray-50 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsClientInfoOpen((prev) => !prev)}
+                className="text-[#333333] hover:text-[#333333] transition-colors"
               >
-                {["Enquiry", "Provisional", "Won", "Lost", "Paused"].map(
-                  (s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ),
-                )}
-              </select>
-            </div>
-            <button
-              type="submit"
-              className="bg-[#9d4edd] text-white px-6 py-2 rounded font-bold h-10.5"
-            >
-              Save
-            </button>
-            <div className="w-full border-t border-gray-200 pt-4 mt-4">
-              <p className="text-xs font-bold text-red-500 mb-1">
-                DELETE CLIENT?
-              </p>
-              <p className="text-xs text-gray-500 mb-3">
-                This permanently removes the client and related data.
-              </p>
-              <div className="flex flex-wrap items-center gap-3">
-                <input
-                  value={deleteConfirmInput}
-                  onChange={(e) => setDeleteConfirmInput(e.target.value)}
-                  placeholder="Type DELETE to confirm"
-                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                <ChevronDown
+                  size={16}
+                  className={`transition-transform ${
+                    isClientInfoOpen ? "rotate-0" : "-rotate-90"
+                  }`}
                 />
+              </button>
+              <h2 className="text-lg font-bold">Client Information</h2>
+            </div>
+            {isEditing && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="submit"
+                  className="bg-[#9d4edd] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#7b2cbf]"
+                >
+                  Save
+                </button>
                 <button
                   type="button"
-                  onClick={deleteClient}
-                  disabled={
-                    deleteConfirmInput.trim() !== "DELETE" || deleteClientBusy
-                  }
-                  className="text-red-600 border border-red-200 px-4 py-2 rounded-lg font-bold disabled:opacity-50"
+                  onClick={cancelEditing}
+                  className="text-sm font-semibold text-gray-500 hover:text-gray-800"
                 >
-                  Delete Client
+                  Cancel
                 </button>
               </div>
-            </div>
-          </form>
-        ) : (
-          <div className="flex flex-wrap gap-x-12 gap-y-4 text-sm">
-            <div>
-              <span className="block text-gray-400 text-xs font-bold mb-1">
-                Email
-              </span>
-              {client.email || "-"}
-            </div>
-            <div>
-              <span className="block text-gray-400 text-xs case font-bold mb-1">
-                Phone
-              </span>
-              {client.phone || "-"}
-            </div>
-            <div>
-              <span className="block text-gray-400 text-xs case font-bold mb-1">
-                Status
-              </span>
-              <span
-                className={`px-2 py-0.5 rounded text-xs font-bold ${
-                  client.status === "Won"
-                    ? "bg-green-100 text-green-700"
-                    : "bg-gray-100"
-                }`}
-              >
-                {client.status}
-              </span>
-            </div>
-            <div>
-              <span className="block text-gray-400 text-xs case font-bold mb-1">
-                Work Type
-              </span>
-              {client.work_type}
-            </div>
-            <div>
-              <span className="block text-gray-400 text-xs case font-bold mb-1">
-                Price Quote
-              </span>
-              {client.price_quoted || "-"}
-            </div>
+            )}
           </div>
-        )}
+          {isClientInfoOpen && displayClient && (
+            <div className="p-6">
+              <dl className="grid gap-x-8 gap-y-5 md:grid-cols-2">
+                <div>
+                  <dt className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                    Email
+                  </dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {isEditing ? (
+                      <input
+                        className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
+                        value={displayClient.email || ""}
+                        onChange={(e) =>
+                          draftClient &&
+                          setDraftClient({
+                            ...draftClient,
+                            email: e.target.value,
+                          })
+                        }
+                      />
+                    ) : (
+                      displayClient.email || "—"
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                    Phone
+                  </dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {isEditing ? (
+                      <input
+                        className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
+                        value={displayClient.phone || ""}
+                        onChange={(e) =>
+                          draftClient &&
+                          setDraftClient({
+                            ...draftClient,
+                            phone: e.target.value,
+                          })
+                        }
+                      />
+                    ) : (
+                      displayClient.phone || "—"
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                    Job Title
+                  </dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {isEditing ? (
+                      <input
+                        className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
+                        value={displayClient.job_title || ""}
+                        onChange={(e) =>
+                          draftClient &&
+                          setDraftClient({
+                            ...draftClient,
+                            job_title: e.target.value,
+                          })
+                        }
+                      />
+                    ) : (
+                      displayClient.job_title || "—"
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                    Business Name
+                  </dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {isEditing ? (
+                      <input
+                        className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
+                        value={displayClient.business_name || ""}
+                        onChange={(e) =>
+                          draftClient &&
+                          setDraftClient({
+                            ...draftClient,
+                            business_name: e.target.value,
+                          })
+                        }
+                      />
+                    ) : (
+                      displayClient.business_name || "—"
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                    Status
+                  </dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {isEditing ? (
+                      <select
+                        className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
+                        value={displayClient.status}
+                        onChange={(e) =>
+                          draftClient &&
+                          setDraftClient({
+                            ...draftClient,
+                            status: e.target.value,
+                          })
+                        }
+                      >
+                        {["Enquiry", "Provisional", "Won", "Lost", "Paused"].map(
+                          (s) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ),
+                        )}
+                      </select>
+                    ) : (
+                      <span
+                        className={`inline-flex px-2 py-0.5 rounded text-xs font-bold ${
+                          displayClient.status === "Won"
+                            ? "bg-green-100 text-green-700"
+                            : displayClient.status === "Lost"
+                              ? "bg-red-100 text-red-700"
+                              : displayClient.status === "Provisional"
+                                ? "bg-purple-100 text-[#9d4edd]"
+                                : "bg-blue-100 text-blue-700"
+                        }`}
+                      >
+                        {displayClient.status}
+                      </span>
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                    Work Type
+                  </dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {isEditing ? (
+                      <select
+                        className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
+                        value={displayClient.work_type}
+                        onChange={(e) =>
+                          draftClient &&
+                          setDraftClient({
+                            ...draftClient,
+                            work_type: e.target.value,
+                          })
+                        }
+                      >
+                        <option value="Retainer">Retainer</option>
+                        <option value="Hourly">Hourly</option>
+                        <option value="Ad-hoc">Ad-hoc</option>
+                      </select>
+                    ) : (
+                      displayClient.work_type || "—"
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                    Price Quote
+                  </dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {isEditing ? (
+                      <input
+                        className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
+                        value={displayClient.price_quoted || ""}
+                        onChange={(e) =>
+                          draftClient &&
+                          setDraftClient({
+                            ...draftClient,
+                            price_quoted: e.target.value,
+                          })
+                        }
+                      />
+                    ) : (
+                      displayClient.price_quoted || "—"
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                    Source
+                  </dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {isEditing ? (
+                      <select
+                        className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
+                        value={displayClient.source || ""}
+                        onChange={(e) =>
+                          draftClient &&
+                          setDraftClient({
+                            ...draftClient,
+                            source: e.target.value,
+                          })
+                        }
+                      >
+                        {[
+                          "",
+                          "Referral",
+                          "Social Media",
+                          "Networking",
+                          "Cold Outreach",
+                          "Affiliate",
+                          "Other",
+                        ].map((s) => (
+                          <option key={s || "blank"} value={s}>
+                            {s || "—"}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      displayClient.source || "—"
+                    )}
+                  </dd>
+                </div>
+                <div className="md:col-span-2">
+                  <dt className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                    Address
+                  </dt>
+                  <dd className="mt-1 text-sm text-gray-900 whitespace-pre-line">
+                    {isEditing ? (
+                      <textarea
+                        rows={3}
+                        className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
+                        value={displayClient.address || ""}
+                        onChange={(e) =>
+                          draftClient &&
+                          setDraftClient({
+                            ...draftClient,
+                            address: e.target.value,
+                          })
+                        }
+                      />
+                    ) : (
+                      displayClient.address || "—"
+                    )}
+                  </dd>
+                </div>
+                <div className="md:col-span-2">
+                  <dt className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                    Websites & Social Links
+                  </dt>
+                  <dd className="mt-1 text-sm text-gray-900">
+                    {isEditing ? (
+                      <div className="space-y-3">
+                        {websiteLinks.length === 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setWebsiteLinks([""])}
+                            className="text-sm font-semibold text-[#9d4edd] hover:underline"
+                          >
+                            + Add website address
+                          </button>
+                        )}
+                        {websiteLinks.map((link, index) => (
+                          <div
+                            key={`website-${index}`}
+                            className="flex flex-col gap-2"
+                          >
+                            <input
+                              type="url"
+                              className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
+                              placeholder="Enter URL"
+                              value={link}
+                              onChange={(event) => {
+                                const next = [...websiteLinks];
+                                next[index] = event.target.value;
+                                setWebsiteLinks(next);
+                              }}
+                            />
+                            <div className="flex items-center justify-between">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const next = websiteLinks.filter(
+                                    (_, i) => i !== index,
+                                  );
+                                  setWebsiteLinks(next);
+                                }}
+                                className="text-xs font-semibold text-gray-400 hover:text-red-500"
+                              >
+                                Remove
+                              </button>
+                              {index === websiteLinks.length - 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setWebsiteLinks([...websiteLinks, ""])
+                                  }
+                                  className="text-sm font-semibold text-[#9d4edd] hover:underline"
+                                >
+                                  + Add another website address
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : websiteLinks.length ? (
+                      <div className="flex flex-col gap-1">
+                        {websiteLinks.map((link, index) => (
+                          <span key={`website-${index}`} className="text-sm">
+                            {link}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      "—"
+                    )}
+                  </dd>
+                </div>
+                <div className="md:col-span-2">
+                  <dt className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                    Summary of scope of work & rates
+                  </dt>
+                  <dd className="mt-1 text-sm text-gray-900 whitespace-pre-line">
+                    {isEditing ? (
+                      <textarea
+                        rows={4}
+                        className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
+                        value={summaryDraft}
+                        onChange={(e) => setSummaryDraft(e.target.value)}
+                      />
+                    ) : (
+                      summaryValue || "—"
+                    )}
+                  </dd>
+                </div>
+              </dl>
+
+              {isEditing && (
+                <div className="mt-6 border-t border-gray-200 pt-4">
+                  <p className="text-xs font-bold text-red-500 mb-1">
+                    DELETE CLIENT?
+                  </p>
+                  <p className="text-xs text-gray-500 mb-3">
+                    This permanently removes the client and related data.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <input
+                      value={deleteConfirmInput}
+                      onChange={(e) => setDeleteConfirmInput(e.target.value)}
+                      placeholder="Type DELETE to confirm"
+                      className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={deleteClient}
+                      disabled={
+                        deleteConfirmInput.trim() !== "DELETE" ||
+                        deleteClientBusy
+                      }
+                      className="text-red-600 border border-red-200 px-4 py-2 rounded-lg font-bold disabled:opacity-50"
+                    >
+                      Delete Client
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
-        </section>
+        </form>
+      </section>
       )}
 
       {/* 3. TASK MANAGER (Table Layout) */}
