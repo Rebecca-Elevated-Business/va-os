@@ -919,9 +919,7 @@ export default function ClientProfilePage({
           </h2>
           <div className="flex gap-3">
             <button
-              onClick={() =>
-                router.push(`/va/dashboard/documents/create?clientId=${id}`)
-              }
+              onClick={() => router.push("/va/dashboard/documents")}
               className="text-sm border border-[#9d4edd] text-[#9d4edd] px-4 py-2 rounded-lg font-bold hover:bg-purple-50 transition-all"
             >
               + New Document

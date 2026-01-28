@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 import {
   FileText,
   FileSignature,
@@ -48,6 +49,37 @@ export default function DocumentLibraryPage() {
     (typeof DOCUMENT_TYPES)[0] | null
   >(null);
   const [search, setSearch] = useState("");
+  const [clients, setClients] = useState<
+    { id: string; first_name: string; surname: string; business_name: string }[]
+  >([]);
+  const [clientSearch, setClientSearch] = useState("");
+  const [selectedClient, setSelectedClient] = useState<{
+    id: string;
+    first_name: string;
+    surname: string;
+    business_name: string;
+  } | null>(null);
+  const [loadingClients, setLoadingClients] = useState(false);
+
+  useEffect(() => {
+    if (!selectedType || clients.length > 0) return;
+    async function loadClients() {
+      setLoadingClients(true);
+      const { data } = await supabase
+        .from("clients")
+        .select("id, first_name, surname, business_name")
+        .order("surname");
+      if (data) setClients(data);
+      setLoadingClients(false);
+    }
+    loadClients();
+  }, [selectedType, clients.length]);
+
+  const closeModal = () => {
+    setSelectedType(null);
+    setSelectedClient(null);
+    setClientSearch("");
+  };
 
   const filteredTypes = useMemo(() => {
     if (!search.trim()) return DOCUMENT_TYPES;
@@ -58,6 +90,50 @@ export default function DocumentLibraryPage() {
         doc.description.toLowerCase().includes(value),
     );
   }, [search]);
+
+  const filteredClients = useMemo(() => {
+    const value = clientSearch.toLowerCase();
+    return clients.filter(
+      (client) =>
+        client.first_name.toLowerCase().includes(value) ||
+        client.surname.toLowerCase().includes(value) ||
+        client.business_name?.toLowerCase().includes(value),
+    );
+  }, [clients, clientSearch]);
+
+  const canShowResults =
+    !selectedClient && clientSearch.trim().length >= 2 && !loadingClients;
+  const clientList = canShowResults ? filteredClients : [];
+  const shouldShowEmptyState = canShowResults && clientList.length === 0;
+
+  const handleGenerate = async () => {
+    if (!selectedType || !selectedClient) return;
+    const { data, error } = await supabase
+      .from("client_documents")
+      .insert([
+        {
+          client_id: selectedClient.id,
+          type: selectedType.id,
+          title: `Draft ${selectedType.id.replace("_", " ")}`,
+          status: "draft",
+          content: { sections: [] },
+        },
+      ])
+      .select()
+      .single();
+
+    if (error || !data) {
+      alert("Error: " + (error?.message || "Unable to create document"));
+      return;
+    }
+
+    const editRoute =
+      selectedType.id === "upload"
+        ? "edit-upload"
+        : `edit-${selectedType.id}`;
+    router.push(`/va/dashboard/documents/${editRoute}/${data.id}`);
+    closeModal();
+  };
 
   return (
     <div className="text-black">
@@ -118,7 +194,7 @@ export default function DocumentLibraryPage() {
                 <h1 className="text-2xl font-bold">{selectedType.title}</h1>
               </div>
               <button
-                onClick={() => setSelectedType(null)}
+                onClick={closeModal}
                 className="h-9 w-9 rounded-full border border-gray-200 text-gray-400 hover:text-black hover:border-gray-300 transition"
                 aria-label="Close"
               >
@@ -246,20 +322,94 @@ export default function DocumentLibraryPage() {
                       : "Generate the draft to begin adding project-specific details."}
                   </p>
                 </div>
+                <div className="text-left space-y-3">
+                  <label className="text-[10px] font-black text-purple-600 uppercase tracking-widest">
+                    Select Client
+                  </label>
+                  {selectedClient ? (
+                    <div className="flex items-center justify-between bg-white border border-purple-100 rounded-2xl px-4 py-3">
+                      <div className="text-sm text-purple-900 font-semibold">
+                        {selectedClient.business_name ||
+                          `${selectedClient.first_name} ${selectedClient.surname}`}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedClient(null);
+                          setClientSearch("");
+                        }}
+                        className="text-xs font-bold text-purple-500 hover:text-purple-700 uppercase tracking-widest"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2 bg-white border border-purple-100 rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-[#9d4edd]/20">
+                        <Search
+                          className="h-4 w-4 text-[#9d4edd]"
+                          aria-hidden
+                        />
+                        <input
+                          value={clientSearch}
+                          onChange={(event) =>
+                            setClientSearch(event.target.value)
+                          }
+                          placeholder="Search clients..."
+                          className="w-full bg-transparent text-sm text-gray-700 outline-none"
+                        />
+                      </div>
+                      {clientList.length > 0 && (
+                        <div className="bg-white border border-purple-100 rounded-2xl p-2 max-h-48 overflow-y-auto">
+                          {clientList.map((client) => (
+                            <button
+                              key={client.id}
+                              onClick={() => {
+                                setSelectedClient(client);
+                                setClientSearch(
+                                  client.business_name ||
+                                    `${client.first_name} ${client.surname}`,
+                                );
+                              }}
+                              className="w-full text-left px-3 py-2 rounded-xl text-sm text-gray-700 hover:bg-purple-50"
+                            >
+                              <div className="font-semibold text-gray-900">
+                                {client.business_name ||
+                                  `${client.first_name} ${client.surname}`}
+                              </div>
+                              <div className="text-[11px] text-gray-400">
+                                {client.business_name
+                                  ? `${client.first_name} ${client.surname}`
+                                  : "Client"}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {shouldShowEmptyState && (
+                        <div className="text-xs text-purple-500">
+                          No clients match that search.
+                        </div>
+                      )}
+                      {loadingClients && (
+                        <div className="text-xs text-purple-500">
+                          Loading clients...
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
                 <div className="flex flex-col gap-3">
                   <button
-                    onClick={() => setSelectedType(null)}
+                    onClick={closeModal}
                     className="px-4 py-2 text-sm font-bold text-gray-400 hover:text-black"
                   >
                     Back
                   </button>
                   <button
-                    onClick={() =>
-                      router.push(
-                        `/va/dashboard/documents/create?type=${selectedType.id}`,
-                      )
-                    }
-                    className="bg-[#9d4edd] text-white px-6 py-3 rounded-xl font-bold shadow-md hover:bg-[#7b2cbf] transition-all"
+                    onClick={handleGenerate}
+                    disabled={!selectedClient}
+                    className="bg-[#9d4edd] text-white px-6 py-3 rounded-xl font-bold shadow-md hover:bg-[#7b2cbf] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {selectedType.id === "upload"
                       ? "Go to Upload"
