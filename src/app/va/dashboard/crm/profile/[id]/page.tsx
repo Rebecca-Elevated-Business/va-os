@@ -140,6 +140,9 @@ export default function ClientProfilePage({
   const [deleteClientBusy, setDeleteClientBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [newNote, setNewNote] = useState("");
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editingNoteContent, setEditingNoteContent] = useState("");
+  const [isSavingNote, setIsSavingNote] = useState(false);
   const [summaryDraft, setSummaryDraft] = useState("");
   const [draftClient, setDraftClient] = useState<Client | null>(null);
   const [websiteLinks, setWebsiteLinks] = useState<string[]>([]);
@@ -456,6 +459,44 @@ export default function ClientProfilePage({
       },
     ]);
     setNewNote("");
+    refreshData();
+  };
+  const startNoteEdit = (note: Note) => {
+    setEditingNoteId(note.id);
+    setEditingNoteContent(note.content);
+  };
+  const cancelNoteEdit = () => {
+    setEditingNoteId(null);
+    setEditingNoteContent("");
+  };
+  const saveNoteEdit = async () => {
+    if (!editingNoteId) return;
+    const trimmed = editingNoteContent.trim();
+    if (!trimmed) {
+      await alert({
+        title: "Note cannot be empty",
+        message: "Please enter a note before saving.",
+        tone: "danger",
+      });
+      return;
+    }
+    setIsSavingNote(true);
+    const { error } = await supabase
+      .from("client_notes")
+      .update({ content: trimmed })
+      .eq("id", editingNoteId);
+    if (error) {
+      await alert({
+        title: "Error saving note",
+        message: error.message,
+        tone: "danger",
+      });
+      setIsSavingNote(false);
+      return;
+    }
+    setIsSavingNote(false);
+    setEditingNoteId(null);
+    setEditingNoteContent("");
     refreshData();
   };
   // 6. Delete Task
@@ -893,14 +934,6 @@ export default function ClientProfilePage({
           </p>
         </div>
         <div className="flex gap-3">
-          {!isEditing && (
-            <button
-              onClick={startEditing}
-              className="text-sm font-semibold text-gray-500 hover:text-gray-800"
-            >
-              Edit Details
-            </button>
-          )}
           {!portalAccessEnabled && !portalInviteLink && (
             <button
               onClick={issuePortalAccess}
@@ -1421,6 +1454,17 @@ export default function ClientProfilePage({
                 </>
               )}
             </div>
+            {!isEditing && (
+              <div className="flex items-center justify-start border-t border-gray-100 px-6 py-3">
+                <button
+                  type="button"
+                  onClick={startEditing}
+                  className="text-xs font-semibold text-gray-400 hover:text-gray-600"
+                >
+                  Edit Details
+                </button>
+              </div>
+            )}
           </form>
         </section>
       )}
@@ -2398,10 +2442,50 @@ export default function ClientProfilePage({
                   key={note.id}
                   className="bg-gray-50 p-3 rounded-lg border border-gray-100"
                 >
-                  <p className="text-sm text-gray-800">{note.content}</p>
-                  <span className="text-[10px] text-gray-400 mt-2 block">
-                    {new Date(note.created_at).toLocaleString("en-GB")}
-                  </span>
+                  {editingNoteId === note.id ? (
+                    <textarea
+                      rows={3}
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
+                      value={editingNoteContent}
+                      onChange={(event) => setEditingNoteContent(event.target.value)}
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-800">{note.content}</p>
+                  )}
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="text-[10px] text-gray-400">
+                      {new Date(note.created_at).toLocaleString("en-GB")}
+                    </span>
+                    {editingNoteId === note.id ? (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={cancelNoteEdit}
+                          className="text-[10px] font-semibold text-gray-400 hover:text-gray-600"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={saveNoteEdit}
+                          disabled={isSavingNote}
+                          className="text-[10px] font-semibold text-[#9d4edd] hover:underline disabled:opacity-60"
+                        >
+                          {isSavingNote ? "Saving..." : "Save"}
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => startNoteEdit(note)}
+                        className="text-gray-400 hover:text-gray-600"
+                        title="Edit note"
+                        aria-label="Edit note"
+                      >
+                        <Edit2 size={12} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
