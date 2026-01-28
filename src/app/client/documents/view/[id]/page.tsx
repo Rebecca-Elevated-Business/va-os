@@ -256,12 +256,22 @@ export default function ClientDocumentView({
   const hasValue = (value: string) => value.trim().length > 0;
 
   const isBookingReadyToSign = (content: BookingFormContent) => {
+    const hiddenFields = new Set<string>([
+      ...(content.section1_hidden_fields || []),
+      ...(content.section2_hidden_fields || []),
+      ...(content.section3_hidden_fields || []),
+      ...(content.section4_hidden_fields || []),
+      ...(content.section5_hidden_fields || []),
+    ]);
     const missingFields = requiredBookingFields.filter(
-      (field) => !hasValue(String(content[field] || ""))
+      (field) =>
+        !hiddenFields.has(field) && !hasValue(String(content[field] || ""))
     );
-    const missingServiceFields = content.services.some(
-      (service) => !hasValue(service.title) || !hasValue(service.details)
-    );
+    const missingServiceFields = hiddenFields.has("services")
+      ? false
+      : content.services.some(
+          (service) => !hasValue(service.title) || !hasValue(service.details)
+        );
 
     return missingFields.length === 0 && !missingServiceFields;
   };

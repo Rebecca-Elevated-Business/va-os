@@ -23,7 +23,7 @@ const DOCUMENT_TYPES = [
     id: "booking_form",
     title: "Booking Form",
     description:
-      "Formal legal agreement and booking confirmation with E-Signature requirements.",
+      "Confirm client details, project information, and booking particulars in a personalised form.",
     icon: FileSignature,
   },
   {
@@ -55,7 +55,7 @@ export default function DocumentLibraryPage() {
     return DOCUMENT_TYPES.filter(
       (doc) =>
         doc.title.toLowerCase().includes(value) ||
-        doc.description.toLowerCase().includes(value)
+        doc.description.toLowerCase().includes(value),
     );
   }, [search]);
 
@@ -175,7 +175,7 @@ export default function DocumentLibraryPage() {
                   <button
                     onClick={() =>
                       router.push(
-                        `/va/dashboard/documents/create?type=${selectedType.id}`
+                        `/va/dashboard/documents/create?type=${selectedType.id}`,
                       )
                     }
                     className="bg-[#9d4edd] text-white px-6 py-3 rounded-xl font-bold shadow-md hover:bg-[#7b2cbf] transition-all"

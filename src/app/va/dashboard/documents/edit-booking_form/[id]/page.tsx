@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Eye, Plus, Trash2 } from "lucide-react";
 import {
   mergeBookingContent,
+  type BookingExtraField,
   type BookingServiceItem,
   type BookingFormContent,
 } from "@/lib/bookingFormContent";
@@ -63,6 +64,64 @@ const FieldRow = ({
   </div>
 );
 
+type SectionKey = "section1" | "section2" | "section3" | "section4" | "section5";
+
+const SECTION_FIELDS: Record<
+  SectionKey,
+  { id: string; label: string }[]
+> = {
+  section1: [
+    { id: "client_business_name", label: "Client business name" },
+    { id: "client_contact_name", label: "Client contact name" },
+    { id: "client_job_title", label: "Job title" },
+    { id: "client_postal_address", label: "Client postal address" },
+    { id: "client_email", label: "Client email address" },
+    { id: "client_phone", label: "Client phone number" },
+  ],
+  section2: [
+    { id: "va_business_name", label: "Our business name" },
+    { id: "va_contact_name", label: "VA contact name" },
+    { id: "va_job_title", label: "Job title" },
+    { id: "va_contact_details", label: "Our contact details" },
+  ],
+  section3: [
+    { id: "services", label: "Description of services and outcomes" },
+    { id: "personal_data_processing", label: "Personal data processing" },
+    { id: "timeline_key_dates", label: "Timeline/key dates" },
+    { id: "working_hours", label: "Usual working hours" },
+    { id: "communication_channels", label: "Communication channels" },
+  ],
+  section4: [
+    { id: "fee", label: "Fee" },
+    { id: "payment_terms", label: "Payment terms and preferred method" },
+    {
+      id: "prepayment_expiration",
+      label: "Expiration date of prepayments or unused retainer time",
+    },
+    {
+      id: "additional_hourly_rate",
+      label: "Basic hourly rate for additional work beyond original booking",
+    },
+    { id: "out_of_hours_rate", label: "Out of hours rate for work outside normal hours" },
+    { id: "urgent_work_rate", label: "Urgent work rate (less than 24 hours notice)" },
+    {
+      id: "additional_payment_charges",
+      label: "Additional charges for payments made by other methods",
+    },
+    { id: "late_payment_interest", label: "Late payment interest rate" },
+    { id: "purchase_order_number", label: "Purchase order (PO number)" },
+  ],
+  section5: [
+    { id: "data_privacy_link", label: "Our data privacy policy link" },
+    { id: "insurance_cover", label: "Insurance level of cover" },
+    { id: "notice_period", label: "Notice period" },
+    { id: "special_terms", label: "Special terms for this booking" },
+    { id: "custom_terms_url", label: "Our main terms link" },
+    { id: "courts_jurisdiction", label: "Courts that will handle disputes" },
+    { id: "accept_by_date", label: "Please accept this booking by" },
+  ],
+};
+
 export default function EditBookingFormPage({
   params,
 }: {
@@ -75,6 +134,13 @@ export default function EditBookingFormPage({
   const [saving, setSaving] = useState(false);
   const [autosaving, setAutosaving] = useState(false);
   const [warmWelcomeRemoved, setWarmWelcomeRemoved] = useState(false);
+  const [customiseOpen, setCustomiseOpen] = useState<Record<SectionKey, boolean>>({
+    section1: false,
+    section2: false,
+    section3: false,
+    section4: false,
+    section5: false,
+  });
   const [doc, setDoc] = useState<ClientDoc | null>(null);
   const lastSavedRef = useRef<string>("");
 
@@ -162,6 +228,92 @@ export default function EditBookingFormPage({
 
   const updateServices = (services: BookingServiceItem[]) => {
     updateContent({ services });
+  };
+
+  const getHiddenFields = (section: SectionKey) =>
+    (doc?.content?.[
+      `${section}_hidden_fields` as keyof BookingFormContent
+    ] as string[]) || [];
+
+  const setHiddenFields = (section: SectionKey, fields: string[]) => {
+    updateContent({
+      [`${section}_hidden_fields`]: fields,
+    } as Partial<BookingFormContent>);
+  };
+
+  const toggleHiddenField = (section: SectionKey, fieldId: string) => {
+    const current = getHiddenFields(section);
+    const next = current.includes(fieldId)
+      ? current.filter((field) => field !== fieldId)
+      : [...current, fieldId];
+    setHiddenFields(section, next);
+  };
+
+  const isFieldHidden = (section: SectionKey, fieldId: string) =>
+    getHiddenFields(section).includes(fieldId);
+
+  const getExtraFields = (section: SectionKey) =>
+    (doc?.content?.[
+      `${section}_extra_fields` as keyof BookingFormContent
+    ] as BookingExtraField[]) || [];
+
+  const setExtraFields = (section: SectionKey, fields: BookingExtraField[]) => {
+    updateContent({
+      [`${section}_extra_fields`]: fields,
+    } as Partial<BookingFormContent>);
+  };
+
+  const addExtraField = (section: SectionKey) => {
+    const existing = getExtraFields(section);
+    setExtraFields(section, [
+      ...existing,
+      { id: `extra-${Date.now()}`, title: "", value: "" },
+    ]);
+  };
+
+  const updateExtraField = (
+    section: SectionKey,
+    id: string,
+    updates: Partial<BookingExtraField>
+  ) => {
+    const next = getExtraFields(section).map((field) =>
+      field.id === id ? { ...field, ...updates } : field
+    );
+    setExtraFields(section, next);
+  };
+
+  const removeExtraField = (section: SectionKey, id: string) => {
+    setExtraFields(
+      section,
+      getExtraFields(section).filter((field) => field.id !== id)
+    );
+  };
+
+  const renderRemovedFields = (section: SectionKey) => {
+    const hiddenFields = getHiddenFields(section);
+    if (hiddenFields.length === 0) return null;
+    const labels = SECTION_FIELDS[section].filter((field) =>
+      hiddenFields.includes(field.id)
+    );
+    return (
+      <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-4 text-xs text-gray-500">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-bold text-gray-400 uppercase tracking-widest">
+            Removed fields:
+          </span>
+          {labels.map((field) => (
+            <button
+              key={field.id}
+              type="button"
+              onClick={() => toggleHiddenField(section, field.id)}
+              className="px-3 py-1 rounded-full border border-gray-200 text-gray-500 hover:border-[#9d4edd] hover:text-[#9d4edd] transition"
+            >
+              {field.label} · Reinstate
+            </button>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   const handleHeroUpload = (file: File) => {
@@ -393,359 +545,820 @@ export default function EditBookingFormPage({
         </section>
 
         <section className="rounded-3xl border border-gray-100 bg-gray-50 p-6 space-y-4">
-          <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
-            1. About you and your business
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
+              About you and your business
+            </h2>
+            <button
+              type="button"
+              onClick={() =>
+                setCustomiseOpen((prev) => ({
+                  ...prev,
+                  section1: !prev.section1,
+                }))
+              }
+              className="text-xs font-bold text-gray-400 uppercase tracking-widest hover:text-[#9d4edd]"
+            >
+              Customise section
+            </button>
+          </div>
+          {customiseOpen.section1 && (
+            <div className="rounded-2xl border border-gray-100 bg-white p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                  Show or hide fields
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setHiddenFields("section1", [])}
+                  className="text-xs font-bold text-gray-400 hover:text-[#9d4edd]"
+                >
+                  Reinstate all
+                </button>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 text-xs text-gray-600">
+                {SECTION_FIELDS.section1.map((field) => (
+                  <label key={field.id} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={!isFieldHidden("section1", field.id)}
+                      onChange={() => toggleHiddenField("section1", field.id)}
+                    />
+                    {field.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="space-y-3">
-            <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
-              <div className="text-xs font-bold text-gray-500">
-                1. Client business name:
+            {!isFieldHidden("section1", "client_business_name") && (
+              <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
+                <div className="text-xs font-bold text-gray-500">
+                  Client business name:
+                </div>
+                <input
+                  className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
+                  value={doc.content.client_business_name || ""}
+                  onChange={(e) =>
+                    updateContent({ client_business_name: e.target.value })
+                  }
+                />
               </div>
+            )}
+            {!isFieldHidden("section1", "client_contact_name") && (
+              <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
+                <div className="text-xs font-bold text-gray-500">
+                  Client contact name:
+                </div>
+                <input
+                  className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
+                  value={doc.content.client_contact_name || ""}
+                  onChange={(e) =>
+                    updateContent({ client_contact_name: e.target.value })
+                  }
+                />
+              </div>
+            )}
+            {!isFieldHidden("section1", "client_job_title") && (
+              <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
+                <div className="text-xs font-bold text-gray-500">Job title:</div>
+                <input
+                  className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
+                  value={doc.content.client_job_title || ""}
+                  onChange={(e) =>
+                    updateContent({ client_job_title: e.target.value })
+                  }
+                />
+              </div>
+            )}
+            {!isFieldHidden("section1", "client_postal_address") && (
+              <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
+                <div className="text-xs font-bold text-gray-500">
+                  Client postal address:
+                </div>
+                <textarea
+                  className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none min-h-20 bg-white border-gray-200 focus:border-purple-100"
+                  value={doc.content.client_postal_address || ""}
+                  onChange={(e) =>
+                    updateContent({ client_postal_address: e.target.value })
+                  }
+                />
+              </div>
+            )}
+            {!isFieldHidden("section1", "client_email") && (
+              <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
+                <div className="text-xs font-bold text-gray-500">
+                  Client email address:
+                </div>
+                <input
+                  className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
+                  value={doc.content.client_email || ""}
+                  onChange={(e) =>
+                    updateContent({ client_email: e.target.value })
+                  }
+                />
+              </div>
+            )}
+            {!isFieldHidden("section1", "client_phone") && (
+              <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
+                <div className="text-xs font-bold text-gray-500">
+                  Client phone number:
+                </div>
+                <input
+                  className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
+                  value={doc.content.client_phone || ""}
+                  onChange={(e) =>
+                    updateContent({ client_phone: e.target.value })
+                  }
+                />
+              </div>
+            )}
+          </div>
+          {renderRemovedFields("section1")}
+          {getExtraFields("section1").map((field) => (
+            <div
+              key={field.id}
+              className="relative grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start"
+            >
               <input
                 className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
-                value={doc.content.client_business_name || ""}
+                placeholder="Title"
+                value={field.title}
                 onChange={(e) =>
-                  updateContent({ client_business_name: e.target.value })
+                  updateExtraField("section1", field.id, {
+                    title: e.target.value,
+                  })
                 }
               />
-            </div>
-            <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
-              <div className="text-xs font-bold text-gray-500">
-                2. Client contact name:
-              </div>
-              <input
-                className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
-                value={doc.content.client_contact_name || ""}
-                onChange={(e) =>
-                  updateContent({ client_contact_name: e.target.value })
-                }
-              />
-            </div>
-            <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
-              <div className="text-xs font-bold text-gray-500">
-                3. Job title:
-              </div>
-              <input
-                className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
-                value={doc.content.client_job_title || ""}
-                onChange={(e) =>
-                  updateContent({ client_job_title: e.target.value })
-                }
-              />
-            </div>
-            <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
-              <div className="text-xs font-bold text-gray-500">
-                4. Client postal address:
-              </div>
               <textarea
                 className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none min-h-20 bg-white border-gray-200 focus:border-purple-100"
-                value={doc.content.client_postal_address || ""}
+                placeholder="Details"
+                value={field.value}
                 onChange={(e) =>
-                  updateContent({ client_postal_address: e.target.value })
+                  updateExtraField("section1", field.id, {
+                    value: e.target.value,
+                  })
                 }
               />
+              <button
+                type="button"
+                onClick={() => removeExtraField("section1", field.id)}
+                className="absolute top-3 right-3 text-[#9d4edd] hover:text-red-500 transition-colors"
+                aria-label="Remove extra field"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
             </div>
-            <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
-              <div className="text-xs font-bold text-gray-500">
-                5. Client email address:
-              </div>
-              <input
-                className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
-                value={doc.content.client_email || ""}
-                onChange={(e) =>
-                  updateContent({ client_email: e.target.value })
-                }
-              />
-            </div>
-            <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
-              <div className="text-xs font-bold text-gray-500">
-                6. Client phone number:
-              </div>
-              <input
-                className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
-                value={doc.content.client_phone || ""}
-                onChange={(e) =>
-                  updateContent({ client_phone: e.target.value })
-                }
-              />
-            </div>
-          </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => addExtraField("section1")}
+            className="w-full py-3 border-2 border-dashed border-gray-200 rounded-2xl text-xs font-black text-gray-400 hover:border-[#9d4edd] hover:text-[#9d4edd] transition-all uppercase tracking-widest flex items-center justify-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Add extra field
+          </button>
         </section>
 
         <section className="rounded-3xl border border-gray-100 bg-gray-50 p-6 space-y-4">
-          <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
-            2. About us
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
+              About us
+            </h2>
+            <button
+              type="button"
+              onClick={() =>
+                setCustomiseOpen((prev) => ({
+                  ...prev,
+                  section2: !prev.section2,
+                }))
+              }
+              className="text-xs font-bold text-gray-400 uppercase tracking-widest hover:text-[#9d4edd]"
+            >
+              Customise section
+            </button>
+          </div>
+          {customiseOpen.section2 && (
+            <div className="rounded-2xl border border-gray-100 bg-white p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                  Show or hide fields
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setHiddenFields("section2", [])}
+                  className="text-xs font-bold text-gray-400 hover:text-[#9d4edd]"
+                >
+                  Reinstate all
+                </button>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 text-xs text-gray-600">
+                {SECTION_FIELDS.section2.map((field) => (
+                  <label key={field.id} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={!isFieldHidden("section2", field.id)}
+                      onChange={() => toggleHiddenField("section2", field.id)}
+                    />
+                    {field.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="space-y-3">
-            <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
-              <div className="text-xs font-bold text-gray-500">
-                7. Our business name:
+            {!isFieldHidden("section2", "va_business_name") && (
+              <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
+                <div className="text-xs font-bold text-gray-500">
+                  Our business name:
+                </div>
+                <input
+                  className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
+                  value={doc.content.va_business_name || ""}
+                  onChange={(e) =>
+                    updateContent({ va_business_name: e.target.value })
+                  }
+                />
               </div>
+            )}
+            {!isFieldHidden("section2", "va_contact_name") && (
+              <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
+                <div className="text-xs font-bold text-gray-500">
+                  VA contact name:
+                </div>
+                <input
+                  className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
+                  value={doc.content.va_contact_name || ""}
+                  onChange={(e) =>
+                    updateContent({ va_contact_name: e.target.value })
+                  }
+                />
+              </div>
+            )}
+            {!isFieldHidden("section2", "va_job_title") && (
+              <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
+                <div className="text-xs font-bold text-gray-500">Job title:</div>
+                <input
+                  className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
+                  value={doc.content.va_job_title || ""}
+                  onChange={(e) =>
+                    updateContent({ va_job_title: e.target.value })
+                  }
+                />
+              </div>
+            )}
+            {!isFieldHidden("section2", "va_contact_details") && (
+              <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
+                <div className="text-xs font-bold text-gray-500">
+                  Our contact details:
+                </div>
+                <textarea
+                  className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none min-h-20 bg-white border-gray-200 focus:border-purple-100"
+                  value={doc.content.va_contact_details || ""}
+                  onChange={(e) =>
+                    updateContent({ va_contact_details: e.target.value })
+                  }
+                />
+              </div>
+            )}
+          </div>
+          {renderRemovedFields("section2")}
+          {getExtraFields("section2").map((field) => (
+            <div
+              key={field.id}
+              className="relative grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start"
+            >
               <input
                 className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
-                value={doc.content.va_business_name || ""}
+                placeholder="Title"
+                value={field.title}
                 onChange={(e) =>
-                  updateContent({ va_business_name: e.target.value })
+                  updateExtraField("section2", field.id, {
+                    title: e.target.value,
+                  })
                 }
               />
-            </div>
-            <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
-              <div className="text-xs font-bold text-gray-500">
-                8. VA contact name:
-              </div>
-              <input
-                className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
-                value={doc.content.va_contact_name || ""}
-                onChange={(e) =>
-                  updateContent({ va_contact_name: e.target.value })
-                }
-              />
-            </div>
-            <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
-              <div className="text-xs font-bold text-gray-500">
-                9. Job title:
-              </div>
-              <input
-                className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
-                value={doc.content.va_job_title || ""}
-                onChange={(e) =>
-                  updateContent({ va_job_title: e.target.value })
-                }
-              />
-            </div>
-            <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
-              <div className="text-xs font-bold text-gray-500">
-                10. Our contact details:
-              </div>
               <textarea
                 className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none min-h-20 bg-white border-gray-200 focus:border-purple-100"
-                value={doc.content.va_contact_details || ""}
+                placeholder="Details"
+                value={field.value}
                 onChange={(e) =>
-                  updateContent({ va_contact_details: e.target.value })
+                  updateExtraField("section2", field.id, {
+                    value: e.target.value,
+                  })
                 }
               />
+              <button
+                type="button"
+                onClick={() => removeExtraField("section2", field.id)}
+                className="absolute top-3 right-3 text-[#9d4edd] hover:text-red-500 transition-colors"
+                aria-label="Remove extra field"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
             </div>
-          </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => addExtraField("section2")}
+            className="w-full py-3 border-2 border-dashed border-gray-200 rounded-2xl text-xs font-black text-gray-400 hover:border-[#9d4edd] hover:text-[#9d4edd] transition-all uppercase tracking-widest flex items-center justify-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Add extra field
+          </button>
         </section>
 
         <section className="rounded-3xl border border-gray-100 bg-gray-50 p-6 space-y-5">
-          <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
-            3. About the work
-          </h2>
-          <div className="space-y-4">
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-              11. Description of services and outcomes
-            </p>
-            <div className="space-y-4">
-              {(doc.content.services || []).map((service, index) => (
-                <div
-                  key={service.id}
-                  className="rounded-3xl border border-gray-100 bg-gray-50 p-4 space-y-3 relative"
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
+              About the work
+            </h2>
+            <button
+              type="button"
+              onClick={() =>
+                setCustomiseOpen((prev) => ({
+                  ...prev,
+                  section3: !prev.section3,
+                }))
+              }
+              className="text-xs font-bold text-gray-400 uppercase tracking-widest hover:text-[#9d4edd]"
+            >
+              Customise section
+            </button>
+          </div>
+          {customiseOpen.section3 && (
+            <div className="rounded-2xl border border-gray-100 bg-white p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                  Show or hide fields
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setHiddenFields("section3", [])}
+                  className="text-xs font-bold text-gray-400 hover:text-[#9d4edd]"
                 >
+                  Reinstate all
+                </button>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 text-xs text-gray-600">
+                {SECTION_FIELDS.section3.map((field) => (
+                  <label key={field.id} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={!isFieldHidden("section3", field.id)}
+                      onChange={() => toggleHiddenField("section3", field.id)}
+                    />
+                    {field.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="space-y-4">
+            {!isFieldHidden("section3", "services") && (
+              <>
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                  Description of services and outcomes
+                </p>
+                <div className="space-y-4">
+                  {(doc.content.services || []).map((service, index) => (
+                    <div
+                      key={service.id}
+                      className="rounded-3xl border border-gray-100 bg-gray-50 p-4 space-y-3 relative"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = [...(doc.content.services || [])];
+                          updated.splice(index, 1);
+                          updateServices(updated);
+                        }}
+                        className="absolute top-4 right-4 text-[#9d4edd] hover:text-red-500 transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                      <input
+                        className="w-full rounded-2xl border-2 px-4 py-3 text-sm font-semibold outline-none bg-white border-gray-200 focus:border-purple-100"
+                        value={service.title}
+                        onChange={(e) => {
+                          const updated = [...(doc.content.services || [])];
+                          updated[index] = {
+                            ...updated[index],
+                            title: e.target.value,
+                          };
+                          updateServices(updated);
+                        }}
+                      />
+                      <textarea
+                        className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none min-h-20 bg-white border-gray-200 focus:border-purple-100"
+                        value={service.details}
+                        onChange={(e) => {
+                          const updated = [...(doc.content.services || [])];
+                          updated[index] = {
+                            ...updated[index],
+                            details: e.target.value,
+                          };
+                          updateServices(updated);
+                        }}
+                      />
+                    </div>
+                  ))}
                   <button
                     type="button"
-                    onClick={() => {
-                      const updated = [...(doc.content.services || [])];
-                      updated.splice(index, 1);
-                      updateServices(updated);
-                    }}
-                    className="absolute top-4 right-4 text-[#9d4edd] hover:text-red-500 transition-colors"
+                    onClick={() =>
+                      updateServices([
+                        ...(doc.content.services || []),
+                        {
+                          id: `service-${Date.now()}`,
+                          title: "",
+                          details: "",
+                        },
+                      ])
+                    }
+                    className="w-full py-3 border-2 border-dashed border-gray-200 rounded-2xl text-xs font-black text-gray-400 hover:border-[#9d4edd] hover:text-[#9d4edd] transition-all uppercase tracking-widest flex items-center justify-center gap-2"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Plus className="h-4 w-4" />
+                    Add service item
                   </button>
-                  <input
-                    className="w-full rounded-2xl border-2 px-4 py-3 text-sm font-semibold outline-none bg-white border-gray-200 focus:border-purple-100"
-                    value={service.title}
-                    onChange={(e) => {
-                      const updated = [...(doc.content.services || [])];
-                      updated[index] = {
-                        ...updated[index],
-                        title: e.target.value,
-                      };
-                      updateServices(updated);
-                    }}
-                  />
-                  <textarea
-                    className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none min-h-20 bg-white border-gray-200 focus:border-purple-100"
-                    value={service.details}
-                    onChange={(e) => {
-                      const updated = [...(doc.content.services || [])];
-                      updated[index] = {
-                        ...updated[index],
-                        details: e.target.value,
-                      };
-                      updateServices(updated);
-                    }}
-                  />
                 </div>
-              ))}
+              </>
+            )}
+          </div>
+
+          {!isFieldHidden("section3", "personal_data_processing") && (
+            <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
+              <div className="text-xs font-bold text-gray-500">
+                Personal data processing required?
+              </div>
+              <select
+                className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
+                value={doc.content.personal_data_processing || "no"}
+                onChange={(e) =>
+                  updateContent({
+                    personal_data_processing:
+                      e.target.value === "yes" ? "yes" : "no",
+                  })
+                }
+              >
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
+              </select>
+            </div>
+          )}
+          {!isFieldHidden("section3", "timeline_key_dates") && (
+            <FieldRow
+              label="Timeline/key dates:"
+              value={doc.content.timeline_key_dates || ""}
+              multiline
+              onChange={(value) => updateContent({ timeline_key_dates: value })}
+            />
+          )}
+          {!isFieldHidden("section3", "working_hours") && (
+            <FieldRow
+              label="Usual working hours:"
+              value={doc.content.working_hours || ""}
+              multiline
+              onChange={(value) => updateContent({ working_hours: value })}
+            />
+          )}
+          {!isFieldHidden("section3", "communication_channels") && (
+            <FieldRow
+              label="Communication channels:"
+              value={doc.content.communication_channels || ""}
+              multiline
+              onChange={(value) =>
+                updateContent({ communication_channels: value })
+              }
+            />
+          )}
+          {renderRemovedFields("section3")}
+          {getExtraFields("section3").map((field) => (
+            <div
+              key={field.id}
+              className="relative grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start"
+            >
+              <input
+                className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
+                placeholder="Title"
+                value={field.title}
+                onChange={(e) =>
+                  updateExtraField("section3", field.id, {
+                    title: e.target.value,
+                  })
+                }
+              />
+              <textarea
+                className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none min-h-20 bg-white border-gray-200 focus:border-purple-100"
+                placeholder="Details"
+                value={field.value}
+                onChange={(e) =>
+                  updateExtraField("section3", field.id, {
+                    value: e.target.value,
+                  })
+                }
+              />
               <button
                 type="button"
-                onClick={() =>
-                  updateServices([
-                    ...(doc.content.services || []),
-                    {
-                      id: `service-${Date.now()}`,
-                      title: "",
-                      details: "",
-                    },
-                  ])
-                }
-                className="w-full py-3 border-2 border-dashed border-gray-200 rounded-2xl text-xs font-black text-gray-400 hover:border-[#9d4edd] hover:text-[#9d4edd] transition-all uppercase tracking-widest flex items-center justify-center gap-2"
+                onClick={() => removeExtraField("section3", field.id)}
+                className="absolute top-3 right-3 text-[#9d4edd] hover:text-red-500 transition-colors"
+                aria-label="Remove extra field"
               >
-                <Plus className="h-4 w-4" />
-                Add Service Item
+                <Trash2 className="h-4 w-4" />
               </button>
             </div>
-          </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => addExtraField("section3")}
+            className="w-full py-3 border-2 border-dashed border-gray-200 rounded-2xl text-xs font-black text-gray-400 hover:border-[#9d4edd] hover:text-[#9d4edd] transition-all uppercase tracking-widest flex items-center justify-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Add extra field
+          </button>
+        </section>
 
-          <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
-            <div className="text-xs font-bold text-gray-500">
-              12. Personal data processing required?
-            </div>
-            <select
-              className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
-              value={doc.content.personal_data_processing || "no"}
-              onChange={(e) =>
-                updateContent({
-                  personal_data_processing: e.target.value === "yes" ? "yes" : "no",
-                })
+        <section className="rounded-3xl border border-gray-100 bg-gray-50 p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
+              About payments
+            </h2>
+            <button
+              type="button"
+              onClick={() =>
+                setCustomiseOpen((prev) => ({
+                  ...prev,
+                  section4: !prev.section4,
+                }))
               }
+              className="text-xs font-bold text-gray-400 uppercase tracking-widest hover:text-[#9d4edd]"
             >
-              <option value="no">No</option>
-              <option value="yes">Yes</option>
-            </select>
+              Customise section
+            </button>
           </div>
-          <FieldRow
-            label="13. Timeline/key dates:"
-            value={doc.content.timeline_key_dates || ""}
-            multiline
-            onChange={(value) => updateContent({ timeline_key_dates: value })}
-          />
-          <FieldRow
-            label="14. Usual working hours:"
-            value={doc.content.working_hours || ""}
-            multiline
-            onChange={(value) => updateContent({ working_hours: value })}
-          />
-          <FieldRow
-            label="15. Communication channels:"
-            value={doc.content.communication_channels || ""}
-            multiline
-            onChange={(value) =>
-              updateContent({ communication_channels: value })
-            }
-          />
+          {customiseOpen.section4 && (
+            <div className="rounded-2xl border border-gray-100 bg-white p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                  Show or hide fields
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setHiddenFields("section4", [])}
+                  className="text-xs font-bold text-gray-400 hover:text-[#9d4edd]"
+                >
+                  Reinstate all
+                </button>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 text-xs text-gray-600">
+                {SECTION_FIELDS.section4.map((field) => (
+                  <label key={field.id} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={!isFieldHidden("section4", field.id)}
+                      onChange={() => toggleHiddenField("section4", field.id)}
+                    />
+                    {field.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="space-y-3">
+            {!isFieldHidden("section4", "fee") && (
+              <FieldRow
+                label="Fee:"
+                value={doc.content.fee || ""}
+                onChange={(value) => updateContent({ fee: value })}
+              />
+            )}
+            {!isFieldHidden("section4", "payment_terms") && (
+              <FieldRow
+                label="Payment terms and preferred method:"
+                value={doc.content.payment_terms || ""}
+                multiline
+                onChange={(value) => updateContent({ payment_terms: value })}
+              />
+            )}
+            {!isFieldHidden("section4", "prepayment_expiration") && (
+              <FieldRow
+                label="Expiration date of prepayments or unused retainer time:"
+                value={doc.content.prepayment_expiration || ""}
+                onChange={(value) =>
+                  updateContent({ prepayment_expiration: value })
+                }
+              />
+            )}
+            {!isFieldHidden("section4", "additional_hourly_rate") && (
+              <FieldRow
+                label="Basic hourly rate for additional work beyond original booking:"
+                value={doc.content.additional_hourly_rate || ""}
+                onChange={(value) =>
+                  updateContent({ additional_hourly_rate: value })
+                }
+              />
+            )}
+            {!isFieldHidden("section4", "out_of_hours_rate") && (
+              <FieldRow
+                label="Out of hours rate for work outside normal hours:"
+                value={doc.content.out_of_hours_rate || ""}
+                onChange={(value) =>
+                  updateContent({ out_of_hours_rate: value })
+                }
+              />
+            )}
+            {!isFieldHidden("section4", "urgent_work_rate") && (
+              <FieldRow
+                label="Urgent work rate (less than 24 hours notice):"
+                value={doc.content.urgent_work_rate || ""}
+                onChange={(value) =>
+                  updateContent({ urgent_work_rate: value })
+                }
+              />
+            )}
+            {!isFieldHidden("section4", "additional_payment_charges") && (
+              <FieldRow
+                label="Additional charges for payments made by other methods:"
+                value={doc.content.additional_payment_charges || ""}
+                onChange={(value) =>
+                  updateContent({ additional_payment_charges: value })
+                }
+              />
+            )}
+            {!isFieldHidden("section4", "late_payment_interest") && (
+              <FieldRow
+                label="Late payment interest rate:"
+                value={doc.content.late_payment_interest || ""}
+                onChange={(value) =>
+                  updateContent({ late_payment_interest: value })
+                }
+              />
+            )}
+            {!isFieldHidden("section4", "purchase_order_number") && (
+              <FieldRow
+                label="Purchase order (PO number):"
+                value={doc.content.purchase_order_number || ""}
+                onChange={(value) =>
+                  updateContent({ purchase_order_number: value })
+                }
+              />
+            )}
+          </div>
+          {renderRemovedFields("section4")}
+          {getExtraFields("section4").map((field) => (
+            <div
+              key={field.id}
+              className="relative grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start"
+            >
+              <input
+                className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
+                placeholder="Title"
+                value={field.title}
+                onChange={(e) =>
+                  updateExtraField("section4", field.id, {
+                    title: e.target.value,
+                  })
+                }
+              />
+              <textarea
+                className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none min-h-20 bg-white border-gray-200 focus:border-purple-100"
+                placeholder="Details"
+                value={field.value}
+                onChange={(e) =>
+                  updateExtraField("section4", field.id, {
+                    value: e.target.value,
+                  })
+                }
+              />
+              <button
+                type="button"
+                onClick={() => removeExtraField("section4", field.id)}
+                className="absolute top-3 right-3 text-[#9d4edd] hover:text-red-500 transition-colors"
+                aria-label="Remove extra field"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => addExtraField("section4")}
+            className="w-full py-3 border-2 border-dashed border-gray-200 rounded-2xl text-xs font-black text-gray-400 hover:border-[#9d4edd] hover:text-[#9d4edd] transition-all uppercase tracking-widest flex items-center justify-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Add extra field
+          </button>
         </section>
 
         <section className="rounded-3xl border border-gray-100 bg-gray-50 p-6 space-y-4">
-          <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
-            4. About payments
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
+              Final important subjects
+            </h2>
+            <button
+              type="button"
+              onClick={() =>
+                setCustomiseOpen((prev) => ({
+                  ...prev,
+                  section5: !prev.section5,
+                }))
+              }
+              className="text-xs font-bold text-gray-400 uppercase tracking-widest hover:text-[#9d4edd]"
+            >
+              Customise section
+            </button>
+          </div>
+          {customiseOpen.section5 && (
+            <div className="rounded-2xl border border-gray-100 bg-white p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                  Show or hide fields
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setHiddenFields("section5", [])}
+                  className="text-xs font-bold text-gray-400 hover:text-[#9d4edd]"
+                >
+                  Reinstate all
+                </button>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 text-xs text-gray-600">
+                {SECTION_FIELDS.section5.map((field) => (
+                  <label key={field.id} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={!isFieldHidden("section5", field.id)}
+                      onChange={() => toggleHiddenField("section5", field.id)}
+                    />
+                    {field.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="space-y-3">
+            {!isFieldHidden("section5", "data_privacy_link") && (
+              <FieldRow
+                label="Our data privacy policy link:"
+                value={doc.content.data_privacy_link || ""}
+                onChange={(value) => updateContent({ data_privacy_link: value })}
+              />
+            )}
+            {!isFieldHidden("section5", "insurance_cover") && (
+              <FieldRow
+                label="Insurance level of cover:"
+                value={doc.content.insurance_cover || ""}
+                onChange={(value) => updateContent({ insurance_cover: value })}
+              />
+            )}
+            {!isFieldHidden("section5", "notice_period") && (
+              <FieldRow
+                label="Notice period:"
+                value={doc.content.notice_period || ""}
+                onChange={(value) => updateContent({ notice_period: value })}
+              />
+            )}
+            {!isFieldHidden("section5", "special_terms") && (
+              <FieldRow
+                label="Special terms for this booking:"
+                value={doc.content.special_terms || ""}
+                multiline
+                onChange={(value) => updateContent({ special_terms: value })}
+              />
+            )}
+          </div>
+
+          {!isFieldHidden("section5", "custom_terms_url") && (
+            <div className="space-y-3">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                Our main terms can be found at this link:
+              </p>
+              <FieldRow
+                label="Our main terms link:"
+                value={doc.content.custom_terms_url || ""}
+                onChange={(value) =>
+                  updateContent({ custom_terms_url: value })
+                }
+              />
+            </div>
+          )}
+
+          {!isFieldHidden("section5", "courts_jurisdiction") && (
             <FieldRow
-              label="16. Fee:"
-              value={doc.content.fee || ""}
-              onChange={(value) => updateContent({ fee: value })}
-            />
-            <FieldRow
-              label="17. Payment terms and preferred method:"
-              value={doc.content.payment_terms || ""}
-              multiline
-              onChange={(value) => updateContent({ payment_terms: value })}
-            />
-            <FieldRow
-              label="18. Expiration date of prepayments or unused retainer time:"
-              value={doc.content.prepayment_expiration || ""}
-              onChange={(value) => updateContent({ prepayment_expiration: value })}
-            />
-            <FieldRow
-              label="19. Basic hourly rate for additional work beyond original booking:"
-              value={doc.content.additional_hourly_rate || ""}
-              onChange={(value) => updateContent({ additional_hourly_rate: value })}
-            />
-            <FieldRow
-              label="20. Out of hours rate for work outside normal hours:"
-              value={doc.content.out_of_hours_rate || ""}
-              onChange={(value) => updateContent({ out_of_hours_rate: value })}
-            />
-            <FieldRow
-              label="21. Urgent work rate (less than 24 hours notice):"
-              value={doc.content.urgent_work_rate || ""}
-              onChange={(value) => updateContent({ urgent_work_rate: value })}
-            />
-            <FieldRow
-              label="22. Additional charges for payments made by other methods:"
-              value={doc.content.additional_payment_charges || ""}
+              label="Courts that will handle disputes:"
+              value={doc.content.courts_jurisdiction || ""}
               onChange={(value) =>
-                updateContent({ additional_payment_charges: value })
+                updateContent({ courts_jurisdiction: value })
               }
             />
+          )}
+          {!isFieldHidden("section5", "accept_by_date") && (
             <FieldRow
-              label="23. Late payment interest rate:"
-              value={doc.content.late_payment_interest || ""}
-              onChange={(value) => updateContent({ late_payment_interest: value })}
+              label="Please accept this booking by:"
+              value={doc.content.accept_by_date || ""}
+              onChange={(value) => updateContent({ accept_by_date: value })}
+              type="date"
             />
-            <FieldRow
-              label="24. Purchase order (PO number):"
-              value={doc.content.purchase_order_number || ""}
-              onChange={(value) =>
-                updateContent({ purchase_order_number: value })
-              }
-            />
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-gray-100 bg-gray-50 p-6 space-y-4">
-          <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
-            5. Final important subjects
-          </h2>
-          <div className="space-y-3">
-            <FieldRow
-              label="25. Our data privacy policy link:"
-              value={doc.content.data_privacy_link || ""}
-              onChange={(value) => updateContent({ data_privacy_link: value })}
-            />
-            <FieldRow
-              label="26. Insurance level of cover:"
-              value={doc.content.insurance_cover || ""}
-              onChange={(value) => updateContent({ insurance_cover: value })}
-            />
-            <FieldRow
-              label="27. Notice period:"
-              value={doc.content.notice_period || ""}
-              onChange={(value) => updateContent({ notice_period: value })}
-            />
-            <FieldRow
-              label="28. Special terms for this booking:"
-              value={doc.content.special_terms || ""}
-              multiline
-              onChange={(value) => updateContent({ special_terms: value })}
-            />
-          </div>
-
-          <div className="space-y-3">
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-              29. Our main terms can be found at this link:
-            </p>
-            <FieldRow
-              label="Our main terms link:"
-              value={doc.content.custom_terms_url || ""}
-              onChange={(value) => updateContent({ custom_terms_url: value })}
-            />
-          </div>
-
-          <FieldRow
-            label="30. Courts that will handle disputes:"
-            value={doc.content.courts_jurisdiction || ""}
-            onChange={(value) => updateContent({ courts_jurisdiction: value })}
-          />
-          <FieldRow
-            label="31. Please accept this booking by:"
-            value={doc.content.accept_by_date || ""}
-            onChange={(value) => updateContent({ accept_by_date: value })}
-            type="date"
-          />
+          )}
           <div className="text-xs text-gray-500 leading-relaxed whitespace-pre-wrap">
             If this BOOKING means we will be working on personal data about any
             clients, prospects, suppliers, or other people, please provide us
@@ -759,11 +1372,55 @@ export default function EditBookingFormPage({
             {"\n\n"}Our AGREEMENT begins when you sign and return this BOOKING
             or you tell us to start work, preferably in writing.
           </div>
+          {renderRemovedFields("section5")}
+          {getExtraFields("section5").map((field) => (
+            <div
+              key={field.id}
+              className="relative grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start"
+            >
+              <input
+                className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none bg-white border-gray-200 focus:border-purple-100"
+                placeholder="Title"
+                value={field.title}
+                onChange={(e) =>
+                  updateExtraField("section5", field.id, {
+                    title: e.target.value,
+                  })
+                }
+              />
+              <textarea
+                className="w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none min-h-20 bg-white border-gray-200 focus:border-purple-100"
+                placeholder="Details"
+                value={field.value}
+                onChange={(e) =>
+                  updateExtraField("section5", field.id, {
+                    value: e.target.value,
+                  })
+                }
+              />
+              <button
+                type="button"
+                onClick={() => removeExtraField("section5", field.id)}
+                className="absolute top-3 right-3 text-[#9d4edd] hover:text-red-500 transition-colors"
+                aria-label="Remove extra field"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => addExtraField("section5")}
+            className="w-full py-3 border-2 border-dashed border-gray-200 rounded-2xl text-xs font-black text-gray-400 hover:border-[#9d4edd] hover:text-[#9d4edd] transition-all uppercase tracking-widest flex items-center justify-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Add extra field
+          </button>
         </section>
 
         <section className="rounded-3xl border border-gray-100 bg-gray-50 p-6 space-y-4">
           <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
-            6. Client
+            Client
           </h2>
           <div className="space-y-3">
             <FieldRow
@@ -819,7 +1476,7 @@ export default function EditBookingFormPage({
 
         <section className="rounded-3xl border border-gray-100 bg-gray-50 p-6 space-y-4">
           <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
-            7. Us
+            Us
           </h2>
           <div className="space-y-3">
             <FieldRow

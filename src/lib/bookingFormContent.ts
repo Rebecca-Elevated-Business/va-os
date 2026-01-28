@@ -4,6 +4,12 @@ export type BookingServiceItem = {
   details: string;
 };
 
+export type BookingExtraField = {
+  id: string;
+  title: string;
+  value: string;
+};
+
 export type BookingFormContent = {
   hero_image_url: string;
   hero_title: string;
@@ -22,6 +28,16 @@ export type BookingFormContent = {
   va_job_title: string;
   va_contact_details: string;
   services: BookingServiceItem[];
+  section1_hidden_fields: string[];
+  section1_extra_fields: BookingExtraField[];
+  section2_hidden_fields: string[];
+  section2_extra_fields: BookingExtraField[];
+  section3_hidden_fields: string[];
+  section3_extra_fields: BookingExtraField[];
+  section4_hidden_fields: string[];
+  section4_extra_fields: BookingExtraField[];
+  section5_hidden_fields: string[];
+  section5_extra_fields: BookingExtraField[];
   personal_data_processing: "yes" | "no";
   timeline_key_dates: string;
   working_hours: string;
@@ -98,6 +114,16 @@ export const createBookingDefaults = (
       details: "",
     },
   ],
+  section1_hidden_fields: [],
+  section1_extra_fields: [],
+  section2_hidden_fields: [],
+  section2_extra_fields: [],
+  section3_hidden_fields: [],
+  section3_extra_fields: [],
+  section4_hidden_fields: [],
+  section4_extra_fields: [],
+  section5_hidden_fields: [],
+  section5_extra_fields: [],
   personal_data_processing: "no",
   timeline_key_dates:
     "Work to begin on [estimated date] providing booking form is signed and invoice is paid.",
@@ -147,5 +173,25 @@ export const mergeBookingContent = (
       content.services && content.services.length > 0
         ? content.services
         : defaults.services,
+    section1_hidden_fields:
+      content.section1_hidden_fields ?? defaults.section1_hidden_fields,
+    section1_extra_fields:
+      content.section1_extra_fields ?? defaults.section1_extra_fields,
+    section2_hidden_fields:
+      content.section2_hidden_fields ?? defaults.section2_hidden_fields,
+    section2_extra_fields:
+      content.section2_extra_fields ?? defaults.section2_extra_fields,
+    section3_hidden_fields:
+      content.section3_hidden_fields ?? defaults.section3_hidden_fields,
+    section3_extra_fields:
+      content.section3_extra_fields ?? defaults.section3_extra_fields,
+    section4_hidden_fields:
+      content.section4_hidden_fields ?? defaults.section4_hidden_fields,
+    section4_extra_fields:
+      content.section4_extra_fields ?? defaults.section4_extra_fields,
+    section5_hidden_fields:
+      content.section5_hidden_fields ?? defaults.section5_hidden_fields,
+    section5_extra_fields:
+      content.section5_extra_fields ?? defaults.section5_extra_fields,
   };
 };
