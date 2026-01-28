@@ -12,7 +12,7 @@ import {
   ReceiptText,
 } from "lucide-react";
 import TaskModal from "../../../tasks/TaskModal";
-import { Task } from "../../../tasks/types";
+import { STATUS_CONFIG, Task } from "../../../tasks/types";
 import { useClientSession } from "../../../ClientSessionContext";
 
 // --- TYPES ---
@@ -108,7 +108,7 @@ export default function ClientProfilePage({
 
   // Task Manager State
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-  const [showCompleted, setShowCompleted] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [now, setNow] = useState(0); // Initialize with 0 to satisfy React Purity
   const [taskModalTask, setTaskModalTask] = useState<Task | null>(null);
   const [taskModalPrefill, setTaskModalPrefill] = useState<{
@@ -267,18 +267,27 @@ export default function ClientProfilePage({
     refreshData();
   };
 
-  // 3. Toggle Completion
-  const toggleComplete = async (task: Task) => {
-    // If task was running, stop it first before completing
-    if (task.is_running) await toggleTimer(task);
-
+  // 3. Update Status
+  const updateTaskStatus = async (task: Task, newStatus: string) => {
+    if (task.status === newStatus) return;
     await supabase
       .from("tasks")
       .update({
-        is_completed: !task.is_completed,
+        status: newStatus,
+        is_completed: newStatus === "completed",
       })
       .eq("id", task.id);
-    refreshData();
+    setTasks((prev) =>
+      prev.map((item) =>
+        item.id === task.id
+          ? {
+              ...item,
+              status: newStatus,
+              is_completed: newStatus === "completed",
+            }
+          : item,
+      ),
+    );
   };
 
   // 4. Update Client Info
@@ -683,9 +692,13 @@ export default function ClientProfilePage({
       <div className="p-10 text-black text-center mt-20">Client not found.</div>
     );
 
-  const visibleTasks = tasks.filter((t) =>
-    showCompleted ? true : !t.is_completed,
-  );
+  const getTaskStatus = (task: Task) =>
+    task.status || (task.is_completed ? "completed" : "todo");
+  const visibleTasks = tasks.filter((task) => {
+    const status = getTaskStatus(task);
+    if (statusFilter !== "all" && status !== statusFilter) return false;
+    return true;
+  });
   const orderTasks = (items: Task[]) =>
     [...items].sort((a, b) => {
       const orderA = a.sort_order ?? Number.MAX_SAFE_INTEGER;
@@ -1336,15 +1349,22 @@ export default function ClientProfilePage({
                 </button>
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={showCompleted}
-                    onChange={(e) => setShowCompleted(e.target.checked)}
-                    className="rounded text-[#9d4edd] focus:ring-[#9d4edd]"
-                  />
-                  Show Completed
-                </label>
+                <div className="flex items-center gap-2 text-xs font-semibold text-gray-600">
+                  <label htmlFor="crm-task-status-filter">Status</label>
+                  <select
+                    id="crm-task-status-filter"
+                    value={statusFilter}
+                    onChange={(event) => setStatusFilter(event.target.value)}
+                    className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-[#333333] focus:ring-2 focus:ring-[#9d4edd] outline-none"
+                  >
+                    <option value="all">All</option>
+                    {Object.values(STATUS_CONFIG).map((status) => (
+                      <option key={status.id} value={status.id}>
+                        {status.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <button
                   onClick={() => openTaskModal()}
                   className="bg-black text-white px-6 py-2 rounded font-bold hover:bg-gray-800"
@@ -1359,8 +1379,8 @@ export default function ClientProfilePage({
                 <table className="w-full text-left">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-12 text-center">
-                        Done
+                      <th className="px-4 py-3 text-xs font-bold text-gray-400 case w-28 text-center">
+                        Status
                       </th>
                       <th className="px-4 py-3 text-xs font-bold text-gray-400 case">
                         Task
@@ -1406,6 +1426,7 @@ export default function ClientProfilePage({
                           const childTasks = subtasksByParent[task.id] || [];
                           const isExpanded = expandedParents[task.id] ?? true;
                           const dueDate = task.scheduled_start || task.due_date;
+                          const statusValue = getTaskStatus(task);
                           const endDate =
                             task.scheduled_end ||
                             (task.scheduled_start ? null : task.due_date);
@@ -1449,7 +1470,7 @@ export default function ClientProfilePage({
                                   }
                                 }}
                                 className={`group hover:bg-gray-50 transition-colors ${
-                                  task.is_completed
+                                  statusValue === "completed"
                                     ? "bg-gray-50 opacity-60"
                                     : ""
                                 } ${
@@ -1459,17 +1480,25 @@ export default function ClientProfilePage({
                                 }`}
                                 onClick={() => openTaskModal(task)}
                               >
-                              {/* 1. CHECKBOX */}
+                              {/* 1. STATUS */}
                               <td className="px-4 py-3 text-center">
-                                <input
-                                  type="checkbox"
-                                  checked={task.is_completed}
+                                <select
+                                  value={statusValue}
+                                  onClick={(event) => event.stopPropagation()}
                                   onChange={(event) => {
                                     event.stopPropagation();
-                                    toggleComplete(task);
+                                    updateTaskStatus(task, event.target.value);
                                   }}
-                                  className="w-5 h-5 text-[#9d4edd] rounded focus:ring-[#9d4edd] cursor-pointer"
-                                />
+                                  className="rounded-md border border-gray-200 bg-white px-2 py-1 text-[10px] font-semibold text-gray-600 focus:ring-2 focus:ring-[#9d4edd] outline-none"
+                                >
+                                  {Object.values(STATUS_CONFIG).map(
+                                    (status) => (
+                                      <option key={status.id} value={status.id}>
+                                        {status.label}
+                                      </option>
+                                    ),
+                                  )}
+                                </select>
                               </td>
 
                               {/* 2. TASK NAME */}
@@ -1496,7 +1525,7 @@ export default function ClientProfilePage({
                                   <div>
                                     <div
                                       className={`text-sm font-semibold text-[#333333] ${
-                                        task.is_completed
+                                        statusValue === "completed"
                                           ? "line-through opacity-50"
                                           : ""
                                       }`}
@@ -1556,7 +1585,7 @@ export default function ClientProfilePage({
 
                               {/* 5. TIMER BUTTON */}
                               <td className="px-4 py-3 text-center align-top pt-4">
-                                {!task.is_completed && (
+                                {statusValue !== "completed" && (
                                   <button
                                     onClick={(event) => {
                                       event.stopPropagation();
@@ -1591,6 +1620,7 @@ export default function ClientProfilePage({
                                 {childTasks.map((child) => {
                                   const childDue =
                                     child.scheduled_start || child.due_date;
+                                  const childStatusValue = getTaskStatus(child);
                                   const childEnd =
                                     child.scheduled_end ||
                                     (child.scheduled_start
@@ -1640,7 +1670,7 @@ export default function ClientProfilePage({
                                         );
                                       }}
                                       className={`group hover:bg-gray-50 transition-colors ${
-                                        child.is_completed
+                                        childStatusValue === "completed"
                                           ? "bg-gray-50 opacity-60"
                                           : ""
                                       } ${
@@ -1651,15 +1681,31 @@ export default function ClientProfilePage({
                                       onClick={() => openTaskModal(child)}
                                     >
                                       <td className="px-4 py-3 text-center">
-                                        <input
-                                          type="checkbox"
-                                          checked={child.is_completed}
+                                        <select
+                                          value={childStatusValue}
+                                          onClick={(event) =>
+                                            event.stopPropagation()
+                                          }
                                           onChange={(event) => {
                                             event.stopPropagation();
-                                            toggleComplete(child);
+                                            updateTaskStatus(
+                                              child,
+                                              event.target.value,
+                                            );
                                           }}
-                                          className="w-5 h-5 text-[#9d4edd] rounded focus:ring-[#9d4edd] cursor-pointer"
-                                        />
+                                          className="rounded-md border border-gray-200 bg-white px-2 py-1 text-[10px] font-semibold text-gray-600 focus:ring-2 focus:ring-[#9d4edd] outline-none"
+                                        >
+                                          {Object.values(STATUS_CONFIG).map(
+                                            (status) => (
+                                              <option
+                                                key={status.id}
+                                                value={status.id}
+                                              >
+                                                {status.label}
+                                              </option>
+                                            ),
+                                          )}
+                                        </select>
                                       </td>
                                       <td className="px-4 py-3">
                                         <div className="flex items-center gap-2 pl-6">
@@ -1668,7 +1714,7 @@ export default function ClientProfilePage({
                                           </span>
                                           <span
                                             className={`text-sm font-semibold text-[#333333] ${
-                                              child.is_completed
+                                              childStatusValue === "completed"
                                                 ? "line-through opacity-50"
                                                 : ""
                                             }`}
@@ -1712,7 +1758,7 @@ export default function ClientProfilePage({
                                           : "-"}
                                       </td>
                                       <td className="px-4 py-3 text-center align-top pt-4">
-                                        {!child.is_completed && (
+                                        {childStatusValue !== "completed" && (
                                           <button
                                             onClick={(event) => {
                                               event.stopPropagation();
