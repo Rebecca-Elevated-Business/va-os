@@ -26,7 +26,6 @@ type Client = {
   phone: string;
   address?: string;
   status: string;
-  price_quoted: string;
   work_type: string;
   has_access: boolean;
   portal_invite_link?: string | null;
@@ -299,7 +298,6 @@ export default function ClientProfilePage({
         source: draftClient.source || null,
         status: draftClient.status,
         work_type: draftClient.work_type,
-        price_quoted: draftClient.price_quoted,
         website_links: websiteLinks.filter((link) => link.trim().length > 0),
       })
       .eq("id", id);
@@ -892,372 +890,364 @@ export default function ClientProfilePage({
               </div>
               {displayClient && (
                 <>
-                  <dl className="grid gap-x-8 gap-y-5 md:grid-cols-2">
-                <div>
-                  <dt className="text-[11px] font-semibold text-[#333333]">
-                    Client Name
-                  </dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {isEditing ? (
-                      <div className="grid grid-cols-2 gap-3">
-                        <input
-                          className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
-                          value={displayClient.first_name || ""}
-                          onChange={(e) =>
-                            draftClient &&
-                            setDraftClient({
-                              ...draftClient,
-                              first_name: e.target.value,
-                            })
-                          }
-                        />
-                        <input
-                          className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
-                          value={displayClient.surname || ""}
-                          onChange={(e) =>
-                            draftClient &&
-                            setDraftClient({
-                              ...draftClient,
-                              surname: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                    ) : (
-                      `${displayClient.first_name || ""} ${
-                        displayClient.surname || ""
-                      }`.trim() || "—"
-                    )}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-[11px] font-semibold text-[#333333]">
-                    Email
-                  </dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {isEditing ? (
-                      <input
-                        className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
-                        value={displayClient.email || ""}
-                        onChange={(e) =>
-                          draftClient &&
-                          setDraftClient({
-                            ...draftClient,
-                            email: e.target.value,
-                          })
-                        }
-                      />
-                    ) : (
-                      displayClient.email || "—"
-                    )}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-[11px] font-semibold text-[#333333]">
-                    Phone
-                  </dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {isEditing ? (
-                      <input
-                        className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
-                        value={displayClient.phone || ""}
-                        onChange={(e) =>
-                          draftClient &&
-                          setDraftClient({
-                            ...draftClient,
-                            phone: e.target.value,
-                          })
-                        }
-                      />
-                    ) : (
-                      displayClient.phone || "—"
-                    )}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-[11px] font-semibold text-[#333333]">
-                    Job Title
-                  </dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {isEditing ? (
-                      <input
-                        className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
-                        value={displayClient.job_title || ""}
-                        onChange={(e) =>
-                          draftClient &&
-                          setDraftClient({
-                            ...draftClient,
-                            job_title: e.target.value,
-                          })
-                        }
-                      />
-                    ) : (
-                      displayClient.job_title || "—"
-                    )}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-[11px] font-semibold text-[#333333]">
-                    Business Name
-                  </dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {isEditing ? (
-                      <input
-                        className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
-                        value={displayClient.business_name || ""}
-                        onChange={(e) =>
-                          draftClient &&
-                          setDraftClient({
-                            ...draftClient,
-                            business_name: e.target.value,
-                          })
-                        }
-                      />
-                    ) : (
-                      displayClient.business_name || "—"
-                    )}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-[11px] font-semibold text-[#333333]">
-                    Status
-                  </dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {isEditing ? (
-                      <select
-                        className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
-                        value={displayClient.status}
-                        onChange={(e) =>
-                          draftClient &&
-                          setDraftClient({
-                            ...draftClient,
-                            status: e.target.value,
-                          })
-                        }
-                      >
-                        {["Enquiry", "Provisional", "Won", "Lost", "Paused"].map(
-                          (s) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ),
-                        )}
-                      </select>
-                    ) : (
-                      <span
-                        className={`inline-flex px-2 py-0.5 rounded text-xs font-bold ${
-                          displayClient.status === "Won"
-                            ? "bg-green-100 text-green-700"
-                            : displayClient.status === "Lost"
-                              ? "bg-red-100 text-red-700"
-                              : displayClient.status === "Provisional"
-                                ? "bg-purple-100 text-[#9d4edd]"
-                                : "bg-blue-100 text-blue-700"
-                        }`}
-                      >
-                        {displayClient.status}
-                      </span>
-                    )}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-[11px] font-semibold text-[#333333]">
-                    Work Type
-                  </dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {isEditing ? (
-                      <select
-                        className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
-                        value={displayClient.work_type}
-                        onChange={(e) =>
-                          draftClient &&
-                          setDraftClient({
-                            ...draftClient,
-                            work_type: e.target.value,
-                          })
-                        }
-                      >
-                        <option value="Retainer">Retainer</option>
-                        <option value="Hourly">Hourly</option>
-                        <option value="Ad-hoc">Ad-hoc</option>
-                      </select>
-                    ) : (
-                      displayClient.work_type || "—"
-                    )}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-[11px] font-semibold text-[#333333]">
-                    Price Quote
-                  </dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {isEditing ? (
-                      <input
-                        className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
-                        value={displayClient.price_quoted || ""}
-                        onChange={(e) =>
-                          draftClient &&
-                          setDraftClient({
-                            ...draftClient,
-                            price_quoted: e.target.value,
-                          })
-                        }
-                      />
-                    ) : (
-                      displayClient.price_quoted || "—"
-                    )}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-[11px] font-semibold text-[#333333]">
-                    Source
-                  </dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {isEditing ? (
-                      <select
-                        className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
-                        value={displayClient.source || ""}
-                        onChange={(e) =>
-                          draftClient &&
-                          setDraftClient({
-                            ...draftClient,
-                            source: e.target.value,
-                          })
-                        }
-                      >
-                        {[
-                          "",
-                          "Referral",
-                          "Social Media",
-                          "Networking",
-                          "Cold Outreach",
-                          "Affiliate",
-                          "Other",
-                        ].map((s) => (
-                          <option key={s || "blank"} value={s}>
-                            {s || "—"}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      displayClient.source || "—"
-                    )}
-                  </dd>
-                </div>
-                <div className="md:col-span-2">
-                  <dt className="text-[11px] font-semibold text-[#333333]">
-                    Address
-                  </dt>
-                  <dd className="mt-1 text-sm text-gray-900 whitespace-pre-line">
-                    {isEditing ? (
-                      <textarea
-                        rows={3}
-                        className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
-                        value={displayClient.address || ""}
-                        onChange={(e) =>
-                          draftClient &&
-                          setDraftClient({
-                            ...draftClient,
-                            address: e.target.value,
-                          })
-                        }
-                      />
-                    ) : (
-                      displayClient.address || "—"
-                    )}
-                  </dd>
-                </div>
-                <div className="md:col-span-2">
-                  <dt className="text-[11px] font-semibold text-[#333333]">
-                    Websites & Social Links
-                  </dt>
-                  <dd className="mt-1 text-sm text-gray-900">
-                    {isEditing ? (
-                      <div className="space-y-3">
-                        {websiteLinks.length === 0 && (
-                          <button
-                            type="button"
-                            onClick={() => setWebsiteLinks([""])}
-                            className="text-sm font-semibold text-[#9d4edd] hover:underline"
-                          >
-                            + Add website address
-                          </button>
-                        )}
-                        {websiteLinks.map((link, index) => (
-                          <div
-                            key={`website-${index}`}
-                            className="flex flex-col gap-2"
-                          >
-                            <input
-                              type="url"
-                              className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
-                              placeholder="Enter URL"
-                              value={link}
-                              onChange={(event) => {
-                                const next = [...websiteLinks];
-                                next[index] = event.target.value;
-                                setWebsiteLinks(next);
-                              }}
-                            />
-                            <div className="flex items-center justify-between">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const next = websiteLinks.filter(
-                                    (_, i) => i !== index,
-                                  );
-                                  setWebsiteLinks(next);
-                                }}
-                                className="text-xs font-semibold text-gray-400 hover:text-red-500"
-                              >
-                                Remove
-                              </button>
-                              {index === websiteLinks.length - 1 && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setWebsiteLinks([...websiteLinks, ""])
+                  <div className="relative">
+                    <div className="hidden md:block absolute left-1/2 -translate-x-1/2 border-l border-gray-200" style={{ top: "12.5%", bottom: "12.5%" }} />
+                    <div className="grid gap-10 md:grid-cols-2">
+                      <dl className="space-y-5">
+                        <div>
+                          <dt className="text-[11px] font-semibold text-[#333333]">
+                            Name
+                          </dt>
+                          <dd className="mt-1 text-sm text-gray-900">
+                            {isEditing ? (
+                              <div className="grid grid-cols-2 gap-3">
+                                <input
+                                  className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
+                                  value={displayClient.first_name || ""}
+                                  onChange={(e) =>
+                                    draftClient &&
+                                    setDraftClient({
+                                      ...draftClient,
+                                      first_name: e.target.value,
+                                    })
                                   }
-                                  className="text-sm font-semibold text-[#9d4edd] hover:underline"
-                                >
-                                  + Add another website address
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : websiteDisplayLinks.length ? (
-                      <div className="flex flex-col gap-1">
-                        {websiteDisplayLinks.map((link, index) => (
-                          <span key={`website-${index}`} className="text-sm">
-                            {link}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      "—"
-                    )}
-                  </dd>
-                </div>
-                <div className="md:col-span-2">
-                  <dt className="text-[11px] font-semibold text-[#333333]">
-                    Summary of scope of work & rates
-                  </dt>
-                  <dd className="mt-1 text-sm text-gray-900 whitespace-pre-line">
-                    {isEditing ? (
-                      <textarea
-                        rows={4}
-                        className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
-                        value={summaryDraft}
-                        onChange={(e) => setSummaryDraft(e.target.value)}
-                      />
-                    ) : (
-                      summaryValue || "—"
-                    )}
-                  </dd>
-                </div>
-              </dl>
+                                />
+                                <input
+                                  className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
+                                  value={displayClient.surname || ""}
+                                  onChange={(e) =>
+                                    draftClient &&
+                                    setDraftClient({
+                                      ...draftClient,
+                                      surname: e.target.value,
+                                    })
+                                  }
+                                />
+                              </div>
+                            ) : (
+                              `${displayClient.first_name || ""} ${
+                                displayClient.surname || ""
+                              }`.trim() || "—"
+                            )}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-[11px] font-semibold text-[#333333]">
+                            Email
+                          </dt>
+                          <dd className="mt-1 text-sm text-gray-900">
+                            {isEditing ? (
+                              <input
+                                className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
+                                value={displayClient.email || ""}
+                                onChange={(e) =>
+                                  draftClient &&
+                                  setDraftClient({
+                                    ...draftClient,
+                                    email: e.target.value,
+                                  })
+                                }
+                              />
+                            ) : (
+                              displayClient.email || "—"
+                            )}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-[11px] font-semibold text-[#333333]">
+                            Phone
+                          </dt>
+                          <dd className="mt-1 text-sm text-gray-900">
+                            {isEditing ? (
+                              <input
+                                className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
+                                value={displayClient.phone || ""}
+                                onChange={(e) =>
+                                  draftClient &&
+                                  setDraftClient({
+                                    ...draftClient,
+                                    phone: e.target.value,
+                                  })
+                                }
+                              />
+                            ) : (
+                              displayClient.phone || "—"
+                            )}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-[11px] font-semibold text-[#333333]">
+                            Address
+                          </dt>
+                          <dd className="mt-1 text-sm text-gray-900 whitespace-pre-line">
+                            {isEditing ? (
+                              <textarea
+                                rows={3}
+                                className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
+                                value={displayClient.address || ""}
+                                onChange={(e) =>
+                                  draftClient &&
+                                  setDraftClient({
+                                    ...draftClient,
+                                    address: e.target.value,
+                                  })
+                                }
+                              />
+                            ) : (
+                              displayClient.address || "—"
+                            )}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-[11px] font-semibold text-[#333333]">
+                            Website & Social Links
+                          </dt>
+                          <dd className="mt-1 text-sm text-gray-900">
+                            {isEditing ? (
+                              <div className="space-y-3">
+                                {websiteLinks.length === 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setWebsiteLinks([""])}
+                                    className="text-sm font-semibold text-[#9d4edd] hover:underline"
+                                  >
+                                    + Add website address
+                                  </button>
+                                )}
+                                {websiteLinks.map((link, index) => (
+                                  <div
+                                    key={`website-${index}`}
+                                    className="flex flex-col gap-2"
+                                  >
+                                    <input
+                                      type="url"
+                                      className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
+                                      placeholder="Enter URL"
+                                      value={link}
+                                      onChange={(event) => {
+                                        const next = [...websiteLinks];
+                                        next[index] = event.target.value;
+                                        setWebsiteLinks(next);
+                                      }}
+                                    />
+                                    <div className="flex items-center justify-between">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const next = websiteLinks.filter(
+                                            (_, i) => i !== index,
+                                          );
+                                          setWebsiteLinks(next);
+                                        }}
+                                        className="text-xs font-semibold text-gray-400 hover:text-red-500"
+                                      >
+                                        Remove
+                                      </button>
+                                      {index === websiteLinks.length - 1 && (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setWebsiteLinks([
+                                              ...websiteLinks,
+                                              "",
+                                            ])
+                                          }
+                                          className="text-sm font-semibold text-[#9d4edd] hover:underline"
+                                        >
+                                          + Add another website address
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : websiteDisplayLinks.length ? (
+                              <div className="flex flex-col gap-1">
+                                {websiteDisplayLinks.map((link, index) => (
+                                  <span key={`website-${index}`} className="text-sm">
+                                    {link}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              "—"
+                            )}
+                          </dd>
+                        </div>
+                      </dl>
+                      <dl className="space-y-5">
+                        <div>
+                          <dt className="text-[11px] font-semibold text-[#333333]">
+                            Business Name
+                          </dt>
+                          <dd className="mt-1 text-sm text-gray-900">
+                            {isEditing ? (
+                              <input
+                                className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
+                                value={displayClient.business_name || ""}
+                                onChange={(e) =>
+                                  draftClient &&
+                                  setDraftClient({
+                                    ...draftClient,
+                                    business_name: e.target.value,
+                                  })
+                                }
+                              />
+                            ) : (
+                              displayClient.business_name || "—"
+                            )}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-[11px] font-semibold text-[#333333]">
+                            Job Title
+                          </dt>
+                          <dd className="mt-1 text-sm text-gray-900">
+                            {isEditing ? (
+                              <input
+                                className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
+                                value={displayClient.job_title || ""}
+                                onChange={(e) =>
+                                  draftClient &&
+                                  setDraftClient({
+                                    ...draftClient,
+                                    job_title: e.target.value,
+                                  })
+                                }
+                              />
+                            ) : (
+                              displayClient.job_title || "—"
+                            )}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-[11px] font-semibold text-[#333333]">
+                            Work Type
+                          </dt>
+                          <dd className="mt-1 text-sm text-gray-900">
+                            {isEditing ? (
+                              <select
+                                className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
+                                value={displayClient.work_type}
+                                onChange={(e) =>
+                                  draftClient &&
+                                  setDraftClient({
+                                    ...draftClient,
+                                    work_type: e.target.value,
+                                  })
+                                }
+                              >
+                                <option value="Retainer">Retainer</option>
+                                <option value="Hourly">Hourly</option>
+                                <option value="Ad-hoc">Ad-hoc</option>
+                              </select>
+                            ) : (
+                              displayClient.work_type || "—"
+                            )}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-[11px] font-semibold text-[#333333]">
+                            Source
+                          </dt>
+                          <dd className="mt-1 text-sm text-gray-900">
+                            {isEditing ? (
+                              <select
+                                className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
+                                value={displayClient.source || ""}
+                                onChange={(e) =>
+                                  draftClient &&
+                                  setDraftClient({
+                                    ...draftClient,
+                                    source: e.target.value,
+                                  })
+                                }
+                              >
+                                {[
+                                  "",
+                                  "Referral",
+                                  "Social Media",
+                                  "Networking",
+                                  "Cold Outreach",
+                                  "Affiliate",
+                                  "Other",
+                                ].map((s) => (
+                                  <option key={s || "blank"} value={s}>
+                                    {s || "—"}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              displayClient.source || "—"
+                            )}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-[11px] font-semibold text-[#333333]">
+                            Summary scope notes
+                          </dt>
+                          <dd className="mt-1 text-sm text-gray-900 whitespace-pre-line">
+                            {isEditing ? (
+                              <textarea
+                                rows={4}
+                                className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
+                                value={summaryDraft}
+                                onChange={(e) => setSummaryDraft(e.target.value)}
+                              />
+                            ) : (
+                              summaryValue || "—"
+                            )}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-[11px] font-semibold text-[#333333]">
+                            Status
+                          </dt>
+                          <dd className="mt-1 text-sm text-gray-900">
+                            {isEditing ? (
+                              <select
+                                className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#9d4edd]"
+                                value={displayClient.status}
+                                onChange={(e) =>
+                                  draftClient &&
+                                  setDraftClient({
+                                    ...draftClient,
+                                    status: e.target.value,
+                                  })
+                                }
+                              >
+                                {[
+                                  "Enquiry",
+                                  "Provisional",
+                                  "Won",
+                                  "Lost",
+                                  "Paused",
+                                ].map((s) => (
+                                  <option key={s} value={s}>
+                                    {s}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <span
+                                className={`inline-flex px-2 py-0.5 rounded text-xs font-bold ${
+                                  displayClient.status === "Won"
+                                    ? "bg-green-100 text-green-700"
+                                    : displayClient.status === "Lost"
+                                      ? "bg-red-100 text-red-700"
+                                      : displayClient.status === "Provisional"
+                                        ? "bg-purple-100 text-[#9d4edd]"
+                                        : "bg-blue-100 text-blue-700"
+                                }`}
+                              >
+                                {displayClient.status}
+                              </span>
+                            )}
+                          </dd>
+                        </div>
+                      </dl>
+                    </div>
+                  </div>
 
                   {isEditing && (
                     <div className="mt-6 border-t border-gray-200 pt-4">
