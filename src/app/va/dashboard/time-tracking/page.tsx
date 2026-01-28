@@ -332,13 +332,14 @@ export default function TimeTrackingPage() {
     if (selectedTask.is_running) {
       if (!selectedTask.start_time) return;
       const endTime = new Date().toISOString();
-      const sessionMins = Math.max(
-        1,
+      const elapsedSeconds = Math.max(
+        0,
         Math.round(
           (new Date().getTime() - new Date(selectedTask.start_time).getTime()) /
-            60000,
+            1000,
         ),
       );
+      const sessionMins = elapsedSeconds / 60;
 
       const { data: entryData } = await supabase
         .from("time_entries")

@@ -213,10 +213,8 @@ export default function ClientProfilePage({
       if (!task.start_time) return;
       const start = new Date(task.start_time).getTime();
       const end = new Date().getTime(); // Use new Date() object instead of Date.now()
-      const currentSessionMinutes = Math.max(
-        1,
-        Math.round((end - start) / 60000),
-      );
+      const elapsedSeconds = Math.max(0, Math.round((end - start) / 1000));
+      const currentSessionMinutes = elapsedSeconds / 60;
       const endTime = new Date().toISOString();
 
       await supabase

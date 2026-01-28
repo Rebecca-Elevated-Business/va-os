@@ -410,12 +410,13 @@ export default function TaskCentrePage() {
     if (task.is_running) {
       if (!task.start_time) return;
       const endTime = new Date().toISOString();
-      const sessionMins = Math.max(
-        1,
+      const elapsedSeconds = Math.max(
+        0,
         Math.round(
-          (new Date().getTime() - new Date(task.start_time).getTime()) / 60000,
+          (new Date().getTime() - new Date(task.start_time).getTime()) / 1000,
         ),
       );
+      const sessionMins = elapsedSeconds / 60;
       await supabase
         .from("tasks")
         .update({
