@@ -871,30 +871,30 @@ export default function ClientProfilePage({
 
       {/* 2. CLIENT INFORMATION (Horizontal Layout) */}
       {activeTab === "overview" && (
-      <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <form onSubmit={handleUpdateClient}>
-          <div className="p-6">
-            <div className="flex items-center justify-end gap-2 pb-4">
-              {isEditing && (
-                <>
-                  <button
-                    type="submit"
-                    className="bg-[#9d4edd] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#7b2cbf]"
-                  >
-                    Save
-                  </button>
-                  <button
-                    type="button"
-                    onClick={cancelEditing}
-                    className="text-sm font-semibold text-gray-500 hover:text-gray-800"
-                  >
-                    Cancel
-                  </button>
-                </>
-              )}
-            </div>
-            {displayClient && (
-              <dl className="grid gap-x-8 gap-y-5 md:grid-cols-2">
+        <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <form onSubmit={handleUpdateClient}>
+            <div className="p-6">
+              <div className="flex items-center justify-end gap-2 pb-4">
+                {isEditing && (
+                  <>
+                    <button
+                      type="submit"
+                      className="bg-[#9d4edd] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#7b2cbf]"
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelEditing}
+                      className="text-sm font-semibold text-gray-500 hover:text-gray-800"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                )}
+              </div>
+              {displayClient && (
+                <dl className="grid gap-x-8 gap-y-5 md:grid-cols-2">
                 <div>
                   <dt className="text-[11px] font-semibold text-[#333333]">
                     Client Name
@@ -1290,10 +1290,10 @@ export default function ClientProfilePage({
                   </div>
                 </div>
               )}
-            </div>
-          )}
-        </form>
-      </section>
+              </div>
+            )}
+          </form>
+        </section>
       )}
 
       {/* 3. TASK MANAGER (Table Layout) */}
