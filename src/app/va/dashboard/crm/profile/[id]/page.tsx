@@ -127,7 +127,6 @@ export default function ClientProfilePage({
   const [draftClient, setDraftClient] = useState<Client | null>(null);
   const [websiteLinks, setWebsiteLinks] = useState<string[]>([]);
   const [isSavingOverview, setIsSavingOverview] = useState(false);
-  const [isTaskManagerOpen, setIsTaskManagerOpen] = useState(true);
   const [isDocsOpen, setIsDocsOpen] = useState(true);
   const [isNotesOpen, setIsNotesOpen] = useState(true);
   const [docTypeFilter, setDocTypeFilter] = useState("all");
@@ -1312,58 +1311,40 @@ export default function ClientProfilePage({
       {/* 3. TASK MANAGER (Table Layout) */}
       {activeTab === "tasks" && (
         <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-6 border-b border-gray-100 bg-gray-50 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setIsTaskManagerOpen((prev) => !prev)}
-                className="text-[#333333] hover:text-[#333333] transition-colors"
-              >
-                <ChevronDown
-                  size={16}
-                  className={`transition-transform ${
-                    isTaskManagerOpen ? "rotate-0" : "-rotate-90"
-                  }`}
-                />
-              </button>
-              <h2 className="text-xl font-bold">Task Manager</h2>
-            </div>
-            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={showCompleted}
-                onChange={(e) => setShowCompleted(e.target.checked)}
-                className="rounded text-[#9d4edd] focus:ring-[#9d4edd]"
-              />
-              Show Completed
-            </label>
-          </div>
-
-          {isTaskManagerOpen && (
-            <div className="p-6">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
-                <div className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                    Client Session
-                  </div>
-                  <span className="font-mono text-sm text-[#333333]">
-                    {formatHms(sessionElapsedSeconds)}
-                  </span>
-                  <button
-                    onClick={handleToggleSession}
-                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                      isSessionRunning
-                        ? "bg-red-500 text-white hover:bg-red-600"
-                        : "bg-[#9d4edd] text-white hover:bg-[#7b2cbf]"
-                    }`}
-                  >
-                    {isSessionRunning && activeClientId && activeClientId !== id
-                      ? "Switch to this client"
-                      : isSessionRunning
-                        ? "Stop Session"
-                        : "Start Session"}
-                  </button>
+          <div className="p-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+              <div className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                  Client Session
                 </div>
+                <span className="font-mono text-sm text-[#333333]">
+                  {formatHms(sessionElapsedSeconds)}
+                </span>
+                <button
+                  onClick={handleToggleSession}
+                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                    isSessionRunning
+                      ? "bg-red-500 text-white hover:bg-red-600"
+                      : "bg-[#9d4edd] text-white hover:bg-[#7b2cbf]"
+                  }`}
+                >
+                  {isSessionRunning && activeClientId && activeClientId !== id
+                    ? "Switch to this client"
+                    : isSessionRunning
+                      ? "Stop Session"
+                      : "Start Session"}
+                </button>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={showCompleted}
+                    onChange={(e) => setShowCompleted(e.target.checked)}
+                    className="rounded text-[#9d4edd] focus:ring-[#9d4edd]"
+                  />
+                  Show Completed
+                </label>
                 <button
                   onClick={() => openTaskModal()}
                   className="bg-black text-white px-6 py-2 rounded font-bold hover:bg-gray-800"
@@ -1371,6 +1352,7 @@ export default function ClientProfilePage({
                   Add Task
                 </button>
               </div>
+            </div>
 
               {/* Tasks Table */}
               <div className="overflow-hidden border border-gray-200 rounded-lg">
@@ -1745,8 +1727,7 @@ export default function ClientProfilePage({
               </table>
             </div>
           </div>
-        )}
-      </section>
+        </section>
       )}
       <TaskModal
         key={`${client.id}-${taskModalTask?.id || "new"}-${
@@ -2024,7 +2005,7 @@ export default function ClientProfilePage({
                     ))}
                 </tbody>
               </table>
-            </div>
+          </div>
           )}
         </section>
       )}
