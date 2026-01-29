@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { ChevronDown, Circle, Play, Search } from "lucide-react";
+import { ChevronDown, Circle, Play, Search, Trash2 } from "lucide-react";
 import TaskModal from "../tasks/TaskModal";
 import { Task } from "../tasks/types";
 import { useClientSession } from "../ClientSessionContext";
+import { usePrompt } from "@/components/ui/PromptProvider";
 
 type TimeEntry = {
   id: string;
@@ -17,6 +18,13 @@ type TimeEntry = {
   ended_at: string;
   duration_minutes: number;
   created_at: string;
+};
+
+type ClientSessionRow = {
+  id: string;
+  client_id: string;
+  started_at: string;
+  ended_at: string | null;
 };
 
 const getTodayDateString = () => {
@@ -56,6 +64,7 @@ export default function TimeTrackingPage() {
     startSession,
     stopSession,
   } = useClientSession();
+  const { confirm } = usePrompt();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [clients, setClients] = useState<
     { id: string; business_name: string; surname: string }[]
@@ -81,6 +90,7 @@ export default function TimeTrackingPage() {
   const [expandedSessions, setExpandedSessions] = useState<Record<string, boolean>>(
     {},
   );
+  const [clientSessions, setClientSessions] = useState<ClientSessionRow[]>([]);
 
   const [filterStart, setFilterStart] = useState(getTodayDateString());
   const [filterEnd, setFilterEnd] = useState(getTodayDateString());
@@ -167,7 +177,16 @@ export default function TimeTrackingPage() {
         .lte("started_at", endIso)
         .order("started_at", { ascending: false });
 
+    const { data: sessionData } = await supabase
+      .from("client_sessions")
+      .select("id, client_id, started_at, ended_at")
+      .eq("va_id", userId)
+      .gte("started_at", startIso)
+      .lte("started_at", endIso)
+      .order("started_at", { ascending: false });
+
       setTimeEntries((data as TimeEntry[]) || []);
+      setClientSessions((sessionData as ClientSessionRow[]) || []);
       setLoadingEntries(false);
     },
     [userId],
@@ -416,7 +435,7 @@ export default function TimeTrackingPage() {
   );
 
   const entryTaskLabel = (entry: TimeEntry) => {
-    if (!entry.task_id) return "Client session (unassigned)";
+    if (!entry.task_id) return "Client Work";
     const task = tasksById.get(entry.task_id);
     if (!task) return "Untitled task";
     return task.task_name;
@@ -440,50 +459,69 @@ export default function TimeTrackingPage() {
   );
 
   const groupedEntries = useMemo(() => {
-    const sessionMap = new Map<string, TimeEntry[]>();
+    const sessionMap = new Map<
+      string,
+      {
+        session: ClientSessionRow;
+        entries: TimeEntry[];
+      }
+    >();
+
+    clientSessions.forEach((session) => {
+      sessionMap.set(session.id, { session, entries: [] });
+    });
+
     const standalone: TimeEntry[] = [];
 
     timeEntries.forEach((entry) => {
       if (entry.session_id) {
-        const bucket = sessionMap.get(entry.session_id) || [];
-        bucket.push(entry);
-        sessionMap.set(entry.session_id, bucket);
+        const bucket = sessionMap.get(entry.session_id);
+        if (bucket) {
+          bucket.entries.push(entry);
+        } else {
+          // Fallback if session is missing from the date range
+          sessionMap.set(entry.session_id, {
+            session: {
+              id: entry.session_id,
+              client_id: entry.client_id || "",
+              started_at: entry.started_at,
+              ended_at: entry.ended_at,
+            },
+            entries: [entry],
+          });
+        }
       } else {
         standalone.push(entry);
       }
     });
 
-    const sessions = Array.from(sessionMap.entries()).map(
-      ([sessionId, entries]) => {
-        const sortedEntries = [...entries].sort(
-          (a, b) => new Date(a.started_at).getTime() - new Date(b.started_at).getTime(),
-        );
-        const startMs = new Date(sortedEntries[0]?.started_at || 0).getTime();
-        const endMs = new Date(
-          sortedEntries[sortedEntries.length - 1]?.ended_at ||
-            sortedEntries[sortedEntries.length - 1]?.started_at ||
-            0,
-        ).getTime();
-        const totalSeconds = sortedEntries.reduce(
-          (sum, entry) => sum + entry.duration_minutes * 60,
-          0,
-        );
-        const clientEntry =
-          sortedEntries.find((entry) => entry.client_id) ||
-          sortedEntries.find((entry) => entry.task_id) ||
-          sortedEntries[0];
-        const clientLabel = clientEntry ? entryClientLabel(clientEntry) : "Client";
+    const sessions = Array.from(sessionMap.values()).map(({ session, entries }) => {
+      const sortedEntries = [...entries].sort(
+        (a, b) => new Date(a.started_at).getTime() - new Date(b.started_at).getTime(),
+      );
+      const startMs = new Date(session.started_at).getTime();
+      const endMs = new Date(session.ended_at || session.started_at).getTime();
+      const totalSeconds =
+        session.ended_at && endMs >= startMs
+          ? Math.max(0, Math.floor((endMs - startMs) / 1000))
+          : sortedEntries.reduce(
+              (sum, entry) => sum + entry.duration_minutes * 60,
+              0,
+            );
+      const clientLabel = clientsById.get(session.client_id)?.surname ||
+        clientsById.get(session.client_id)?.business_name ||
+        "Client";
 
-        return {
-          sessionId,
-          entries: sortedEntries,
-          totalSeconds,
-          startMs,
-          endMs,
-          clientLabel,
-        };
-      },
-    );
+      return {
+        sessionId: session.id,
+        entries: sortedEntries,
+        totalSeconds,
+        startMs,
+        endMs,
+        clientLabel,
+        hasTaskChildren: sortedEntries.some((entry) => Boolean(entry.task_id)),
+      };
+    });
 
     sessions.sort((a, b) => b.endMs - a.endMs);
 
@@ -492,7 +530,39 @@ export default function TimeTrackingPage() {
     );
 
     return { sessions, standalone: sortedStandalone };
-  }, [timeEntries, entryClientLabel]);
+  }, [clientSessions, clientsById, timeEntries]);
+
+  const deleteTimeEntry = useCallback(
+    async (entry: TimeEntry) => {
+      const ok = await confirm({
+        title: "Delete time entry?",
+        message: "Delete this time entry? This cannot be undone.",
+        confirmLabel: "Delete",
+        tone: "danger",
+      });
+      if (!ok) return;
+      await supabase.from("time_entries").delete().eq("id", entry.id);
+      setTimeEntries((prev) => prev.filter((item) => item.id !== entry.id));
+    },
+    [confirm],
+  );
+
+  const deleteSession = useCallback(
+    async (sessionId: string) => {
+      const ok = await confirm({
+        title: "Delete Client Session?",
+        message: "Delete this Client Session? This cannot be undone.",
+        confirmLabel: "Delete",
+        tone: "danger",
+      });
+      if (!ok) return;
+      await supabase.from("time_entries").delete().eq("session_id", sessionId);
+      await supabase.from("client_session_entries").delete().eq("session_id", sessionId);
+      await supabase.from("client_sessions").delete().eq("id", sessionId);
+      setClientSessions((prev) => prev.filter((session) => session.id !== sessionId));
+    },
+    [confirm],
+  );
 
   return (
     <div className="min-h-screen text-[#333333] pb-20 font-sans">
@@ -803,7 +873,7 @@ export default function TimeTrackingPage() {
                   return (
                     <div
                       key={`session-${session.sessionId}`}
-                      className="rounded-xl border border-gray-100 px-4 py-3 shadow-sm"
+                      className="group rounded-xl border border-gray-100 px-4 py-3 shadow-sm"
                     >
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="flex items-start gap-2">
@@ -826,21 +896,44 @@ export default function TimeTrackingPage() {
                           </button>
                           <div>
                             <p className="text-sm font-bold text-[#333333]">
-                              Client session
+                              Client Session
                             </p>
                             <p className="text-xs text-gray-400">
                               {session.clientLabel}
                             </p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-xs font-bold text-gray-500">
-                            {formatEntryTime(new Date(session.startMs).toISOString())} -{" "}
-                            {formatEntryTime(new Date(session.endMs).toISOString())}
-                          </p>
-                          <p className="text-sm font-mono text-[#333333]">
-                            {formatHms(session.totalSeconds)}
-                          </p>
+                        <div className="flex items-center gap-3 text-right">
+                          <button
+                            type="button"
+                            disabled={session.hasTaskChildren}
+                            title={
+                              session.hasTaskChildren
+                                ? "Delete task entries first"
+                                : "Delete session"
+                            }
+                            className={`opacity-0 transition-opacity group-hover:opacity-100 text-gray-300 ${
+                              session.hasTaskChildren
+                                ? "cursor-not-allowed"
+                                : "hover:text-red-500"
+                            }`}
+                            onClick={() => {
+                              if (!session.hasTaskChildren) {
+                                void deleteSession(session.sessionId);
+                              }
+                            }}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                          <div>
+                            <p className="text-xs font-bold text-gray-500">
+                              {formatEntryTime(new Date(session.startMs).toISOString())} -{" "}
+                              {formatEntryTime(new Date(session.endMs).toISOString())}
+                            </p>
+                            <p className="text-sm font-mono text-[#333333]">
+                              {formatHms(session.totalSeconds)}
+                            </p>
+                          </div>
                         </div>
                       </div>
 
@@ -849,24 +942,34 @@ export default function TimeTrackingPage() {
                           {session.entries.map((entry) => (
                             <div
                               key={entry.id}
-                              className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-gray-50 px-3 py-2"
+                              className="group flex flex-wrap items-center justify-between gap-3 rounded-lg bg-gray-50 px-3 py-2"
                             >
                               <div>
                                 <p className="text-sm font-semibold text-[#333333]">
-                                  {entry.task_id ? entryTaskLabel(entry) : "Unassigned time"}
+                                  {entry.task_id ? entryTaskLabel(entry) : "Client Work"}
                                 </p>
                                 <p className="text-xs text-gray-400">
                                   {entryClientLabel(entry)}
                                 </p>
                               </div>
-                              <div className="text-right">
-                                <p className="text-xs font-bold text-gray-500">
-                                  {formatEntryTime(entry.started_at)} -{" "}
-                                  {formatEntryTime(entry.ended_at)}
-                                </p>
-                                <p className="text-sm font-mono text-[#333333]">
-                                  {formatHms(entry.duration_minutes * 60)}
-                                </p>
+                              <div className="flex items-center gap-3 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => deleteTimeEntry(entry)}
+                                  className="opacity-0 transition-opacity group-hover:opacity-100 text-gray-400 hover:text-red-500"
+                                  title="Delete entry"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                                <div>
+                                  <p className="text-xs font-bold text-gray-500">
+                                    {formatEntryTime(entry.started_at)} -{" "}
+                                    {formatEntryTime(entry.ended_at)}
+                                  </p>
+                                  <p className="text-sm font-mono text-[#333333]">
+                                    {formatHms(entry.duration_minutes * 60)}
+                                  </p>
+                                </div>
                               </div>
                             </div>
                           ))}
@@ -879,7 +982,7 @@ export default function TimeTrackingPage() {
                 {groupedEntries.standalone.map((entry) => (
                   <div
                     key={entry.id}
-                    className="flex flex-col gap-2 rounded-xl border border-gray-100 px-4 py-3 shadow-sm"
+                    className="group flex flex-col gap-2 rounded-xl border border-gray-100 px-4 py-3 shadow-sm"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
@@ -890,14 +993,24 @@ export default function TimeTrackingPage() {
                           {entryClientLabel(entry)}
                         </p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-xs font-bold text-gray-500">
-                          {formatEntryTime(entry.started_at)} -{" "}
-                          {formatEntryTime(entry.ended_at)}
-                        </p>
-                        <p className="text-sm font-mono text-[#333333]">
-                          {formatHms(entry.duration_minutes * 60)}
-                        </p>
+                      <div className="flex items-center gap-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => deleteTimeEntry(entry)}
+                          className="opacity-0 transition-opacity group-hover:opacity-100 text-gray-400 hover:text-red-500"
+                          title="Delete entry"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                        <div>
+                          <p className="text-xs font-bold text-gray-500">
+                            {formatEntryTime(entry.started_at)} -{" "}
+                            {formatEntryTime(entry.ended_at)}
+                          </p>
+                          <p className="text-sm font-mono text-[#333333]">
+                            {formatHms(entry.duration_minutes * 60)}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>

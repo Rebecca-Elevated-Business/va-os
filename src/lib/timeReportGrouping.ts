@@ -33,7 +33,12 @@ const toMs = (value: string) => new Date(value).getTime();
 
 const isUnassignedEntry = (entry: ReportEntryBase) => {
   if (entry.task_id) return false;
-  return entry.task_title.toLowerCase().includes("client session");
+  const title = entry.task_title.toLowerCase();
+  return (
+    title.includes("client session") ||
+    title.includes("client work") ||
+    title.includes("unassigned")
+  );
 };
 
 const buildEntryKey = (entry: ReportEntryBase, index: number) =>
@@ -89,7 +94,7 @@ export const buildReportDisplayEntries = (
         key: buildEntryKey(entry, display.length),
         entry_date: entry.entry_date,
         task_title: isUnassignedEntry(entry)
-          ? "Unassigned time"
+          ? "Client Work"
           : entry.task_title,
         duration_seconds: entry.duration_seconds,
         notes: entry.notes ?? null,
@@ -106,7 +111,7 @@ export const buildReportDisplayEntries = (
     display.push({
       key: `session-${block.sessionId}`,
       entry_date: new Date(block.startMs).toISOString(),
-      task_title: "Client session",
+      task_title: "Client Session",
       duration_seconds: totalSeconds,
       notes: null,
       level: 0,
@@ -118,7 +123,7 @@ export const buildReportDisplayEntries = (
         key: buildEntryKey(entry, index),
         entry_date: entry.entry_date,
         task_title: isUnassignedEntry(entry)
-          ? "Unassigned time"
+          ? "Client Work"
           : entry.task_title,
         duration_seconds: entry.duration_seconds,
         notes: entry.notes ?? null,

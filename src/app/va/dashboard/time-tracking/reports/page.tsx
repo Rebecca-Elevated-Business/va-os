@@ -331,7 +331,7 @@ export default function TimeReportsPage() {
       entry_date: entry.started_at,
       task_title:
         entry.tasks?.task_name ||
-        (entry.client_id ? "Client session (unassigned)" : "Untitled task"),
+        (entry.client_id ? "Client Work" : "Untitled task"),
       duration_seconds: entry.duration_minutes * 60,
       notes: includeNotes ? entry.notes || null : null,
       source_time_entry_id: entry.id,
