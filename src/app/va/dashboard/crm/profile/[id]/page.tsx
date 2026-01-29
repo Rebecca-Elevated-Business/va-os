@@ -729,6 +729,7 @@ export default function ClientProfilePage({
         return;
       }
       await stopSession();
+      await loadTimeEntries(activeRange.start, activeRange.end);
       return;
     }
     await startSession(client.id);
