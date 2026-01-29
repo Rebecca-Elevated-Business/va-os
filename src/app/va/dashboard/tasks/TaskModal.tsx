@@ -147,7 +147,7 @@ export default function TaskModal({
   );
   const [viewerId, setViewerId] = useState<string>("");
   const [viewerName, setViewerName] = useState<string>("");
-  const { confirm } = usePrompt();
+  const { confirm, alert } = usePrompt();
 
   useEffect(() => {
     const loadViewer = async () => {
@@ -230,9 +230,15 @@ export default function TaskModal({
         .eq("id", task.id)
         .select("*, clients(business_name, surname)")
         .single();
-      if (error && error.message?.toLowerCase().includes("details")) {
-        const { details: ignoredDetails, ...fallbackPayload } = payload;
+      if (
+        error &&
+        error.message &&
+        (error.message.toLowerCase().includes("details") ||
+          error.message.toLowerCase().includes("shared_with_client"))
+      ) {
+        const { details: ignoredDetails, shared_with_client: ignoredShared, ...fallbackPayload } = payload;
         void ignoredDetails;
+        void ignoredShared;
         ({ data, error } = await supabase
           .from("tasks")
           .update(fallbackPayload)
@@ -242,6 +248,11 @@ export default function TaskModal({
       }
       if (error) {
         console.error("Failed to update task", error);
+        await alert({
+          title: "Task not saved",
+          message: error.message || "Unknown error updating task.",
+          tone: "danger",
+        });
         return;
       }
       if (data) {
@@ -285,9 +296,22 @@ export default function TaskModal({
         .insert([insertPayload])
         .select("*, clients(business_name, surname)")
         .single();
-      if (error && error.message?.toLowerCase().includes("details")) {
-        const { details: ignoredDetails, ...fallbackPayload } = insertPayload;
+      if (
+        error &&
+        error.message &&
+        (error.message.toLowerCase().includes("details") ||
+          error.message.toLowerCase().includes("shared_with_client") ||
+          error.message.toLowerCase().includes("created_by_client"))
+      ) {
+        const {
+          details: ignoredDetails,
+          shared_with_client: ignoredShared,
+          created_by_client: ignoredCreatedByClient,
+          ...fallbackPayload
+        } = insertPayload;
         void ignoredDetails;
+        void ignoredShared;
+        void ignoredCreatedByClient;
         ({ data, error } = await supabase
           .from("tasks")
           .insert([fallbackPayload])
@@ -296,6 +320,11 @@ export default function TaskModal({
       }
       if (error) {
         console.error("Failed to create task", error);
+        await alert({
+          title: "Task not created",
+          message: error.message || "Unknown error creating task.",
+          tone: "danger",
+        });
         return;
       }
       if (data) {
