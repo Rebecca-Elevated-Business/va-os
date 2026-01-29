@@ -318,9 +318,11 @@ export default function TimeTrackingPage() {
     if (isSessionRunning) {
       if (sessionClientId && sessionClientId !== activeClientId) {
         await startSession(sessionClientId);
+        await loadEntries(activeRange.start, activeRange.end);
         return;
       }
       await stopSession();
+      await loadEntries(activeRange.start, activeRange.end);
       return;
     }
     if (!sessionClientId) return;
