@@ -60,10 +60,23 @@ export default function VADashboardLayout({
       // Success: User is a VA
       setAuthorized(true);
 
-      // Fetch Inbox Badge Count
+      // Fetch Inbox Badge Count (scoped to this VA's clients)
+      const { data: clientRows } = await supabase
+        .from("clients")
+        .select("id")
+        .eq("va_id", session.user.id);
+
+      const clientIds = (clientRows || []).map((row) => row.id);
+
+      if (clientIds.length === 0) {
+        setUnreadCount(0);
+        return;
+      }
+
       const { count } = await supabase
         .from("client_requests")
-        .select("*", { count: "exact", head: true })
+        .select("id", { count: "exact", head: true })
+        .in("client_id", clientIds)
         .eq("is_read", false)
         .eq("is_completed", false);
 

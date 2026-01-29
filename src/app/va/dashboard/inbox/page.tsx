@@ -136,7 +136,7 @@ export default function VAInboxPage() {
     document: "Document Uploaded",
     work: "Work Request",
     onboarding: "Onboarding Complete",
-    task_created: "Task Created",
+    task_created: "Task Added",
     task_note: "Task Note",
     task_status: "Task Status Update",
     task_updated: "Task Updated",
@@ -147,10 +147,10 @@ export default function VAInboxPage() {
     document: "bg-emerald-50 text-emerald-700 border-emerald-100",
     work: "bg-amber-50 text-amber-700 border-amber-100",
     onboarding: "bg-violet-50 text-violet-700 border-violet-100",
-    task_created: "bg-indigo-50 text-indigo-700 border-indigo-100",
+    task_created: "bg-green-50 text-green-700 border-green-100",
     task_note: "bg-purple-50 text-purple-700 border-purple-100",
     task_status: "bg-sky-50 text-sky-700 border-sky-100",
-    task_updated: "bg-teal-50 text-teal-700 border-teal-100",
+    task_updated: "bg-lime-50 text-lime-700 border-lime-100",
     task_deleted: "bg-red-50 text-red-700 border-red-100",
   };
   const getTypeLabel = (type: string) =>

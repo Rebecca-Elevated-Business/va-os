@@ -326,7 +326,7 @@ export default function ClientDashboard() {
     }
     await notifyVa({
       client_id: safeClientId,
-      type: "work",
+      type: "task_created",
       message: `Task created: ${clientName || "Client"} added "${payload.task_name}"`,
       status: "new",
       is_read: false,
@@ -360,7 +360,7 @@ export default function ClientDashboard() {
     }
     await notifyVa({
       client_id: safeClientId,
-      type: "work",
+      type: "task_updated",
       message: `Task updated: ${clientName || "Client"} updated "${payload.task_name}"`,
       status: "new",
       is_read: false,
