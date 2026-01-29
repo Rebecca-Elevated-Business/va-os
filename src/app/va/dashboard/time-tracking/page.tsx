@@ -877,23 +877,25 @@ export default function TimeTrackingPage() {
                     >
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="flex items-start gap-2">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setExpandedSessions((prev) => ({
-                                ...prev,
-                                [session.sessionId]: !isExpanded,
-                              }))
-                            }
-                            className="mt-0.5 text-gray-400 hover:text-gray-600"
-                          >
-                            <ChevronDown
-                              size={16}
-                              className={`transition-transform ${
-                                isExpanded ? "rotate-0" : "-rotate-90"
-                              }`}
-                            />
-                          </button>
+                          {session.hasTaskChildren && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedSessions((prev) => ({
+                                  ...prev,
+                                  [session.sessionId]: !isExpanded,
+                                }))
+                              }
+                              className="mt-0.5 text-gray-400 hover:text-gray-600"
+                            >
+                              <ChevronDown
+                                size={16}
+                                className={`transition-transform ${
+                                  isExpanded ? "rotate-0" : "-rotate-90"
+                                }`}
+                              />
+                            </button>
+                          )}
                           <div>
                             <p className="text-sm font-bold text-[#333333]">
                               Client Session
@@ -937,7 +939,7 @@ export default function TimeTrackingPage() {
                         </div>
                       </div>
 
-                      {isExpanded && (
+                      {session.hasTaskChildren && isExpanded && (
                         <div className="mt-3 space-y-2 border-l border-gray-100 pl-4">
                           {session.entries.map((entry) => (
                             <div
