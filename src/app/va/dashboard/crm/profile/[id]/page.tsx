@@ -183,6 +183,7 @@ export default function ClientProfilePage({
   const [taskView, setTaskView] = useState<"list" | "kanban">("list");
   const [vaDisplayName, setVaDisplayName] = useState("");
   const [vaUserId, setVaUserId] = useState<string | null>(null);
+  const [showSharedOnly, setShowSharedOnly] = useState(false);
 
   // Time Tracking State
   const [timeEntries, setTimeEntries] = useState<ClientTimeEntry[]>([]);
@@ -1133,6 +1134,7 @@ export default function ClientProfilePage({
   const visibleTasks = tasks.filter((task) => {
     const status = getTaskStatus(task);
     if (!statusFilter.includes(status)) return false;
+    if (showSharedOnly && !task.shared_with_client) return false;
     return true;
   });
   const statusOrder = ["todo", "up_next", "in_progress", "completed"];
@@ -1814,6 +1816,15 @@ export default function ClientProfilePage({
                     );
                   })}
                 </div>
+                <label className="flex items-center gap-2 px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-[#333333] shadow-sm">
+                  <input
+                    type="checkbox"
+                    checked={showSharedOnly}
+                    onChange={(e) => setShowSharedOnly(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 text-[#9d4edd] focus:ring-[#9d4edd]"
+                  />
+                  Shared only
+                </label>
                 <div className="relative" ref={statusFilterRef}>
                   <button
                     onClick={() =>
