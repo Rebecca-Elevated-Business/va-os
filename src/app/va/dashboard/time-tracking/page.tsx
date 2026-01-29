@@ -958,7 +958,7 @@ export default function TimeTrackingPage() {
                                 <button
                                   type="button"
                                   onClick={() => deleteTimeEntry(entry)}
-                                  className="opacity-0 transition-opacity group-hover:opacity-100 text-gray-400 hover:text-red-500"
+                                  className="opacity-0 transition-opacity hover:opacity-100 text-gray-400 hover:text-red-500"
                                   title="Delete entry"
                                 >
                                   <Trash2 size={16} />
