@@ -326,8 +326,8 @@ export default function ClientDashboard() {
     }
     await notifyVa({
       client_id: safeClientId,
-      type: "task_created",
-      message: `${clientName || "Client"} added a task: ${payload.task_name}`,
+      type: "work",
+      message: `Task created: ${clientName || "Client"} added "${payload.task_name}"`,
       status: "new",
       is_read: false,
       is_completed: false,
@@ -360,8 +360,8 @@ export default function ClientDashboard() {
     }
     await notifyVa({
       client_id: safeClientId,
-      type: "task_updated",
-      message: `${clientName || "Client"} updated a task: ${payload.task_name}`,
+      type: "work",
+      message: `Task updated: ${clientName || "Client"} updated "${payload.task_name}"`,
       status: "new",
       is_read: false,
       is_completed: false,
@@ -389,8 +389,8 @@ export default function ClientDashboard() {
     }
     await notifyVa({
       client_id: safeClientId,
-      type: "task_status",
-      message: `${clientName || "Client"} updated a task status: ${task?.task_name || "Task"}`,
+      type: "work",
+      message: `Task status changed: ${clientName || "Client"} set "${task?.task_name || "Task"}" to ${status}`,
       status: "new",
       is_read: false,
       is_completed: false,
@@ -432,8 +432,8 @@ export default function ClientDashboard() {
     }
     await notifyVa({
       client_id: safeClientId,
-      type: "task_deleted",
-      message: `${clientName || "Client"} deleted a task: ${task?.task_name || "Task"}`,
+      type: "work",
+      message: `Task deleted: ${clientName || "Client"} removed "${task?.task_name || "Task"}"`,
       status: "new",
       is_read: false,
       is_completed: false,
