@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useMemo, useState, use } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { buildReportDisplayEntries } from "@/lib/timeReportGrouping";
 
 type ReportEntry = {
   id: string;
@@ -10,6 +11,16 @@ type ReportEntry = {
   task_title: string;
   duration_seconds: number;
   notes: string | null;
+  session_id?: string | null;
+  task_id?: string | null;
+};
+
+type ReportEntryRow = ReportEntry & {
+  source_time_entry_id?: string | null;
+  time_entries?: {
+    session_id: string | null;
+    task_id: string | null;
+  } | null;
 };
 
 type ReportDetail = {
@@ -73,6 +84,11 @@ export default function TimeReportDetailPage({
   const [entries, setEntries] = useState<ReportEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const displayEntries = useMemo(
+    () => buildReportDisplayEntries(entries),
+    [entries],
+  );
+
   useEffect(() => {
     async function loadReport() {
       const { data: reportData } = await supabase
@@ -92,10 +108,22 @@ export default function TimeReportDetailPage({
 
       const { data: entryData } = await supabase
         .from("time_report_entries")
-        .select("id, entry_date, task_title, duration_seconds, notes")
+        .select(
+          "id, entry_date, task_title, duration_seconds, notes, source_time_entry_id, time_entries(session_id, task_id)",
+        )
         .eq("report_id", id)
         .order("entry_date", { ascending: false });
-      setEntries((entryData as ReportEntry[]) || []);
+      const normalized =
+        (entryData as ReportEntryRow[] | null)?.map((entry) => ({
+          id: entry.id,
+          entry_date: entry.entry_date,
+          task_title: entry.task_title,
+          duration_seconds: entry.duration_seconds,
+          notes: entry.notes ?? null,
+          session_id: entry.time_entries?.session_id ?? null,
+          task_id: entry.time_entries?.task_id ?? null,
+        })) || [];
+      setEntries(normalized);
       setLoading(false);
     }
     loadReport();
@@ -173,14 +201,20 @@ export default function TimeReportDetailPage({
             No entries found in this report.
           </div>
         ) : (
-          entries.map((entry) => (
+          displayEntries.map((entry) => (
             <div
-              key={entry.id}
+              key={entry.key}
               className="border border-gray-100 rounded-xl p-4"
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-bold text-[#333333]">
+                <div className={entry.level > 0 ? "pl-4" : ""}>
+                  <p
+                    className={`text-sm ${
+                      entry.is_session_summary
+                        ? "font-bold text-[#333333]"
+                        : "font-semibold text-[#333333]"
+                    }`}
+                  >
                     {entry.task_title}
                   </p>
                   <p className="text-xs text-gray-400">

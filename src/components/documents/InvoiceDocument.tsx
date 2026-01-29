@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import type { InvoiceContent } from "@/lib/invoiceContent";
+import { buildReportDisplayEntries } from "@/lib/timeReportGrouping";
 
 export type InvoiceTimeReport = {
   id: string;
@@ -17,6 +18,8 @@ export type InvoiceTimeReport = {
     task_title: string;
     duration_seconds: number;
     notes: string | null;
+    session_id?: string | null;
+    task_id?: string | null;
   }[];
 };
 
@@ -98,9 +101,13 @@ export default function InvoiceDocument({
     .filter(Boolean)
     .join("\n");
 
-  const entriesPreview = report?.entries.slice(0, 8) || [];
+  const reportDisplayEntries = useMemo(
+    () => (report ? buildReportDisplayEntries(report.entries) : []),
+    [report],
+  );
+  const entriesPreview = reportDisplayEntries.slice(0, 8);
   const hasMoreEntries =
-    report && report.entries.length > entriesPreview.length;
+    report && reportDisplayEntries.length > entriesPreview.length;
 
   return (
     <div className="bg-white shadow-2xl rounded-4xl overflow-hidden border border-gray-100 print:shadow-none print:border-none">
@@ -289,12 +296,18 @@ export default function InvoiceDocument({
                   <div className="space-y-3">
                     {entriesPreview.map((entry) => (
                       <div
-                        key={`${entry.entry_date}-${entry.task_title}`}
+                        key={entry.key}
                         className="rounded-2xl border border-gray-100 bg-white p-4"
                       >
                         <div className="flex items-center justify-between gap-3">
-                          <div>
-                            <p className="font-semibold text-gray-800">
+                          <div className={entry.level > 0 ? "pl-4" : ""}>
+                            <p
+                              className={`${
+                                entry.is_session_summary
+                                  ? "font-bold text-gray-900"
+                                  : "font-semibold text-gray-800"
+                              }`}
+                            >
                               {entry.task_title}
                             </p>
                             <p className="text-xs text-gray-400">

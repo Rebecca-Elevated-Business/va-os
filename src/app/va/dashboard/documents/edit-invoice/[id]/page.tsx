@@ -201,13 +201,25 @@ export default function EditInvoicePage({
 
       const { data: entryData } = await supabase
         .from("time_report_entries")
-        .select("entry_date, task_title, duration_seconds, notes")
+        .select(
+          "entry_date, task_title, duration_seconds, notes, time_entries(session_id, task_id)",
+        )
         .eq("report_id", reportData.id)
         .order("entry_date", { ascending: false });
 
       setReportDetails({
         ...(reportData as TimeReportOption),
-        entries: (entryData as InvoiceTimeReport["entries"]) || [],
+        entries:
+          (entryData as (InvoiceTimeReport["entries"] & {
+            time_entries?: { session_id: string | null; task_id: string | null } | null;
+          })[] | null)?.map((entry) => ({
+            entry_date: entry.entry_date,
+            task_title: entry.task_title,
+            duration_seconds: entry.duration_seconds,
+            notes: entry.notes ?? null,
+            session_id: entry.time_entries?.session_id ?? null,
+            task_id: entry.time_entries?.task_id ?? null,
+          })) || [],
       });
     }
     loadReportDetail();

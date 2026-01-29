@@ -11,6 +11,7 @@ import { useClientSession } from "../ClientSessionContext";
 type TimeEntry = {
   id: string;
   task_id: string | null;
+  session_id?: string | null;
   client_id?: string | null;
   started_at: string;
   ended_at: string;
@@ -77,6 +78,9 @@ export default function TimeTrackingPage() {
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [loadingEntries, setLoadingEntries] = useState(true);
   const [isEntriesOpen, setIsEntriesOpen] = useState(true);
+  const [expandedSessions, setExpandedSessions] = useState<Record<string, boolean>>(
+    {},
+  );
 
   const [filterStart, setFilterStart] = useState(getTodayDateString());
   const [filterEnd, setFilterEnd] = useState(getTodayDateString());
@@ -156,7 +160,7 @@ export default function TimeTrackingPage() {
     const { data } = await supabase
       .from("time_entries")
       .select(
-        "id, task_id, client_id, started_at, ended_at, duration_minutes, created_at",
+        "id, task_id, session_id, client_id, started_at, ended_at, duration_minutes, created_at",
       )
         .eq("va_id", userId)
         .gte("started_at", startIso)
@@ -431,6 +435,61 @@ export default function TimeTrackingPage() {
     }
     return "Internal";
   };
+
+  const groupedEntries = useMemo(() => {
+    const sessionMap = new Map<string, TimeEntry[]>();
+    const standalone: TimeEntry[] = [];
+
+    timeEntries.forEach((entry) => {
+      if (entry.session_id) {
+        const bucket = sessionMap.get(entry.session_id) || [];
+        bucket.push(entry);
+        sessionMap.set(entry.session_id, bucket);
+      } else {
+        standalone.push(entry);
+      }
+    });
+
+    const sessions = Array.from(sessionMap.entries()).map(
+      ([sessionId, entries]) => {
+        const sortedEntries = [...entries].sort(
+          (a, b) => new Date(a.started_at).getTime() - new Date(b.started_at).getTime(),
+        );
+        const startMs = new Date(sortedEntries[0]?.started_at || 0).getTime();
+        const endMs = new Date(
+          sortedEntries[sortedEntries.length - 1]?.ended_at ||
+            sortedEntries[sortedEntries.length - 1]?.started_at ||
+            0,
+        ).getTime();
+        const totalSeconds = sortedEntries.reduce(
+          (sum, entry) => sum + entry.duration_minutes * 60,
+          0,
+        );
+        const clientEntry =
+          sortedEntries.find((entry) => entry.client_id) ||
+          sortedEntries.find((entry) => entry.task_id) ||
+          sortedEntries[0];
+        const clientLabel = clientEntry ? entryClientLabel(clientEntry) : "Client";
+
+        return {
+          sessionId,
+          entries: sortedEntries,
+          totalSeconds,
+          startMs,
+          endMs,
+          clientLabel,
+        };
+      },
+    );
+
+    sessions.sort((a, b) => b.endMs - a.endMs);
+
+    const sortedStandalone = [...standalone].sort(
+      (a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime(),
+    );
+
+    return { sessions, standalone: sortedStandalone };
+  }, [timeEntries, entryClientLabel]);
 
   return (
     <div className="min-h-screen text-[#333333] pb-20 font-sans">
@@ -735,8 +794,86 @@ export default function TimeTrackingPage() {
                 No time entries. Start tracking to see your history.
               </div>
             ) : (
-              <div className="space-y-3">
-                {timeEntries.map((entry) => (
+              <div className="space-y-4">
+                {groupedEntries.sessions.map((session) => {
+                  const isExpanded = expandedSessions[session.sessionId] ?? true;
+                  return (
+                    <div
+                      key={`session-${session.sessionId}`}
+                      className="rounded-xl border border-gray-100 px-4 py-3 shadow-sm"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-start gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedSessions((prev) => ({
+                                ...prev,
+                                [session.sessionId]: !isExpanded,
+                              }))
+                            }
+                            className="mt-0.5 text-gray-400 hover:text-gray-600"
+                          >
+                            <ChevronDown
+                              size={16}
+                              className={`transition-transform ${
+                                isExpanded ? "rotate-0" : "-rotate-90"
+                              }`}
+                            />
+                          </button>
+                          <div>
+                            <p className="text-sm font-bold text-[#333333]">
+                              Client session
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              {session.clientLabel}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs font-bold text-gray-500">
+                            {formatEntryTime(new Date(session.startMs).toISOString())} -{" "}
+                            {formatEntryTime(new Date(session.endMs).toISOString())}
+                          </p>
+                          <p className="text-sm font-mono text-[#333333]">
+                            {formatHms(session.totalSeconds)}
+                          </p>
+                        </div>
+                      </div>
+
+                      {isExpanded && (
+                        <div className="mt-3 space-y-2 border-l border-gray-100 pl-4">
+                          {session.entries.map((entry) => (
+                            <div
+                              key={entry.id}
+                              className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-gray-50 px-3 py-2"
+                            >
+                              <div>
+                                <p className="text-sm font-semibold text-[#333333]">
+                                  {entry.task_id ? entryTaskLabel(entry) : "Unassigned time"}
+                                </p>
+                                <p className="text-xs text-gray-400">
+                                  {entryClientLabel(entry)}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xs font-bold text-gray-500">
+                                  {formatEntryTime(entry.started_at)} -{" "}
+                                  {formatEntryTime(entry.ended_at)}
+                                </p>
+                                <p className="text-sm font-mono text-[#333333]">
+                                  {formatHms(entry.duration_minutes * 60)}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {groupedEntries.standalone.map((entry) => (
                   <div
                     key={entry.id}
                     className="flex flex-col gap-2 rounded-xl border border-gray-100 px-4 py-3 shadow-sm"

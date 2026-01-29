@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Search } from "lucide-react";
 import { usePrompt } from "@/components/ui/PromptProvider";
+import { buildReportDisplayEntries } from "@/lib/timeReportGrouping";
 
 type ClientSearchResult = {
   id: string;
@@ -16,11 +17,13 @@ type ClientSearchResult = {
 
 type TimeEntryRow = {
   id: string;
+  task_id: string | null;
   started_at: string;
   ended_at: string;
   duration_minutes: number;
   notes?: string | null;
   client_id?: string | null;
+  session_id?: string | null;
   tasks: {
     task_name: string;
     client_id: string | null;
@@ -44,6 +47,8 @@ type ReportPreview = {
     duration_seconds: number;
     notes: string | null;
     source_time_entry_id: string;
+    session_id?: string | null;
+    task_id?: string | null;
   }[];
 };
 
@@ -118,6 +123,11 @@ export default function TimeReportsPage() {
   const [savingReport, setSavingReport] = useState(false);
   const [savedReports, setSavedReports] = useState<SavedReportRow[]>([]);
   const [archivedReports, setArchivedReports] = useState<SavedReportRow[]>([]);
+
+  const previewDisplayEntries = useMemo(() => {
+    if (!preview) return [];
+    return buildReportDisplayEntries(preview.entries);
+  }, [preview]);
   const [loadingSavedReports, setLoadingSavedReports] = useState(true);
   const [viewArchived, setViewArchived] = useState(false);
   const [archiveClientSearch, setArchiveClientSearch] = useState("");
@@ -262,7 +272,7 @@ export default function TimeReportsPage() {
     const { data } = await supabase
       .from("time_entries")
       .select(
-        "*, client_id, tasks(task_name, client_id, clients(business_name, surname))"
+        "id, task_id, session_id, client_id, started_at, ended_at, duration_minutes, notes, tasks(task_name, client_id, clients(business_name, surname))"
       )
       .eq("va_id", userId)
       .or(`tasks.client_id.eq.${selectedClient.id},client_id.eq.${selectedClient.id}`)
@@ -279,6 +289,8 @@ export default function TimeReportsPage() {
       duration_seconds: entry.duration_minutes * 60,
       notes: includeNotes ? entry.notes || null : null,
       source_time_entry_id: entry.id,
+      session_id: entry.session_id ?? null,
+      task_id: entry.task_id ?? null,
     }));
 
     const totalSeconds = snapshot.reduce(
@@ -618,14 +630,20 @@ export default function TimeReportsPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {preview.entries.map((entry) => (
+                  {previewDisplayEntries.map((entry) => (
                     <div
-                      key={entry.source_time_entry_id}
+                      key={entry.key}
                       className="border border-gray-100 rounded-xl p-4"
                     >
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-bold text-[#333333]">
+                        <div className={entry.level > 0 ? "pl-4" : ""}>
+                          <p
+                            className={`text-sm ${
+                              entry.is_session_summary
+                                ? "font-bold text-[#333333]"
+                                : "font-semibold text-[#333333]"
+                            }`}
+                          >
                             {entry.task_title}
                           </p>
                           <p className="text-xs text-gray-400">

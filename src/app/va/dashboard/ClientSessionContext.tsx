@@ -156,6 +156,7 @@ export function ClientSessionProvider({ children }: { children: React.ReactNode 
         await supabase.from("time_entries").insert([
           {
             task_id: entry.task_id,
+            session_id: session.id,
             client_id: session.client_id,
             va_id: session.va_id,
             started_at: entry.started_at,
