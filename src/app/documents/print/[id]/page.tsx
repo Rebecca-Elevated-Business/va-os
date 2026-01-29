@@ -75,7 +75,7 @@ export default function DocumentPrintPage({
       setInvoiceReport({
         ...(reportData as InvoiceTimeReport),
         entries:
-          (entryData as (InvoiceTimeReport["entries"] & {
+          (entryData as (InvoiceTimeReport["entries"][number] & {
             time_entries?: { session_id: string | null; task_id: string | null } | null;
           })[] | null)?.map((entry) => ({
             entry_date: entry.entry_date,
