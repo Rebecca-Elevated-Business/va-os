@@ -271,6 +271,28 @@ export default function ClientDashboard() {
 
   const ensureClientReady = () => Boolean(clientId && vaId);
 
+  const notifyVa = async (payload: {
+    client_id: string;
+    type: string;
+    message: string;
+    status: string;
+    is_read: boolean;
+    is_completed: boolean;
+    is_starred: boolean;
+  }) => {
+    const { error } = await supabase.from("client_requests").insert([payload]);
+    if (error) {
+      await alert({
+        title: "Notification failed",
+        message: `Your task was saved, but we couldn't notify your VA.\nError: ${error.message}`,
+        tone: "danger",
+      });
+      console.error("client_requests insert error:", error);
+      return false;
+    }
+    return true;
+  };
+
   const createTask = async (payload: {
     task_name: string;
     details: string | null;
@@ -302,17 +324,15 @@ export default function ClientDashboard() {
       });
       return;
     }
-    await supabase.from("client_requests").insert([
-      {
-        client_id: safeClientId,
-        type: "task_created",
-        message: `${clientName || "Client"} added a task: ${payload.task_name}`,
-        status: "new",
-        is_read: false,
-        is_completed: false,
-        is_starred: false,
-      },
-    ]);
+    await notifyVa({
+      client_id: safeClientId,
+      type: "task_created",
+      message: `${clientName || "Client"} added a task: ${payload.task_name}`,
+      status: "new",
+      is_read: false,
+      is_completed: false,
+      is_starred: false,
+    });
     await fetchTasks(safeClientId);
   };
 
@@ -338,17 +358,15 @@ export default function ClientDashboard() {
       });
       return;
     }
-    await supabase.from("client_requests").insert([
-      {
-        client_id: safeClientId,
-        type: "task_updated",
-        message: `${clientName || "Client"} updated a task: ${payload.task_name}`,
-        status: "new",
-        is_read: false,
-        is_completed: false,
-        is_starred: false,
-      },
-    ]);
+    await notifyVa({
+      client_id: safeClientId,
+      type: "task_updated",
+      message: `${clientName || "Client"} updated a task: ${payload.task_name}`,
+      status: "new",
+      is_read: false,
+      is_completed: false,
+      is_starred: false,
+    });
     await fetchTasks(safeClientId);
   };
 
@@ -369,17 +387,15 @@ export default function ClientDashboard() {
       });
       return;
     }
-    await supabase.from("client_requests").insert([
-      {
-        client_id: safeClientId,
-        type: "task_status",
-        message: `${clientName || "Client"} updated a task status: ${task?.task_name || "Task"}`,
-        status: "new",
-        is_read: false,
-        is_completed: false,
-        is_starred: false,
-      },
-    ]);
+    await notifyVa({
+      client_id: safeClientId,
+      type: "task_status",
+      message: `${clientName || "Client"} updated a task status: ${task?.task_name || "Task"}`,
+      status: "new",
+      is_read: false,
+      is_completed: false,
+      is_starred: false,
+    });
     if (task) {
       await supabase.from("task_activity").insert([
         {
@@ -414,17 +430,15 @@ export default function ClientDashboard() {
       });
       return;
     }
-    await supabase.from("client_requests").insert([
-      {
-        client_id: safeClientId,
-        type: "task_deleted",
-        message: `${clientName || "Client"} deleted a task: ${task?.task_name || "Task"}`,
-        status: "new",
-        is_read: false,
-        is_completed: false,
-        is_starred: false,
-      },
-    ]);
+    await notifyVa({
+      client_id: safeClientId,
+      type: "task_deleted",
+      message: `${clientName || "Client"} deleted a task: ${task?.task_name || "Task"}`,
+      status: "new",
+      is_read: false,
+      is_completed: false,
+      is_starred: false,
+    });
     if (task) {
       await supabase.from("task_activity").insert([
         {

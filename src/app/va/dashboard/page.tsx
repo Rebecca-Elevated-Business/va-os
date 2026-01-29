@@ -168,6 +168,23 @@ export default function VADashboard() {
   }, [fetchDashboardData]);
 
   useEffect(() => {
+    const channel = supabase
+      .channel("va-dashboard-client-requests")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "client_requests" },
+        () => {
+          fetchDashboardData();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchDashboardData]);
+
+  useEffect(() => {
     if (!userId) return;
     const timer = setTimeout(() => {
       loadTimeEntries(todayDate);

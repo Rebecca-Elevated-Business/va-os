@@ -165,8 +165,9 @@ export default function CRMPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden text-black">
-        <table className="w-full text-left border-collapse">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 text-black">
+        <div className="w-full overflow-x-auto overflow-y-hidden">
+          <table className="min-w-[900px] w-full text-left border-collapse">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-100">
               <th className="px-6 py-4 text-sm font-semibold text-gray-700">
@@ -272,7 +273,8 @@ export default function CRMPage() {
               ))
             )}
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
     </div>
   );

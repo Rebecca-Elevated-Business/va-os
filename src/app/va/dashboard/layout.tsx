@@ -171,11 +171,11 @@ export default function VADashboardLayout({
                   <span className="text-[13.5px] truncate">{item.name}</span>
                 )}
 
-                {item.name === "Inbox" && unreadCount > 0 && (
+                {item.name === "Inbox" && unreadCount > 0 && !isCollapsed && (
                   <span
                     className={`ml-auto text-[12px] font-semibold shrink-0 ${
                       isActive ? "text-white" : "text-[#555555]"
-                    } ${isCollapsed ? "absolute top-2 right-4" : ""}`}
+                    }`}
                   >
                     ({unreadCount})
                   </span>
