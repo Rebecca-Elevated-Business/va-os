@@ -351,7 +351,7 @@ export default function ClientProfilePage({
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [isDocTypeFilterOpen]);
 
   useEffect(() => {
     if (!isDocTypeFilterOpen) return;
@@ -2628,7 +2628,7 @@ export default function ClientProfilePage({
                 createPortal(
                   <div
                     ref={docTypeMenuRef}
-                    className="fixed w-56 bg-white border border-gray-100 rounded-xl shadow-xl z-[100] p-3 animate-in fade-in slide-in-from-top-2"
+                    className="fixed w-56 bg-white border border-gray-100 rounded-xl shadow-xl z-100 p-3 animate-in fade-in slide-in-from-top-2"
                     style={{
                       top: docTypeMenuPosition.top,
                       left: docTypeMenuPosition.left,
