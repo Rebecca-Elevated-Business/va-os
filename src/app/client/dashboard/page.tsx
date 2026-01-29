@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { usePrompt } from "@/components/ui/PromptProvider";
+import ClientTaskBoard from "./ClientTaskBoard";
+import ClientTaskModal, { type ClientTask } from "./ClientTaskModal";
+import { format } from "date-fns";
 
 // Define strict types for the dashboard
 type Agreement = {
@@ -19,6 +22,20 @@ type ClientDocument = {
   status: string;
   created_at: string;
 };
+type ClientNotification = {
+  id: string;
+  message: string;
+  type: string;
+  is_read: boolean;
+  created_at: string;
+};
+
+const STATUS_OPTIONS = [
+  { id: "todo", label: "To Do" },
+  { id: "up_next", label: "Up Next" },
+  { id: "in_progress", label: "In Progress" },
+  { id: "completed", label: "Completed" },
+];
 
 export default function ClientDashboard() {
   const router = useRouter();
@@ -28,10 +45,15 @@ export default function ClientDashboard() {
   // Data State
   const [agreements, setAgreements] = useState<Agreement[]>([]);
   const [documents, setDocuments] = useState<ClientDocument[]>([]);
+  const [tasks, setTasks] = useState<ClientTask[]>([]);
+  const [clientNotifications, setClientNotifications] = useState<
+    ClientNotification[]
+  >([]);
 
   // Dashboard Logic State
   const [clientName, setClientName] = useState("");
   const [clientId, setClientId] = useState<string | null>(null);
+  const [vaId, setVaId] = useState<string | null>(null);
 
   // DEBUG STATE
   const [debugInfo, setDebugInfo] = useState<string>("Initializing...");
@@ -40,6 +62,39 @@ export default function ClientDashboard() {
   const [requestType, setRequestType] = useState<"work" | "meeting">("work");
   const [requestMessage, setRequestMessage] = useState("");
   const [sending, setSending] = useState(false);
+
+  // Task Modal State
+  const [taskModalOpen, setTaskModalOpen] = useState(false);
+  const [activeTask, setActiveTask] = useState<ClientTask | null>(null);
+  const [taskModalStatus, setTaskModalStatus] = useState("todo");
+
+  const fetchTasks = useCallback(async (clientIdValue: string) => {
+    const { data } = await supabase
+      .from("tasks")
+      .select(
+        "id, task_name, details, status, client_id, shared_with_client, created_by_client, client_deleted_at",
+      )
+      .eq("client_id", clientIdValue)
+      .eq("shared_with_client", true)
+      .is("deleted_at", null)
+      .is("client_deleted_at", null)
+      .order("created_at", { ascending: false });
+    const normalized = ((data as ClientTask[]) || []).map((task) => ({
+      ...task,
+      status: task.status || "todo",
+    }));
+    setTasks(normalized);
+  }, []);
+
+  const fetchNotifications = useCallback(async (clientIdValue: string) => {
+    const { data } = await supabase
+      .from("client_notifications")
+      .select("id, message, type, is_read, created_at")
+      .eq("client_id", clientIdValue)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    setClientNotifications((data as ClientNotification[]) || []);
+  }, []);
 
   useEffect(() => {
     async function loadClientData() {
@@ -57,7 +112,7 @@ export default function ClientDashboard() {
       // 2. Find the CRM Client record linked to this Login ID
       const { data: client, error: clientError } = await supabase
         .from("clients")
-        .select("id, first_name")
+        .select("id, first_name, surname, va_id")
         .eq("auth_user_id", user.id)
         .single();
 
@@ -69,6 +124,7 @@ export default function ClientDashboard() {
       } else if (client) {
         setClientName(client.first_name);
         setClientId(client.id);
+        setVaId(client.va_id || null);
         setDebugInfo(
           `SUCCESS: Linked to Client ID: ${client.id} (${client.first_name})`
         );
@@ -92,13 +148,59 @@ export default function ClientDashboard() {
           .order("created_at", { ascending: false });
 
         if (docs) setDocuments(docs as ClientDocument[]);
+
+        // 5. Fetch Tasks + Notifications
+        await Promise.all([
+          fetchTasks(client.id),
+          fetchNotifications(client.id),
+        ]);
       } else {
         setDebugInfo(`WARNING: No client record found for Auth ID ${user.id}`);
       }
       setLoading(false);
     }
     loadClientData();
-  }, [router]);
+  }, [router, fetchTasks, fetchNotifications]);
+
+  useEffect(() => {
+    if (!clientId) return;
+    const taskChannel = supabase
+      .channel(`client-tasks-${clientId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "tasks",
+          filter: `client_id=eq.${clientId}`,
+        },
+        () => {
+          void fetchTasks(clientId);
+        },
+      )
+      .subscribe();
+
+    const notifChannel = supabase
+      .channel(`client-notifications-${clientId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "client_notifications",
+          filter: `client_id=eq.${clientId}`,
+        },
+        () => {
+          void fetchNotifications(clientId);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(taskChannel);
+      supabase.removeChannel(notifChannel);
+    };
+  }, [clientId, fetchTasks, fetchNotifications]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -153,6 +255,201 @@ export default function ClientDashboard() {
     }
   };
 
+  const openNewTaskModal = (status: string) => {
+    if (!clientId) return;
+    setActiveTask(null);
+    setTaskModalStatus(status);
+    setTaskModalOpen(true);
+  };
+
+  const openTaskModal = (task: ClientTask) => {
+    if (!clientId) return;
+    setActiveTask(task);
+    setTaskModalStatus(task.status || "todo");
+    setTaskModalOpen(true);
+  };
+
+  const ensureClientReady = () => Boolean(clientId && vaId);
+
+  const createTask = async (payload: {
+    task_name: string;
+    details: string | null;
+    status: string;
+  }) => {
+    if (!ensureClientReady()) return;
+    const safeClientId = clientId;
+    const safeVaId = vaId;
+    if (!safeClientId || !safeVaId) return;
+    const { error } = await supabase.from("tasks").insert([
+      {
+        client_id: safeClientId,
+        va_id: safeVaId,
+        task_name: payload.task_name,
+        details: payload.details,
+        status: payload.status,
+        is_completed: payload.status === "completed",
+        total_minutes: 0,
+        is_running: false,
+        shared_with_client: true,
+        created_by_client: true,
+      },
+    ]);
+    if (error) {
+      await alert({
+        title: "Task not created",
+        message: error.message,
+        tone: "danger",
+      });
+      return;
+    }
+    await supabase.from("client_requests").insert([
+      {
+        client_id: safeClientId,
+        type: "task_created",
+        message: `${clientName || "Client"} added a task: ${payload.task_name}`,
+        status: "new",
+        is_read: false,
+        is_completed: false,
+        is_starred: false,
+      },
+    ]);
+    await fetchTasks(safeClientId);
+  };
+
+  const updateTask = async (
+    taskId: string,
+    payload: { task_name: string; details: string | null },
+  ) => {
+    if (!ensureClientReady()) return;
+    const safeClientId = clientId;
+    if (!safeClientId) return;
+    const { error } = await supabase
+      .from("tasks")
+      .update({
+        task_name: payload.task_name,
+        details: payload.details,
+      })
+      .eq("id", taskId);
+    if (error) {
+      await alert({
+        title: "Task not updated",
+        message: error.message,
+        tone: "danger",
+      });
+      return;
+    }
+    await supabase.from("client_requests").insert([
+      {
+        client_id: safeClientId,
+        type: "task_updated",
+        message: `${clientName || "Client"} updated a task: ${payload.task_name}`,
+        status: "new",
+        is_read: false,
+        is_completed: false,
+        is_starred: false,
+      },
+    ]);
+    await fetchTasks(safeClientId);
+  };
+
+  const updateTaskStatus = async (taskId: string, status: string) => {
+    if (!ensureClientReady()) return;
+    const safeClientId = clientId;
+    if (!safeClientId) return;
+    const task = tasks.find((t) => t.id === taskId);
+    const { error } = await supabase
+      .from("tasks")
+      .update({ status, is_completed: status === "completed" })
+      .eq("id", taskId);
+    if (error) {
+      await alert({
+        title: "Status not updated",
+        message: error.message,
+        tone: "danger",
+      });
+      return;
+    }
+    await supabase.from("client_requests").insert([
+      {
+        client_id: safeClientId,
+        type: "task_status",
+        message: `${clientName || "Client"} updated a task status: ${task?.task_name || "Task"}`,
+        status: "new",
+        is_read: false,
+        is_completed: false,
+        is_starred: false,
+      },
+    ]);
+    if (task) {
+      await supabase.from("task_activity").insert([
+        {
+          task_id: task.id,
+          actor_type: "client",
+          actor_id: safeClientId,
+          action: "status_changed",
+          meta: { to: status },
+        },
+      ]);
+    }
+    await fetchTasks(safeClientId);
+  };
+
+  const deleteTask = async (taskId: string) => {
+    if (!ensureClientReady()) return;
+    const safeClientId = clientId;
+    if (!safeClientId) return;
+    const task = tasks.find((t) => t.id === taskId);
+    const { error } = await supabase
+      .from("tasks")
+      .update({
+        client_deleted_at: new Date().toISOString(),
+        client_deleted_by: safeClientId,
+      })
+      .eq("id", taskId);
+    if (error) {
+      await alert({
+        title: "Task not deleted",
+        message: error.message,
+        tone: "danger",
+      });
+      return;
+    }
+    await supabase.from("client_requests").insert([
+      {
+        client_id: safeClientId,
+        type: "task_deleted",
+        message: `${clientName || "Client"} deleted a task: ${task?.task_name || "Task"}`,
+        status: "new",
+        is_read: false,
+        is_completed: false,
+        is_starred: false,
+      },
+    ]);
+    if (task) {
+      await supabase.from("task_activity").insert([
+        {
+          task_id: task.id,
+          actor_type: "client",
+          actor_id: safeClientId,
+          action: "task_deleted",
+        },
+      ]);
+    }
+    await fetchTasks(safeClientId);
+  };
+
+  const markNotificationRead = async (notificationId: string) => {
+    await supabase
+      .from("client_notifications")
+      .update({ is_read: true })
+      .eq("id", notificationId);
+    setClientNotifications((prev) =>
+      prev.map((n) =>
+        n.id === notificationId ? { ...n, is_read: true } : n,
+      ),
+    );
+  };
+
   if (loading)
     return (
       <div className="p-10 text-gray-500 italic">Loading your portal...</div>
@@ -187,7 +484,81 @@ export default function ClientDashboard() {
           </button>
         </div>
 
-        {/* SECTION 1: DOCUMENT VAULT */}
+        {/* SECTION 1: TASK BOARD */}
+        <section className="bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-8 border-b border-gray-100 bg-purple-50 flex justify-between items-center">
+            <div>
+              <h2 className="text-lg font-black text-[#9d4edd] uppercase tracking-wide">
+                Task Board
+              </h2>
+              <p className="text-xs text-gray-500 font-medium mt-1">
+                Track shared work with your VA.
+              </p>
+            </div>
+            <button
+              onClick={() => openNewTaskModal("todo")}
+              className="px-4 py-2 text-xs font-bold text-white bg-[#9d4edd] rounded-lg shadow-sm hover:bg-[#7b2cbf]"
+            >
+              Add Task
+            </button>
+          </div>
+          <div className="p-6">
+            {tasks.length === 0 ? (
+              <div className="p-8 text-center text-gray-400 italic text-sm">
+                No shared tasks yet.
+              </div>
+            ) : (
+              <ClientTaskBoard
+                tasks={tasks}
+                onOpenTask={openTaskModal}
+                onAddTask={openNewTaskModal}
+                onStatusChange={updateTaskStatus}
+              />
+            )}
+          </div>
+        </section>
+
+        {/* SECTION 2: NOTIFICATIONS */}
+        <section className="bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-8 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+            <div>
+              <h2 className="text-lg font-black text-[#333333] uppercase tracking-wide">
+                Notifications
+              </h2>
+              <p className="text-xs text-gray-500 font-medium mt-1">
+                Updates from your VA.
+              </p>
+            </div>
+          </div>
+          <div className="p-6">
+            {clientNotifications.length === 0 ? (
+              <div className="p-6 text-center text-gray-400 italic text-sm">
+                No updates yet.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {clientNotifications.map((note) => (
+                  <button
+                    key={note.id}
+                    onClick={() => markNotificationRead(note.id)}
+                    className={`w-full text-left rounded-xl border px-4 py-3 transition-colors ${
+                      note.is_read
+                        ? "border-gray-100 bg-white text-gray-500"
+                        : "border-purple-100 bg-purple-50/40 text-[#333333]"
+                    }`}
+                  >
+                    <div className="text-xs font-bold">{note.message}</div>
+                    <div className="text-[10px] text-gray-400 mt-1">
+                      {format(new Date(note.created_at), "d MMM, HH:mm")}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* SECTION 3: DOCUMENT VAULT */}
         <section className="bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-8 border-b border-gray-100 bg-purple-50 flex justify-between items-center">
             <div>
@@ -395,6 +766,21 @@ export default function ClientDashboard() {
             </form>
           </div>
         </section>
+
+        <ClientTaskModal
+          key={`${activeTask?.id || "new"}-${taskModalStatus}-${taskModalOpen ? "open" : "closed"}`}
+          isOpen={taskModalOpen}
+          onClose={() => setTaskModalOpen(false)}
+          task={activeTask}
+          defaultStatus={taskModalStatus}
+          clientId={clientId || ""}
+          clientName={clientName || "Client"}
+          statusOptions={STATUS_OPTIONS}
+          onCreate={createTask}
+          onUpdate={updateTask}
+          onStatusChange={updateTaskStatus}
+          onDelete={deleteTask}
+        />
       </div>
     </main>
   );

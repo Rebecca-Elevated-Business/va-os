@@ -20,10 +20,13 @@ import {
   MoreHorizontal,
   Edit2,
   Trash2,
+  List,
+  Trello,
 } from "lucide-react";
 import { format } from "date-fns";
 import TaskModal from "../../../tasks/TaskModal";
 import { STATUS_CONFIG, Task } from "../../../tasks/types";
+import KanbanView from "../../../tasks/KanbanView";
 import { useClientSession } from "../../../ClientSessionContext";
 
 // --- TYPES ---
@@ -175,7 +178,11 @@ export default function ClientProfilePage({
   const [taskModalTask, setTaskModalTask] = useState<Task | null>(null);
   const [taskModalPrefill, setTaskModalPrefill] = useState<{
     parentTaskId?: string | null;
+    status?: string;
   } | null>(null);
+  const [taskView, setTaskView] = useState<"list" | "kanban">("list");
+  const [vaDisplayName, setVaDisplayName] = useState("");
+  const [vaUserId, setVaUserId] = useState<string | null>(null);
 
   // Time Tracking State
   const [timeEntries, setTimeEntries] = useState<ClientTimeEntry[]>([]);
@@ -318,6 +325,23 @@ export default function ClientProfilePage({
       active = false;
     };
   }, [id, refreshData]);
+
+  useEffect(() => {
+    const loadVaProfile = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user?.id) return;
+      setVaUserId(user.id);
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("display_name, full_name")
+        .eq("id", user.id)
+        .single();
+      setVaDisplayName(profile?.display_name || profile?.full_name || "");
+    };
+    void loadVaProfile();
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -501,6 +525,31 @@ export default function ClientProfilePage({
           : item,
       ),
     );
+    if (
+      task.shared_with_client &&
+      task.client_id &&
+      task.status !== newStatus
+    ) {
+      await supabase.from("client_notifications").insert([
+        {
+          client_id: task.client_id,
+          task_id: task.id,
+          type: "task_status",
+          message: `${vaDisplayName || "Your VA"} updated your task: ${task.task_name}`,
+        },
+      ]);
+      if (vaUserId) {
+        await supabase.from("task_activity").insert([
+          {
+            task_id: task.id,
+            actor_type: "va",
+            actor_id: vaUserId,
+            action: "status_changed",
+            meta: { from: task.status, to: newStatus },
+          },
+        ]);
+      }
+    }
   };
 
   // 4. Update Client Info
@@ -711,7 +760,7 @@ export default function ClientProfilePage({
 
   const openTaskModal = (
     task?: Task,
-    options?: { parentTaskId?: string | null },
+    options?: { parentTaskId?: string | null; status?: string },
   ) => {
     setTaskModalTask(task || null);
     setTaskModalPrefill(options || null);
@@ -1741,6 +1790,30 @@ export default function ClientProfilePage({
                 </button>
               </div>
               <div className="flex flex-wrap items-center gap-3">
+                <div className="flex bg-gray-100 p-1 rounded-xl">
+                  {[
+                    { id: "list", label: "List", icon: List },
+                    { id: "kanban", label: "Kanban", icon: Trello },
+                  ].map((v) => {
+                    const Icon = v.icon;
+                    return (
+                      <button
+                        key={v.id}
+                        onClick={() =>
+                          setTaskView(v.id as "list" | "kanban")
+                        }
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                          taskView === v.id
+                            ? "bg-white text-[#9d4edd] shadow-sm"
+                            : "text-gray-500 hover:text-black"
+                        }`}
+                      >
+                        <Icon size={14} />
+                        {v.label}
+                      </button>
+                    );
+                  })}
+                </div>
                 <div className="relative" ref={statusFilterRef}>
                   <button
                     onClick={() =>
@@ -1794,6 +1867,8 @@ export default function ClientProfilePage({
               </div>
             </div>
 
+              {taskView === "list" && (
+              <>
               {/* Tasks Table */}
               <div className="space-y-4">
                 <div className="rounded-lg border border-gray-200 bg-white">
@@ -1948,6 +2023,10 @@ export default function ClientProfilePage({
                                         dropTargetId === task.id
                                           ? "bg-purple-50/80 ring-1 ring-purple-100"
                                           : ""
+                                      } ${
+                                        task.client_deleted_at
+                                          ? "bg-red-50/60"
+                                          : ""
                                       }`}
                                       onClick={() => openTaskModal(task)}
                                     >
@@ -1981,6 +2060,18 @@ export default function ClientProfilePage({
                                               }`}
                                             >
                                               {task.task_name}
+                                            </div>
+                                            <div className="mt-1 flex items-center gap-2">
+                                              {task.shared_with_client && (
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-semibold bg-purple-50 text-purple-700 border border-purple-100">
+                                                  Shared
+                                                </span>
+                                              )}
+                                              {task.client_deleted_at && (
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-semibold bg-red-50 text-red-600 border border-red-100">
+                                                  Client deleted
+                                                </span>
+                                              )}
                                             </div>
                                             <div className="flex gap-3 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                               <button
@@ -2377,6 +2468,25 @@ export default function ClientProfilePage({
                   })
                 )}
               </div>
+              </>
+              )}
+
+              {taskView === "kanban" && (
+                <KanbanView
+                  tasks={visibleTasks}
+                  onUpdateStatus={(taskId, newStatus) => {
+                    const target = tasks.find((t) => t.id === taskId);
+                    if (target) {
+                      updateTaskStatus(target, newStatus);
+                    }
+                  }}
+                  onToggleTimer={toggleTimer}
+                  onAddTask={(status) => openTaskModal(undefined, { status })}
+                  filterStatus={statusFilter}
+                  onOpenTask={(task) => openTaskModal(task)}
+                  onDeleteTask={deleteTask}
+                />
+              )}
           </div>
         </section>
       )}
@@ -2604,6 +2714,7 @@ export default function ClientProfilePage({
           clientId: client.id,
           category: "client",
           parentTaskId: taskModalPrefill?.parentTaskId,
+          status: taskModalPrefill?.status,
         }}
         variant="side"
         onSaved={() => refreshData()}

@@ -16,6 +16,10 @@ export interface Task {
   sort_order?: number | null;
   created_at?: string;
   deleted_at?: string | null;
+  shared_with_client?: boolean;
+  created_by_client?: boolean;
+  client_deleted_at?: string | null;
+  client_deleted_by?: string | null;
   details?: string;
   category?: string; // <--- This is the magic line that fixes the errors
   clients?: {

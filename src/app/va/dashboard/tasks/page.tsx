@@ -112,6 +112,7 @@ export default function TaskCentrePage() {
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
+  const [vaDisplayName, setVaDisplayName] = useState<string>("");
 
   // Filters (Default: Completed is HIDDEN)
   const [filterStatus, setFilterStatus] = useState<string[]>([
@@ -131,6 +132,7 @@ export default function TaskCentrePage() {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [isColumnsOpen, setIsColumnsOpen] = useState(false);
   const columnsRef = useRef<HTMLDivElement>(null);
+  const [showSharedOnly, setShowSharedOnly] = useState(false);
 
   const [statusOrder, setStatusOrder] = useState<string[]>(
     normalizeStatusOrder(DEFAULT_STATUS_ORDER),
@@ -234,6 +236,14 @@ export default function TaskCentrePage() {
       .eq("va_id", user.id);
 
     if (clientData) setClients(clientData);
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("display_name, full_name")
+      .eq("id", user.id)
+      .single();
+    if (profile) {
+      setVaDisplayName(profile.display_name || profile.full_name || "");
+    }
     setLoading(false);
   }, [searchParams]);
 
@@ -373,8 +383,43 @@ export default function TaskCentrePage() {
 
 
   const updateTaskStatus = async (taskId: string, newStatus: string) => {
-    await supabase.from("tasks").update({ status: newStatus }).eq("id", taskId);
-    patchTask(taskId, { status: newStatus });
+    const task = tasks.find((t) => t.id === taskId);
+    await supabase
+      .from("tasks")
+      .update({
+        status: newStatus,
+        is_completed: newStatus === "completed",
+      })
+      .eq("id", taskId);
+    patchTask(taskId, {
+      status: newStatus,
+      is_completed: newStatus === "completed",
+    });
+    if (
+      task?.shared_with_client &&
+      task.client_id &&
+      task.status !== newStatus
+    ) {
+      await supabase.from("client_notifications").insert([
+        {
+          client_id: task.client_id,
+          task_id: task.id,
+          type: "task_status",
+          message: `${vaDisplayName || "Your VA"} updated your task: ${task.task_name}`,
+        },
+      ]);
+      if (userId) {
+        await supabase.from("task_activity").insert([
+          {
+            task_id: task.id,
+            actor_type: "va",
+            actor_id: userId,
+            action: "status_changed",
+            meta: { from: task.status, to: newStatus },
+          },
+        ]);
+      }
+    }
     setActionMenuId(null);
   };
 
@@ -384,7 +429,7 @@ export default function TaskCentrePage() {
   };
 
   const handleKanbanUpdate = (taskId: string, newStatus: string) => {
-    updateTask(taskId, { status: newStatus });
+    updateTaskStatus(taskId, newStatus);
   };
 
   const deleteTask = async (taskId: string) => {
@@ -514,7 +559,11 @@ export default function TaskCentrePage() {
         category: "personal",
       }
     : null;
-  const filteredTasks = tasks.filter((task) => matchesTypeFilter(task));
+  const filteredTasks = tasks.filter(
+    (task) =>
+      matchesTypeFilter(task) &&
+      (!showSharedOnly || Boolean(task.shared_with_client)),
+  );
   const listTasks =
     draftTask && matchesTypeFilter(draftTask)
       ? [draftTask, ...filteredTasks]
@@ -621,6 +670,7 @@ export default function TaskCentrePage() {
     setSelectedClientId(null);
     setClientSearch("");
     setIsClientModalOpen(false);
+    setShowSharedOnly(false);
   };
 
   const selectedClient = selectedClientId
@@ -791,6 +841,17 @@ export default function TaskCentrePage() {
             )}
           </div>
 
+          {/* Shared Filter */}
+          <label className="flex items-center gap-2 px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-[#333333] shadow-sm">
+            <input
+              type="checkbox"
+              checked={showSharedOnly}
+              onChange={(e) => setShowSharedOnly(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-[#9d4edd] focus:ring-[#9d4edd]"
+            />
+            Shared only
+          </label>
+
           {/* 4. Columns */}
           {view === "list" && (
             <div className="relative" ref={columnsRef}>
@@ -950,6 +1011,7 @@ export default function TaskCentrePage() {
                               CATEGORY_CONFIG[catKey] ||
                               CATEGORY_CONFIG["personal"];
                             const isDraft = task.id === draftTaskId;
+                            const clientDeleted = Boolean(task.client_deleted_at);
 
                             return (
                               <div
@@ -961,7 +1023,9 @@ export default function TaskCentrePage() {
                                 className={`grid items-center gap-x-4 px-4 py-3 transition-colors cursor-pointer ${
                                   activeTaskId === task.id
                                     ? "bg-purple-50/70 ring-1 ring-purple-100"
-                                    : "hover:bg-gray-50/70"
+                                    : clientDeleted
+                                      ? "bg-red-50/60 hover:bg-red-50/80"
+                                      : "hover:bg-gray-50/70"
                                 }`}
                                 style={{ gridTemplateColumns: columnTemplate }}
                               >
@@ -994,6 +1058,16 @@ export default function TaskCentrePage() {
                                     >
                                       {catConfig.label}
                                     </span>
+                                    {task.shared_with_client && (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-100">
+                                        Shared
+                                      </span>
+                                    )}
+                                    {clientDeleted && (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-50 text-red-600 border border-red-100">
+                                        Client deleted
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
 

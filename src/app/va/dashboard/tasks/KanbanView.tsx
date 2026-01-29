@@ -115,7 +115,11 @@ export default function KanbanView({
                       }, 0);
                     }}
                     onClick={() => handleCardClick(task)}
-                    className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-purple-100 transition-all group"
+                    className={`bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-purple-100 transition-all group ${
+                      task.client_deleted_at
+                        ? "bg-red-50/60 border-red-100"
+                        : ""
+                    }`}
                   >
                     {/* Card Header: Category & Context */}
                     <div className="flex justify-between items-start mb-3">
@@ -124,6 +128,16 @@ export default function KanbanView({
                           {task.category ||
                             (task.client_id ? "Client" : "Personal")}
                         </span>
+                        {task.shared_with_client && (
+                          <span className="text-[9px] font-black tracking-widest text-purple-700 bg-purple-50 border border-purple-100 rounded-full px-2 py-0.5">
+                            Shared
+                          </span>
+                        )}
+                        {task.client_deleted_at && (
+                          <span className="text-[9px] font-black tracking-widest text-red-600 bg-red-50 border border-red-100 rounded-full px-2 py-0.5">
+                            Client deleted
+                          </span>
+                        )}
                       </div>
                       <div className="relative">
                         <button

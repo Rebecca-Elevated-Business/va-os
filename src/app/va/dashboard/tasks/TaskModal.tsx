@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { supabase } from "@/lib/supabase";
 import { STATUS_CONFIG, Task } from "./types";
+import TaskNotes from "@/components/tasks/TaskNotes";
+import { usePrompt } from "@/components/ui/PromptProvider";
 
 type ClientOption = {
   id: string;
@@ -140,6 +142,30 @@ export default function TaskModal({
   const [formEndDate, setFormEndDate] = useState(initialState.formEndDate);
   const [formEndTime, setFormEndTime] = useState(initialState.formEndTime);
   const [formStatus, setFormStatus] = useState(initialState.formStatus);
+  const [formShared, setFormShared] = useState(
+    Boolean(task?.shared_with_client),
+  );
+  const [viewerId, setViewerId] = useState<string>("");
+  const [viewerName, setViewerName] = useState<string>("");
+  const { confirm } = usePrompt();
+
+  useEffect(() => {
+    const loadViewer = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user?.id) return;
+      setViewerId(user.id);
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("display_name, full_name")
+        .eq("id", user.id)
+        .single();
+      const name = profile?.display_name || profile?.full_name || "";
+      setViewerName(name);
+    };
+    void loadViewer();
+  }, []);
 
   const clientSearch = formClientQuery.trim().toLowerCase();
   const filteredClients = clientSearch
@@ -181,6 +207,8 @@ export default function TaskModal({
         : null;
     const isCompleted = formStatus === "completed";
     const detailsValue = formDetails.trim();
+    const sharedValue =
+      formCategory === "client" && clientId ? formShared : false;
     const payload = {
       task_name: formTaskName,
       details: detailsValue ? detailsValue : null,
@@ -192,6 +220,7 @@ export default function TaskModal({
       scheduled_start: scheduledStart,
       scheduled_end: scheduledEnd,
       category: formCategory,
+      shared_with_client: sharedValue,
     };
 
     if (task) {
@@ -216,6 +245,29 @@ export default function TaskModal({
         return;
       }
       if (data) {
+        if (
+          task?.shared_with_client &&
+          task.client_id &&
+          task.status !== formStatus
+        ) {
+          await supabase.from("client_notifications").insert([
+            {
+              client_id: task.client_id,
+              task_id: task.id,
+              type: "task_status",
+              message: `${viewerName || "Your VA"} updated your task: ${data.task_name}`,
+            },
+          ]);
+          await supabase.from("task_activity").insert([
+            {
+              task_id: task.id,
+              actor_type: "va",
+              actor_id: user.id,
+              action: "status_changed",
+              meta: { from: task.status, to: formStatus },
+            },
+          ]);
+        }
         onSaved?.(data as Task);
       } else {
         await onFallbackRefresh?.();
@@ -226,6 +278,7 @@ export default function TaskModal({
         ...payload,
         total_minutes: 0,
         is_running: false,
+        created_by_client: false,
       };
       let { data, error } = await supabase
         .from("tasks")
@@ -298,6 +351,44 @@ export default function TaskModal({
         </div>
 
         <div className="space-y-4">
+          {task?.client_deleted_at && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
+              <p className="font-bold">
+                This task has been deleted by your client.
+              </p>
+              <p className="mt-1">Delete from your files?</p>
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const ok = await confirm({
+                      title: "Delete task?",
+                      message: "Delete this task from your files?",
+                      confirmLabel: "Delete",
+                      tone: "danger",
+                    });
+                    if (!ok) return;
+                    const deletedAt = new Date().toISOString();
+                    await supabase
+                      .from("tasks")
+                      .update({ deleted_at: deletedAt })
+                      .eq("id", task.id);
+                    onClose();
+                  }}
+                  className="px-3 py-1.5 rounded-md bg-red-600 text-white text-[10px] font-bold"
+                >
+                  Delete
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-3 py-1.5 rounded-md border border-red-200 text-[10px] font-bold"
+                >
+                  Keep
+                </button>
+              </div>
+            </div>
+          )}
           <div>
             <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-1 ml-1">
               Task Title
@@ -339,6 +430,7 @@ export default function TaskModal({
                     if (cat.id !== "client") {
                       setFormClientId("");
                       setFormClientQuery("");
+                      setFormShared(false);
                     }
                   }}
                   className={`flex-1 py-2 rounded-lg text-[10px] font-bold transition-all border ${
@@ -461,6 +553,29 @@ export default function TaskModal({
               {task ? "Save Changes" : "Create Task"}
             </button>
           </div>
+          {(formCategory === "client" || lockClient) && (
+            <label className="flex items-center gap-2 text-[10px] font-bold text-[#333333] mt-2">
+              <input
+                type="checkbox"
+                checked={formShared}
+                onChange={(e) => setFormShared(e.target.checked)}
+                disabled={!formClientId && !task?.client_id}
+                className="h-4 w-4 rounded border-gray-300 text-[#9d4edd] focus:ring-[#9d4edd]"
+              />
+              Mark as shared
+            </label>
+          )}
+          {task?.id && viewerId && (
+            <TaskNotes
+              taskId={task.id}
+              taskName={task.task_name}
+              viewerType="va"
+              viewerId={viewerId}
+              viewerName={viewerName}
+              clientId={task.client_id || null}
+              sharedWithClient={Boolean(task.shared_with_client)}
+            />
+          )}
         </div>
       </div>
     </div>
