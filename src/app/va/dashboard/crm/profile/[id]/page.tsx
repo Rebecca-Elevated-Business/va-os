@@ -1,6 +1,14 @@
 "use client";
 
-import { useState, useEffect, use, useCallback, useRef, Fragment } from "react";
+import {
+  useState,
+  useEffect,
+  use,
+  useCallback,
+  useRef,
+  Fragment,
+  useMemo,
+} from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
@@ -60,9 +68,31 @@ type Agreement = {
   last_updated_at: string;
 };
 
+type ClientTimeEntry = {
+  id: string;
+  task_id: string | null;
+  session_id: string | null;
+  client_id: string | null;
+  started_at: string;
+  ended_at: string;
+  duration_minutes: number;
+  created_at: string;
+  tasks: {
+    task_name: string;
+  } | null;
+};
+
+type ClientSessionRow = {
+  id: string;
+  client_id: string;
+  started_at: string;
+  ended_at: string | null;
+};
+
 const CRM_TABS = [
   { id: "overview", label: "Overview" },
   { id: "tasks", label: "Task Manager" },
+  { id: "time", label: "Time Tracker" },
   { id: "docs", label: "Documents & Workflows" },
   { id: "notes", label: "Internal Notes" },
 ] as const;
@@ -79,6 +109,17 @@ const formatHms = (totalSeconds: number) => {
     "0",
   )}:${String(seconds).padStart(2, "0")}`;
 };
+
+const getTodayDateString = () => {
+  const now = new Date();
+  return now.toISOString().split("T")[0];
+};
+
+const formatEntryTime = (value: string) =>
+  new Date(value).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
   const formatDateCell = (dateValue: string | null | undefined) => {
     if (!dateValue) return "-";
@@ -135,6 +176,21 @@ export default function ClientProfilePage({
   const [taskModalPrefill, setTaskModalPrefill] = useState<{
     parentTaskId?: string | null;
   } | null>(null);
+
+  // Time Tracking State
+  const [timeEntries, setTimeEntries] = useState<ClientTimeEntry[]>([]);
+  const [clientSessions, setClientSessions] = useState<ClientSessionRow[]>([]);
+  const [loadingEntries, setLoadingEntries] = useState(true);
+  const [expandedSessions, setExpandedSessions] = useState<Record<string, boolean>>(
+    {},
+  );
+  const [filterStart, setFilterStart] = useState(getTodayDateString());
+  const [filterEnd, setFilterEnd] = useState(getTodayDateString());
+  const [activeRange, setActiveRange] = useState({
+    start: getTodayDateString(),
+    end: getTodayDateString(),
+  });
+  const [isFilterActive, setIsFilterActive] = useState(false);
   // UI States
   const [isEditing, setIsEditing] = useState(false);
   const [portalManageOpen, setPortalManageOpen] = useState(false);
@@ -210,6 +266,47 @@ export default function ClientProfilePage({
     if (tasksData) setTasks(tasksData);
   }, [id]);
 
+  const loadTimeEntries = useCallback(
+    async (rangeStart: string, rangeEnd: string) => {
+      const startIso = new Date(`${rangeStart}T00:00:00`).toISOString();
+      const endIso = new Date(`${rangeEnd}T23:59:59.999`).toISOString();
+      setLoadingEntries(true);
+
+      const taskIds = tasks.map((task) => task.id);
+      let entryQuery = supabase
+        .from("time_entries")
+        .select(
+          "id, task_id, session_id, client_id, started_at, ended_at, duration_minutes, created_at",
+        )
+        .gte("started_at", startIso)
+        .lte("started_at", endIso)
+        .order("started_at", { ascending: false });
+
+      if (taskIds.length > 0) {
+        entryQuery = entryQuery.or(
+          `client_id.eq.${id},task_id.in.(${taskIds.join(",")})`,
+        );
+      } else {
+        entryQuery = entryQuery.eq("client_id", id);
+      }
+
+      const { data: entryData } = await entryQuery;
+
+      const { data: sessionData } = await supabase
+        .from("client_sessions")
+        .select("id, client_id, started_at, ended_at")
+        .eq("client_id", id)
+        .gte("started_at", startIso)
+        .lte("started_at", endIso)
+        .order("started_at", { ascending: false });
+
+      setTimeEntries((entryData as ClientTimeEntry[]) || []);
+      setClientSessions((sessionData as ClientSessionRow[]) || []);
+      setLoadingEntries(false);
+    },
+    [id, tasks],
+  );
+
   useEffect(() => {
     let active = true;
     async function loadData() {
@@ -221,6 +318,13 @@ export default function ClientProfilePage({
       active = false;
     };
   }, [id, refreshData]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadTimeEntries(activeRange.start, activeRange.end);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [activeRange.end, activeRange.start, loadTimeEntries]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -832,6 +936,141 @@ export default function ClientProfilePage({
 
     return `${hrs}h ${mins}m ${secs}s`;
   };
+
+  const tasksById = useMemo(
+    () => new Map(tasks.map((task) => [task.id, task])),
+    [tasks],
+  );
+
+  const entryTaskLabel = (entry: ClientTimeEntry) => {
+    if (!entry.task_id) return "Client Work";
+    const task = tasksById.get(entry.task_id);
+    if (task?.task_name) return task.task_name;
+    if (entry.tasks?.task_name) return entry.tasks.task_name;
+    return "Untitled task";
+  };
+
+  const entryClientLabel = useCallback(() => {
+    if (client?.surname) return client.surname;
+    if (client?.business_name) return client.business_name;
+    return "Client";
+  }, [client]);
+
+  const groupedEntries = useMemo(() => {
+    const sessionMap = new Map<
+      string,
+      {
+        session: ClientSessionRow;
+        entries: ClientTimeEntry[];
+      }
+    >();
+
+    clientSessions.forEach((session) => {
+      sessionMap.set(session.id, { session, entries: [] });
+    });
+
+    const standalone: ClientTimeEntry[] = [];
+
+    timeEntries.forEach((entry) => {
+      if (entry.session_id) {
+        const bucket = sessionMap.get(entry.session_id);
+        if (bucket) {
+          bucket.entries.push(entry);
+        } else {
+          sessionMap.set(entry.session_id, {
+            session: {
+              id: entry.session_id,
+              client_id: entry.client_id || id,
+              started_at: entry.started_at,
+              ended_at: entry.ended_at,
+            },
+            entries: [entry],
+          });
+        }
+      } else {
+        standalone.push(entry);
+      }
+    });
+
+    const sessions = Array.from(sessionMap.values()).map(({ session, entries }) => {
+      const sortedEntries = [...entries].sort(
+        (a, b) => new Date(a.started_at).getTime() - new Date(b.started_at).getTime(),
+      );
+      const startMs = new Date(session.started_at).getTime();
+      const endMs = new Date(session.ended_at || session.started_at).getTime();
+      const totalSeconds =
+        session.ended_at && endMs >= startMs
+          ? Math.max(0, Math.floor((endMs - startMs) / 1000))
+          : sortedEntries.reduce(
+              (sum, entry) => sum + entry.duration_minutes * 60,
+              0,
+            );
+
+      return {
+        sessionId: session.id,
+        entries: sortedEntries,
+        totalSeconds,
+        startMs,
+        endMs,
+        clientLabel: entryClientLabel(),
+        hasTaskChildren: sortedEntries.some((entry) => Boolean(entry.task_id)),
+      };
+    });
+
+    sessions.sort((a, b) => b.endMs - a.endMs);
+
+    const sortedStandalone = [...standalone].sort(
+      (a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime(),
+    );
+
+    return { sessions, standalone: sortedStandalone };
+  }, [clientSessions, entryClientLabel, id, timeEntries]);
+
+  const applyFilter = () => {
+    if (!filterStart || !filterEnd) return;
+    setIsFilterActive(true);
+    setActiveRange({ start: filterStart, end: filterEnd });
+  };
+
+  const clearFilter = () => {
+    const today = getTodayDateString();
+    setIsFilterActive(false);
+    setFilterStart(today);
+    setFilterEnd(today);
+    setActiveRange({ start: today, end: today });
+  };
+
+  const deleteTimeEntry = useCallback(
+    async (entry: ClientTimeEntry) => {
+      const ok = await confirm({
+        title: "Delete time entry?",
+        message: "Delete this time entry? This cannot be undone.",
+        confirmLabel: "Delete",
+        tone: "danger",
+      });
+      if (!ok) return;
+      await supabase.from("time_entries").delete().eq("id", entry.id);
+      setTimeEntries((prev) => prev.filter((item) => item.id !== entry.id));
+    },
+    [confirm],
+  );
+
+  const deleteSession = useCallback(
+    async (sessionId: string) => {
+      const ok = await confirm({
+        title: "Delete Client Session?",
+        message: "Delete this Client Session? This cannot be undone.",
+        confirmLabel: "Delete",
+        tone: "danger",
+      });
+      if (!ok) return;
+      await supabase.from("time_entries").delete().eq("session_id", sessionId);
+      await supabase.from("client_session_entries").delete().eq("session_id", sessionId);
+      await supabase.from("client_sessions").delete().eq("id", sessionId);
+      setClientSessions((prev) => prev.filter((session) => session.id !== sessionId));
+    },
+    [confirm],
+  );
 
   if (loading) return <div className="p-10 text-black">Loading Profile...</div>;
   if (!client)
@@ -2140,6 +2379,211 @@ export default function ClientProfilePage({
           </div>
         </section>
       )}
+
+      {activeTab === "time" && (
+        <section className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
+          <div className="flex flex-wrap items-end justify-end gap-3">
+            <div className="flex flex-col text-xs font-semibold text-gray-500">
+              Start date
+              <input
+                type="date"
+                value={filterStart}
+                onChange={(event) => setFilterStart(event.target.value)}
+                className="mt-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-[#333333] focus:ring-2 focus:ring-[#9d4edd] outline-none"
+              />
+            </div>
+            <div className="flex flex-col text-xs font-semibold text-gray-500">
+              End date
+              <input
+                type="date"
+                value={filterEnd}
+                onChange={(event) => setFilterEnd(event.target.value)}
+                className="mt-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-[#333333] focus:ring-2 focus:ring-[#9d4edd] outline-none"
+              />
+            </div>
+            <button
+              onClick={applyFilter}
+              className="bg-[#9d4edd] text-white px-4 py-2.5 rounded-lg font-bold text-xs uppercase tracking-widest shadow-sm hover:bg-[#7b2cbf] transition-colors"
+            >
+              Search
+            </button>
+            {isFilterActive && (
+              <button
+                onClick={clearFilter}
+                className="text-xs font-bold text-gray-500 hover:text-[#9d4edd]"
+              >
+                Clear filter
+              </button>
+            )}
+          </div>
+
+          <div className="mt-6">
+            {loadingEntries ? (
+              <div className="text-sm text-gray-400 italic">Loading entries...</div>
+            ) : timeEntries.length === 0 ? (
+              <div className="text-sm text-gray-400 italic py-8 text-center">
+                No time entries. Start tracking to see your history.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {groupedEntries.sessions.map((session) => {
+                  const isExpanded = expandedSessions[session.sessionId] ?? true;
+                  return (
+                    <div
+                      key={`session-${session.sessionId}`}
+                      className="group rounded-xl border border-gray-100 px-4 py-3 shadow-sm"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-start gap-2">
+                          {session.hasTaskChildren && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedSessions((prev) => ({
+                                  ...prev,
+                                  [session.sessionId]: !isExpanded,
+                                }))
+                              }
+                              className="mt-0.5 text-gray-400 hover:text-gray-600"
+                            >
+                              <ChevronDown
+                                size={16}
+                                className={`transition-transform ${
+                                  isExpanded ? "rotate-0" : "-rotate-90"
+                                }`}
+                              />
+                            </button>
+                          )}
+                          <div>
+                            <p className="text-sm font-bold text-[#333333]">
+                              Client Session
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              {session.clientLabel}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 text-right">
+                          <button
+                            type="button"
+                            disabled={session.hasTaskChildren}
+                            title={
+                              session.hasTaskChildren
+                                ? "Delete task entries first"
+                                : "Delete session"
+                            }
+                            className={`opacity-0 transition-opacity group-hover:opacity-100 text-gray-300 ${
+                              session.hasTaskChildren
+                                ? "cursor-not-allowed"
+                                : "hover:text-red-500"
+                            }`}
+                            onClick={() => {
+                              if (!session.hasTaskChildren) {
+                                void deleteSession(session.sessionId);
+                              }
+                            }}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                          <div>
+                            <p className="text-xs font-bold text-gray-500">
+                              {formatEntryTime(
+                                new Date(session.startMs).toISOString(),
+                              )}{" "}
+                              -{" "}
+                              {formatEntryTime(new Date(session.endMs).toISOString())}
+                            </p>
+                            <p className="text-sm font-mono text-[#333333]">
+                              {formatHms(session.totalSeconds)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {session.hasTaskChildren && isExpanded && (
+                        <div className="mt-3 space-y-2 border-l border-gray-100 pl-4">
+                          {session.entries.map((entry) => (
+                            <div
+                              key={entry.id}
+                              className="group flex flex-wrap items-center justify-between gap-3 rounded-lg bg-gray-50 px-3 py-2"
+                            >
+                              <div>
+                                <p className="text-sm font-semibold text-[#333333]">
+                                  {entry.task_id ? entryTaskLabel(entry) : "Client Work"}
+                                </p>
+                                <p className="text-xs text-gray-400">
+                                  {entryClientLabel()}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-3 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => deleteTimeEntry(entry)}
+                                  className="opacity-0 transition-opacity hover:opacity-100 text-gray-400 hover:text-red-500"
+                                  title="Delete entry"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                                <div>
+                                  <p className="text-xs font-bold text-gray-500">
+                                    {formatEntryTime(entry.started_at)} -{" "}
+                                    {formatEntryTime(entry.ended_at)}
+                                  </p>
+                                  <p className="text-sm font-mono text-[#333333]">
+                                    {formatHms(entry.duration_minutes * 60)}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {groupedEntries.standalone.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="group flex flex-col gap-2 rounded-xl border border-gray-100 px-4 py-3 shadow-sm"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-bold text-[#333333]">
+                          {entryTaskLabel(entry)}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {entryClientLabel()}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => deleteTimeEntry(entry)}
+                          className="opacity-0 transition-opacity group-hover:opacity-100 text-gray-400 hover:text-red-500"
+                          title="Delete entry"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                        <div>
+                          <p className="text-xs font-bold text-gray-500">
+                            {formatEntryTime(entry.started_at)} -{" "}
+                            {formatEntryTime(entry.ended_at)}
+                          </p>
+                          <p className="text-sm font-mono text-[#333333]">
+                            {formatHms(entry.duration_minutes * 60)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
       <TaskModal
         key={`${client.id}-${taskModalTask?.id || "new"}-${
           isTaskModalOpen ? "open" : "closed"
