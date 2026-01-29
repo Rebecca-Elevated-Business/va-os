@@ -228,7 +228,7 @@ export default function TaskModal({
         .from("tasks")
         .update(payload)
         .eq("id", task.id)
-        .select("*, clients(business_name, surname)")
+        .select("*, clients!tasks_client_id_fkey(business_name, surname)")
         .single();
       if (
         error &&
@@ -243,7 +243,7 @@ export default function TaskModal({
           .from("tasks")
           .update(fallbackPayload)
           .eq("id", task.id)
-          .select("*, clients(business_name, surname)")
+          .select("*, clients!tasks_client_id_fkey(business_name, surname)")
           .single());
       }
       if (error) {
@@ -294,7 +294,7 @@ export default function TaskModal({
       let { data, error } = await supabase
         .from("tasks")
         .insert([insertPayload])
-        .select("*, clients(business_name, surname)")
+        .select("*, clients!tasks_client_id_fkey(business_name, surname)")
         .single();
       if (
         error &&
@@ -315,7 +315,7 @@ export default function TaskModal({
         ({ data, error } = await supabase
           .from("tasks")
           .insert([fallbackPayload])
-          .select("*, clients(business_name, surname)")
+          .select("*, clients!tasks_client_id_fkey(business_name, surname)")
           .single());
       }
       if (error) {

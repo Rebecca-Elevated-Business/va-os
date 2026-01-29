@@ -101,7 +101,7 @@ export default function VADashboard() {
     const [taskRes, clientRes, messageRes, noteRes] = await Promise.all([
       supabase
         .from("tasks")
-        .select("*, clients(business_name, surname)")
+        .select("*, clients!tasks_client_id_fkey(business_name, surname)")
         .eq("va_id", user.id)
         .is("deleted_at", null)
         .order("due_date", { ascending: true }),

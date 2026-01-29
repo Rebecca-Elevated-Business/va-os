@@ -203,7 +203,7 @@ export default function TaskCentrePage() {
     // Fetch Tasks
     const { data: taskData } = await supabase
       .from("tasks")
-      .select("*, clients(business_name, surname)")
+      .select("*, clients!tasks_client_id_fkey(business_name, surname)")
       .eq("va_id", user.id)
       .is("deleted_at", null);
 
