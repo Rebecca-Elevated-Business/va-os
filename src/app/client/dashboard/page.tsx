@@ -458,16 +458,7 @@ export default function ClientDashboard() {
   return (
     <main className="min-h-screen bg-gray-50 p-6 md:p-10 text-black font-sans">
       <div className="max-w-5xl mx-auto space-y-8">
-        {/* DIAGNOSTIC BAR */}
-        <div
-          className={`p-4 rounded-xl border-2 font-mono text-xs break-all ${
-            clientId
-              ? "bg-green-100 border-green-300 text-green-800"
-              : "bg-red-100 border-red-300 text-red-800"
-          }`}
-        >
-          <strong>DIAGNOSTIC STATUS:</strong> {debugInfo}
-        </div>
+        {/* Diagnostic bar removed */}
 
         {/* Header Section */}
         <div className="flex justify-between items-center mb-2">
