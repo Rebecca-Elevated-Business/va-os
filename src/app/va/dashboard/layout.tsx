@@ -173,13 +173,11 @@ export default function VADashboardLayout({
 
                 {item.name === "Inbox" && unreadCount > 0 && (
                   <span
-                    className={`text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-sm shrink-0 ${
-                      isActive
-                        ? "bg-white text-[#9d4edd]"
-                        : "bg-red-500 text-white"
+                    className={`ml-auto text-[12px] font-semibold shrink-0 ${
+                      isActive ? "text-white" : "text-[#555555]"
                     } ${isCollapsed ? "absolute top-2 right-4" : ""}`}
                   >
-                    {unreadCount}
+                    ({unreadCount})
                   </span>
                 )}
               </Link>

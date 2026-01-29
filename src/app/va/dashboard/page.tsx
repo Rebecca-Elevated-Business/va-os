@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { Pencil, X } from "lucide-react";
 import { Task } from "./tasks/types";
 import { usePrompt } from "@/components/ui/PromptProvider";
+import { useClientSession } from "./ClientSessionContext";
 
 type InboxMessage = {
   id: string;
@@ -48,11 +49,16 @@ const getDateKey = (value: string | null) => {
   return value.includes("T") ? value.split("T")[0] : value;
 };
 
-const formatDuration = (totalMinutes: number) => {
-  const safeMinutes = Math.max(0, Math.floor(totalMinutes));
-  const hours = Math.floor(safeMinutes / 60);
-  const minutes = safeMinutes % 60;
-  return `${hours}h ${String(minutes).padStart(2, "0")}m`;
+const formatDurationParts = (totalSeconds: number) => {
+  const safeSeconds = Math.max(0, Math.floor(totalSeconds));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const seconds = safeSeconds % 60;
+  return {
+    hours,
+    minutes,
+    seconds,
+  };
 };
 
 const formatDateLabel = (value: string) =>
@@ -67,6 +73,7 @@ const formatUkDate = (value: string) =>
 
 export default function VADashboard() {
   const { confirm } = usePrompt();
+  const { activeSession, isRunning, sessionElapsedSeconds } = useClientSession();
   const [userId, setUserId] = useState<string | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
   const [agendaDate, setAgendaDate] = useState(getTodayDateString());
@@ -241,6 +248,30 @@ export default function VADashboard() {
   const totalMinutesToday = useMemo(
     () => timeEntries.reduce((sum, entry) => sum + entry.duration_minutes, 0),
     [timeEntries],
+  );
+
+  const sessionTodaySeconds = useMemo(() => {
+    if (!isRunning || !activeSession) return 0;
+    const now = new Date();
+    const startOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
+    const sessionStart = new Date(activeSession.started_at);
+    const effectiveStart =
+      sessionStart > startOfToday ? sessionStart : startOfToday;
+    const seconds = Math.floor((now.getTime() - effectiveStart.getTime()) / 1000);
+    return Math.max(0, seconds);
+  }, [activeSession, isRunning, sessionElapsedSeconds]);
+
+  const totalSecondsToday = useMemo(() => {
+    return Math.max(0, Math.round(totalMinutesToday * 60) + sessionTodaySeconds);
+  }, [sessionTodaySeconds, totalMinutesToday]);
+
+  const todayDuration = useMemo(
+    () => formatDurationParts(totalSecondsToday),
+    [totalSecondsToday],
   );
 
   const saveNote = async () => {
@@ -439,15 +470,33 @@ export default function VADashboard() {
           <div className="p-6 space-y-3">
             <div className="flex items-center justify-between text-sm font-semibold text-gray-800">
               <span>Unread messages</span>
-              <span className="text-gray-700">{unreadCount}</span>
+              <span
+                className={
+                  unreadCount > 0 ? "text-red-600" : "text-gray-700"
+                }
+              >
+                {unreadCount}
+              </span>
             </div>
             <div className="flex items-center justify-between text-sm font-semibold text-gray-800">
               <span>Pending approvals</span>
-              <span className="text-gray-700">{pendingApprovalCount}</span>
+              <span
+                className={
+                  pendingApprovalCount > 0 ? "text-red-600" : "text-gray-700"
+                }
+              >
+                {pendingApprovalCount}
+              </span>
             </div>
             <div className="flex items-center justify-between text-sm font-semibold text-gray-800">
               <span>Client replies needing action</span>
-              <span className="text-gray-700">{replyNeededCount}</span>
+              <span
+                className={
+                  replyNeededCount > 0 ? "text-red-600" : "text-gray-700"
+                }
+              >
+                {replyNeededCount}
+              </span>
             </div>
             <Link
               href="/va/dashboard/inbox"
@@ -514,8 +563,14 @@ export default function VADashboard() {
             </p>
           </div>
           <div className="p-6 space-y-4 min-h-55 flex flex-col">
-            <div className="text-4xl font-semibold text-gray-900">
-              {formatDuration(totalMinutesToday)}
+            <div className="text-4xl font-semibold text-gray-900 flex items-baseline gap-2">
+              <span>
+                {todayDuration.hours}h{" "}
+                {String(todayDuration.minutes).padStart(2, "0")}m
+              </span>
+              <span className="text-lg font-semibold text-gray-500">
+                {String(todayDuration.seconds).padStart(2, "0")}s
+              </span>
             </div>
             <p className="text-xs text-gray-500">
               Based on entries logged in Time Tracking.

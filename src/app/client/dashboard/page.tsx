@@ -249,7 +249,7 @@ export default function ClientDashboard() {
     } else {
       await alert({
         title: "Request sent",
-        message: "SUCCESS: Request sent to database! Row created.",
+        message: "Thank you. Your VA will be notified of your message.",
       });
       setRequestMessage("");
     }
