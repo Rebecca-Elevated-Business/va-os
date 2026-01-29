@@ -422,19 +422,22 @@ export default function TimeTrackingPage() {
     return task.task_name;
   };
 
-  const entryClientLabel = (entry: TimeEntry) => {
-    if (entry.task_id) {
-      const task = tasksById.get(entry.task_id);
-      if (task?.clients) {
-        return task.clients.surname || task.clients.business_name || "Client";
+  const entryClientLabel = useCallback(
+    (entry: TimeEntry) => {
+      if (entry.task_id) {
+        const task = tasksById.get(entry.task_id);
+        if (task?.clients) {
+          return task.clients.surname || task.clients.business_name || "Client";
+        }
       }
-    }
-    if (entry.client_id) {
-      const client = clientsById.get(entry.client_id);
-      return client?.surname || client?.business_name || "Client";
-    }
-    return "Internal";
-  };
+      if (entry.client_id) {
+        const client = clientsById.get(entry.client_id);
+        return client?.surname || client?.business_name || "Client";
+      }
+      return "Internal";
+    },
+    [clientsById, tasksById],
+  );
 
   const groupedEntries = useMemo(() => {
     const sessionMap = new Map<string, TimeEntry[]>();

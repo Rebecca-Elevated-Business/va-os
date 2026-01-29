@@ -34,6 +34,39 @@ type TimeEntryRow = {
   } | null;
 };
 
+type TimeEntryRowRaw = Omit<TimeEntryRow, "tasks"> & {
+  tasks:
+    | {
+        task_name: string;
+        client_id: string | null;
+        clients:
+          | {
+              business_name: string | null;
+              surname: string | null;
+            }
+          | {
+              business_name: string | null;
+              surname: string | null;
+            }[]
+          | null;
+      }
+    | {
+        task_name: string;
+        client_id: string | null;
+        clients:
+          | {
+              business_name: string | null;
+              surname: string | null;
+            }
+          | {
+              business_name: string | null;
+              surname: string | null;
+            }[]
+          | null;
+      }[]
+    | null;
+};
+
 type ReportPreview = {
   client_id: string;
   client_name: string;
@@ -280,7 +313,20 @@ export default function TimeReportsPage() {
       .lte("started_at", endIso)
       .order("started_at", { ascending: false });
 
-    const entries = (data as TimeEntryRow[]) || [];
+    const normalizedEntries =
+      (data as TimeEntryRowRaw[] | null)?.map((entry) => {
+        const task =
+          Array.isArray(entry.tasks) ? entry.tasks[0] || null : entry.tasks;
+        const clients = Array.isArray(task?.clients)
+          ? task?.clients[0] || null
+          : task?.clients || null;
+        return {
+          ...entry,
+          tasks: task ? { ...task, clients } : null,
+        } as TimeEntryRow;
+      }) || [];
+
+    const entries = normalizedEntries;
     const snapshot = entries.map((entry) => ({
       entry_date: entry.started_at,
       task_title:
