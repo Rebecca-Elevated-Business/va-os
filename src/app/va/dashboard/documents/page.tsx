@@ -193,15 +193,21 @@ export default function DocumentLibraryPage() {
       </div>
 
       {selectedType && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-          <div className="w-full max-w-4xl bg-white rounded-2xl shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-300">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
+          onClick={closeModal}
+        >
+          <div
+            className="w-full max-w-4xl bg-white rounded-2xl shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-300"
+            onClick={(event) => event.stopPropagation()}
+          >
             <div className="flex items-start justify-between p-4 border-b border-gray-100">
               <div>
                 <h1 className="text-2xl font-bold">{selectedType.title}</h1>
               </div>
               <button
                 onClick={closeModal}
-                className="h-9 w-9 rounded-full border border-gray-200 text-gray-400 hover:text-black hover:border-gray-300 transition"
+                className="h-9 w-9 rounded-full border border-[#525252] text-[#525252] hover:text-[#333333] hover:border-[#333333] transition"
                 aria-label="Close"
               >
                 ✕
