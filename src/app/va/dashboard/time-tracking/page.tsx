@@ -134,11 +134,13 @@ export default function TimeTrackingPage() {
 
   const totalSeconds = useMemo(() => {
     if (!selectedTask) return 0;
-    let seconds = selectedTask.total_minutes * 60;
     if (selectedTask.is_running && selectedTask.start_time && now > 0) {
-      seconds += (now - new Date(selectedTask.start_time).getTime()) / 1000;
+      return Math.max(
+        0,
+        Math.floor((now - new Date(selectedTask.start_time).getTime()) / 1000),
+      );
     }
-    return seconds;
+    return 0;
   }, [now, selectedTask]);
 
   const fetchData = useCallback(async () => {
@@ -336,7 +338,10 @@ export default function TimeTrackingPage() {
 
   const handleSelectTask = (task: Task) => {
     setSelectedTaskId(task.id);
-    setSearchValue(task.task_name);
+    const clientLabel = task.clients?.surname
+      ? ` (${task.clients.surname})`
+      : "";
+    setSearchValue(`${task.task_name}${clientLabel}`);
     setIsDropdownOpen(false);
   };
 
