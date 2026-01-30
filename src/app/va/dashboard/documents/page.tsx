@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { usePrompt } from "@/components/ui/PromptProvider";
-import { FileText, FileSignature, ReceiptText, Upload } from "lucide-react";
+import { FileText, FileSignature, ReceiptText, Search, Upload } from "lucide-react";
 
 // Define the document types based on your workflow
 const DOCUMENT_TYPES = [
