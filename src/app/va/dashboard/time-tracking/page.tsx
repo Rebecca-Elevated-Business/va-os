@@ -70,9 +70,9 @@ export default function TimeTrackingPage() {
   const [clients, setClients] = useState<
     {
       id: string;
-      business_name: string | null;
-      first_name: string | null;
-      surname: string | null;
+      business_name: string;
+      first_name: string;
+      surname: string;
     }[]
   >([]);
   const [userId, setUserId] = useState<string | null>(null);
@@ -170,7 +170,15 @@ export default function TimeTrackingPage() {
       .from("clients")
       .select("id, first_name, surname, business_name")
       .eq("va_id", user.id);
-    if (clientData) setClients(clientData);
+    if (clientData) {
+      const normalizedClients = clientData.map((client) => ({
+        ...client,
+        business_name: client.business_name || "",
+        first_name: client.first_name || "",
+        surname: client.surname || "",
+      }));
+      setClients(normalizedClients);
+    }
   }, []);
 
   const loadEntries = useCallback(
