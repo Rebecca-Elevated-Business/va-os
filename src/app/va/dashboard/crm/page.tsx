@@ -62,9 +62,10 @@ export default function CRMPage() {
 
   // Filter Logic: Handles both Search and Multi-select Status
   const filteredClients = clients.filter((c) => {
-    const matchesSearch = c.surname
-      .toLowerCase()
-      .includes(search.toLowerCase());
+    const matchesSearch =
+      `${c.first_name} ${c.surname} ${c.business_name || ""}`
+        .toLowerCase()
+        .includes(search.toLowerCase());
     const matchesStatus =
       selectedStatuses.length === 0 || selectedStatuses.includes(c.status);
 
@@ -75,7 +76,7 @@ export default function CRMPage() {
     setSelectedStatuses((prev) =>
       prev.includes(status)
         ? prev.filter((s) => s !== status)
-        : [...prev, status]
+        : [...prev, status],
     );
   };
 
@@ -98,7 +99,7 @@ export default function CRMPage() {
           <div className="relative flex items-center">
             <input
               type="text"
-              placeholder="Search by surname..."
+              placeholder="Search by Client / Business Name"
               className="w-64 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#9d4edd] outline-none"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -167,112 +168,115 @@ export default function CRMPage() {
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 text-black">
         <div className="w-full overflow-x-auto overflow-y-hidden">
-          <table className="min-w-[900px] w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-100">
-              <th className="px-6 py-4 text-sm font-semibold text-gray-700">
-                Name
-              </th>
-              <th className="px-6 py-4 text-sm font-semibold text-gray-700">
-                Business
-              </th>
-              <th className="px-6 py-4 text-sm font-semibold text-gray-700">
-                Email
-              </th>
-              <th className="px-6 py-4 text-sm font-semibold text-gray-700">
-                Phone
-              </th>
-              <th className="px-6 py-4 text-sm font-semibold text-gray-700">
-                Status
-              </th>
-              <th className="px-6 py-4 text-sm font-semibold text-gray-700">
-                Portal Access
-              </th>
-              <th className="px-6 py-4 text-sm font-semibold text-gray-700 text-right">
-                Access
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {loading ? (
-              <tr>
-                <td colSpan={7} className="px-6 py-4 text-center text-gray-400">
-                  Loading clients...
-                </td>
+          <table className="min-w-225 w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-100">
+                <th className="px-6 py-4 text-sm font-semibold text-gray-700">
+                  Name
+                </th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-700">
+                  Business
+                </th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-700">
+                  Email
+                </th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-700">
+                  Phone
+                </th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-700">
+                  Status
+                </th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-700">
+                  Portal Access
+                </th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-700 text-right">
+                  Access
+                </th>
               </tr>
-            ) : filteredClients.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={7}
-                  className="px-6 py-4 text-center text-gray-400 p-8"
-                >
-                  No clients match your filters.
-                </td>
-              </tr>
-            ) : (
-              filteredClients.map((client) => (
-                <tr
-                  key={client.id}
-                  className="hover:bg-gray-50 transition-colors"
-                >
-                  <td className="px-6 py-4 font-medium">
-                    {client.first_name} {client.surname}
-                  </td>
-                  <td className="px-6 py-4 text-gray-600">
-                    {client.business_name || "-"}
-                  </td>
-                  <td className="px-6 py-4 text-gray-600 text-sm">
-                    {client.email}
-                  </td>
-                  <td className="px-6 py-4 text-gray-600 text-sm">
-                    {client.phone || "-"}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`px-3 py-1 rounded-full text-[10px] uppercase tracking-wider font-black ${
-                        client.status === "Won"
-                          ? "bg-green-100 text-green-700"
-                          : client.status === "Lost"
-                          ? "bg-red-100 text-red-700"
-                          : client.status === "Provisional"
-                          ? "bg-purple-100 text-[#9d4edd]"
-                          : "bg-blue-100 text-blue-700"
-                      }`}
-                    >
-                      {client.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    {(() => {
-                      const issued = Boolean(
-                        client.portal_access_enabled ||
-                          client.portal_invite_link?.trim(),
-                      );
-                      const accessed = Boolean(client.has_access);
-                      const dotClass = accessed
-                        ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"
-                        : issued
-                          ? "bg-orange-400 shadow-[0_0_8px_rgba(251,146,60,0.45)]"
-                          : "bg-gray-300";
-                      return (
-                        <div
-                          className={`w-2.5 h-2.5 rounded-full mx-auto ${dotClass}`}
-                        />
-                      );
-                    })()}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <Link
-                      href={`/va/dashboard/crm/profile/${client.id}`}
-                      className="text-[#9d4edd] font-bold text-sm hover:text-[#7b2cbf] bg-purple-50 px-3 py-1.5 rounded-md transition-colors"
-                    >
-                      Open Profile
-                    </Link>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {loading ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-6 py-4 text-center text-gray-400"
+                  >
+                    Loading clients...
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
+              ) : filteredClients.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-6 py-4 text-center text-gray-400 p-8"
+                  >
+                    No clients match your filters.
+                  </td>
+                </tr>
+              ) : (
+                filteredClients.map((client) => (
+                  <tr
+                    key={client.id}
+                    className="hover:bg-gray-50 transition-colors"
+                  >
+                    <td className="px-6 py-4 font-medium">
+                      {client.first_name} {client.surname}
+                    </td>
+                    <td className="px-6 py-4 text-gray-600">
+                      {client.business_name || "-"}
+                    </td>
+                    <td className="px-6 py-4 text-gray-600 text-sm">
+                      {client.email}
+                    </td>
+                    <td className="px-6 py-4 text-gray-600 text-sm">
+                      {client.phone || "-"}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`px-3 py-1 rounded-full text-[10px] uppercase tracking-wider font-black ${
+                          client.status === "Won"
+                            ? "bg-green-100 text-green-700"
+                            : client.status === "Lost"
+                              ? "bg-red-100 text-red-700"
+                              : client.status === "Provisional"
+                                ? "bg-purple-100 text-[#9d4edd]"
+                                : "bg-blue-100 text-blue-700"
+                        }`}
+                      >
+                        {client.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      {(() => {
+                        const issued = Boolean(
+                          client.portal_access_enabled ||
+                          client.portal_invite_link?.trim(),
+                        );
+                        const accessed = Boolean(client.has_access);
+                        const dotClass = accessed
+                          ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"
+                          : issued
+                            ? "bg-orange-400 shadow-[0_0_8px_rgba(251,146,60,0.45)]"
+                            : "bg-gray-300";
+                        return (
+                          <div
+                            className={`w-2.5 h-2.5 rounded-full mx-auto ${dotClass}`}
+                          />
+                        );
+                      })()}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <Link
+                        href={`/va/dashboard/crm/profile/${client.id}`}
+                        className="text-[#9d4edd] font-bold text-sm hover:text-[#7b2cbf] bg-purple-50 px-3 py-1.5 rounded-md transition-colors"
+                      >
+                        Open Profile
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
           </table>
         </div>
       </div>

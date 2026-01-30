@@ -68,7 +68,12 @@ export default function TimeTrackingPage() {
   const { confirm } = usePrompt();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [clients, setClients] = useState<
-    { id: string; business_name: string; surname: string }[]
+    {
+      id: string;
+      business_name: string | null;
+      first_name: string | null;
+      surname: string | null;
+    }[]
   >([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -127,7 +132,9 @@ export default function TimeTrackingPage() {
     const query = sessionClientQuery.trim().toLowerCase();
     if (!query) return [];
     return clients.filter((client) =>
-      `${client.surname} ${client.business_name || ""}`
+      `${client.first_name || ""} ${client.surname || ""} ${
+        client.business_name || ""
+      }`
         .toLowerCase()
         .includes(query),
     );
@@ -161,7 +168,7 @@ export default function TimeTrackingPage() {
 
     const { data: clientData } = await supabase
       .from("clients")
-      .select("id, business_name, surname")
+      .select("id, first_name, surname, business_name")
       .eq("va_id", user.id);
     if (clientData) setClients(clientData);
   }, []);
@@ -300,7 +307,12 @@ export default function TimeTrackingPage() {
     if (!activeClientId) return "";
     const activeClient = clients.find((client) => client.id === activeClientId);
     if (!activeClient) return "";
-    return `${activeClient.surname}${activeClient.business_name ? ` (${activeClient.business_name})` : ""}`;
+    const name = `${activeClient.first_name || ""} ${
+      activeClient.surname || ""
+    }`.trim();
+    return name
+      ? `${name}${activeClient.business_name ? ` (${activeClient.business_name})` : ""}`
+      : activeClient.business_name || "";
   }, [activeClientId, clients]);
 
   const sessionInputValue = isSessionClientFocused
@@ -662,25 +674,36 @@ export default function TimeTrackingPage() {
                           No clients found.
                         </div>
                       ) : (
-                        sessionClientOptions.map((client) => (
-                          <button
-                            key={client.id}
-                            onClick={() => {
-                              setSessionClientId(client.id);
-                              setSessionClientQuery(
-                                `${client.surname}${client.business_name ? ` (${client.business_name})` : ""}`,
-                              );
-                              setIsSessionDropdownOpen(false);
-                              setIsSessionClientFocused(false);
-                            }}
-                            className="w-full text-left px-4 py-3 text-sm font-semibold text-[#333333] hover:bg-gray-50 transition-colors"
-                          >
-                            {client.surname}
-                            {client.business_name
-                              ? ` (${client.business_name})`
-                              : ""}
-                          </button>
-                        ))
+                        sessionClientOptions.map((client) => {
+                          const name = `${client.first_name || ""} ${
+                            client.surname || ""
+                          }`.trim();
+                          const label = name
+                            ? `${name}${client.business_name ? ` (${client.business_name})` : ""}`
+                            : client.business_name || "";
+                          return (
+                            <button
+                              key={client.id}
+                              onClick={() => {
+                                setSessionClientId(client.id);
+                                setSessionClientQuery(label);
+                                setIsSessionDropdownOpen(false);
+                                setIsSessionClientFocused(false);
+                              }}
+                              className="w-full text-left px-4 py-3 text-sm font-semibold text-[#333333] hover:bg-gray-50 transition-colors"
+                            >
+                              <span className="text-[#333333]">
+                                {name || "Unnamed Client"}
+                              </span>
+                              {client.business_name && (
+                                <span className="text-[#525252]">
+                                  {" "}
+                                  ({client.business_name})
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })
                       )}
                     </div>
                   )}
@@ -921,7 +944,7 @@ export default function TimeTrackingPage() {
             ) : (
               <div className="space-y-4">
                 {groupedEntries.sessions.map((session) => {
-                  const isExpanded = expandedSessions[session.sessionId] ?? true;
+                  const isExpanded = expandedSessions[session.sessionId] ?? false;
                   return (
                     <div
                       key={`session-${session.sessionId}`}
@@ -938,7 +961,7 @@ export default function TimeTrackingPage() {
                                   [session.sessionId]: !isExpanded,
                                 }))
                               }
-                              className="mt-0.5 text-gray-400 hover:text-gray-600"
+                              className="mt-0.5 text-[#333333] hover:text-[#333333]"
                             >
                               <ChevronDown
                                 size={16}

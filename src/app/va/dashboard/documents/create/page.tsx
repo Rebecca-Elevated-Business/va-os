@@ -39,6 +39,21 @@ function CreateDocumentForm() {
     business_name: string;
   } | null>(null);
   const isClientLocked = Boolean(clientIdParam);
+  const formatClientName = (client: {
+    first_name: string;
+    surname: string;
+  }) => `${client.first_name} ${client.surname}`.trim();
+  const formatClientLabel = (client: {
+    first_name: string;
+    surname: string;
+    business_name: string;
+  }) => {
+    const name = formatClientName(client);
+    if (client.business_name) {
+      return name ? `${name} (${client.business_name})` : client.business_name;
+    }
+    return name || "Unnamed Client";
+  };
 
   useEffect(() => {
     async function loadClients() {
@@ -52,7 +67,7 @@ function CreateDocumentForm() {
           const match = data.find((client) => client.id === clientIdParam);
           if (match) {
             setSelectedClient(match);
-            setSearch(`${match.first_name} ${match.surname}`);
+            setSearch(formatClientLabel(match));
           }
         }
       }
@@ -92,6 +107,7 @@ function CreateDocumentForm() {
 
   const filteredClients = clients.filter(
     (c) =>
+      c.first_name.toLowerCase().includes(search.toLowerCase()) ||
       c.surname.toLowerCase().includes(search.toLowerCase()) ||
       c.business_name?.toLowerCase().includes(search.toLowerCase())
   );
@@ -194,8 +210,16 @@ function CreateDocumentForm() {
                 <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-2">
                   Client Preselected from CRM
                 </p>
-                <p className="text-lg font-bold text-gray-900">
-                  {selectedClient.first_name} {selectedClient.surname}
+                <p className="text-lg font-bold">
+                  <span className="text-[#333333]">
+                    {formatClientName(selectedClient) || "Unnamed Client"}
+                  </span>
+                  {selectedClient.business_name && (
+                    <span className="text-[#525252]">
+                      {" "}
+                      ({selectedClient.business_name})
+                    </span>
+                  )}
                 </p>
                 <p className="text-xs text-gray-400 mt-2">
                   Documents from CRM are generated directly for this client.
@@ -208,7 +232,7 @@ function CreateDocumentForm() {
                 </label>
                 <input
                   type="text"
-                  placeholder="Search by surname or business..."
+                  placeholder="Search by Client / Business Name"
                   className="w-full p-4 border-2 border-gray-50 rounded-2xl outline-none focus:ring-4 focus:ring-purple-50 focus:border-[#9d4edd] bg-gray-50 text-black transition-all"
                   value={search}
                   onChange={(e) => {
@@ -225,6 +249,7 @@ function CreateDocumentForm() {
                   )}
                   {clientList.map((c) => {
                     const isActive = selectedClient?.id === c.id;
+                    const name = formatClientName(c);
                     return (
                       <button
                         key={c.id}
@@ -233,18 +258,21 @@ function CreateDocumentForm() {
                           setSelectedClient(c);
                           setSearch("");
                         }}
-                        className={`w-full text-left p-4 rounded-xl border transition flex justify-between items-center ${
+                        className={`w-full text-left p-4 rounded-xl border transition ${
                           isActive
                             ? "border-[#9d4edd] bg-purple-50"
                             : "border-gray-100 hover:border-[#9d4edd]"
                         }`}
                       >
-                        <span className="font-bold text-gray-900">
-                          {c.first_name} {c.surname}
+                        <span className="font-bold text-[#333333]">
+                          {name || "Unnamed Client"}
                         </span>
-                        <span className="text-[10px] font-black text-[#9d4edd] bg-purple-100 px-2 py-1 rounded-lg uppercase">
-                          {c.business_name || "Personal"}
-                        </span>
+                        {c.business_name && (
+                          <span className="text-[#525252]">
+                            {" "}
+                            ({c.business_name})
+                          </span>
+                        )}
                       </button>
                     );
                   })}

@@ -43,6 +43,9 @@ export default function VAInboxPage() {
     "inbox"
   );
   const [selectedMsg, setSelectedMsg] = useState<InboxMessage | null>(null);
+  const [deleteAllStep, setDeleteAllStep] = useState<
+    null | "confirm" | "final"
+  >(null);
   const { confirm, alert } = usePrompt();
 
   const fetchMessages = useCallback(async () => {
@@ -156,6 +159,23 @@ export default function VAInboxPage() {
     }
   };
 
+  const deleteAllCompleted = async () => {
+    const completedIds = messages.filter((m) => m.is_completed).map((m) => m.id);
+    if (completedIds.length === 0) {
+      setDeleteAllStep(null);
+      return;
+    }
+    const { error } = await supabase
+      .from("client_requests")
+      .delete()
+      .in("id", completedIds);
+    if (!error) {
+      setMessages((prev) => prev.filter((m) => !m.is_completed));
+      setSelectedMsg(null);
+      setDeleteAllStep(null);
+    }
+  };
+
   const filteredMessages = messages.filter((m) => {
     if (activeTab === "starred") return m.is_starred && !m.is_completed;
     if (activeTab === "completed") return m.is_completed;
@@ -255,7 +275,19 @@ export default function VAInboxPage() {
       {/* FEED LIST */}
         <main className="flex-1 overflow-y-auto">
         <div className="border-b border-gray-100 px-8 py-6">
-          <h2 className="text-lg font-bold text-[#333333]">Notification Feed</h2>
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-lg font-bold text-[#333333]">
+              Notification Feed
+            </h2>
+            {activeTab === "completed" && filteredMessages.length > 0 && (
+              <button
+                onClick={() => setDeleteAllStep("confirm")}
+                className="text-xs font-semibold text-[#525252] hover:text-red-500 transition-colors"
+              >
+                Delete All
+              </button>
+            )}
+          </div>
           <p className="text-xs text-gray-400">
             {activeTab === "inbox"
               ? "Unread and active requests"
@@ -299,7 +331,7 @@ export default function VAInboxPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3">
                     <h3
-                      className={`text-sm font-bold ${
+                      className={`text-sm font-bold leading-tight ${
                         !msg.is_read ? "text-[#333333]" : "text-[#333333]"
                       }`}
                     >
@@ -313,7 +345,7 @@ export default function VAInboxPage() {
                       {getTypeLabel(msg.type)}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-gray-400 mt-0 leading-tight">
                     {msg.clients.business_name}
                   </p>
                   <p className="text-sm text-gray-600 mt-2 truncate">
@@ -530,6 +562,75 @@ export default function VAInboxPage() {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {deleteAllStep && (
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-100 flex items-center justify-center p-6 text-black"
+            onClick={() => setDeleteAllStep(null)}
+          >
+            <div
+              className="bg-white w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in duration-200"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="p-8 space-y-4">
+                {deleteAllStep === "confirm" ? (
+                  <>
+                    <h3 className="text-lg font-black text-[#333333]">
+                      Are you sure? This action CANNOT be reversed!
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      This will permanently delete all completed messages.
+                    </p>
+                    <div className="flex items-center justify-end gap-3 pt-2">
+                      <button
+                        onClick={() => {
+                          setActiveTab("completed");
+                          setDeleteAllStep(null);
+                        }}
+                        className="px-4 py-2 rounded-full text-xs font-bold border border-gray-200 text-[#333333] hover:bg-gray-50"
+                      >
+                        No
+                      </button>
+                      <button
+                        onClick={() => setDeleteAllStep("final")}
+                        className="px-4 py-2 rounded-full text-xs font-bold border border-red-200 text-red-600 hover:bg-red-50"
+                      >
+                        Yes
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="text-lg font-black text-[#333333]">
+                      Last Chance
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      To delete all messages click “I understand this cannot be
+                      reversed”.
+                    </p>
+                    <div className="flex items-center justify-end gap-3 pt-2">
+                      <button
+                        onClick={() => {
+                          setActiveTab("completed");
+                          setDeleteAllStep(null);
+                        }}
+                        className="px-4 py-2 rounded-full text-xs font-bold border border-gray-200 text-[#333333] hover:bg-gray-50"
+                      >
+                        Return to completed
+                      </button>
+                      <button
+                        onClick={deleteAllCompleted}
+                        className="px-4 py-2 rounded-full text-xs font-bold border border-red-200 text-red-600 hover:bg-red-50"
+                      >
+                        I understand this cannot be reversed
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>

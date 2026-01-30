@@ -23,8 +23,9 @@ type SearchResult = {
 
 type ClientOption = {
   id: string;
-  business_name: string;
-  surname: string;
+  business_name: string | null;
+  first_name: string | null;
+  surname: string | null;
 };
 
 const formatHms = (totalSeconds: number) => {
@@ -65,6 +66,17 @@ export default function DashboardHeader() {
     stopSession,
   } = useClientSession();
 
+  const formatClientName = (client: ClientOption) =>
+    `${client.first_name || ""} ${client.surname || ""}`.trim();
+
+  const formatClientLabel = (client: ClientOption) => {
+    const name = formatClientName(client);
+    if (client.business_name) {
+      return name ? `${name} (${client.business_name})` : client.business_name;
+    }
+    return name || "Unnamed Client";
+  };
+
   // --- SEARCH LOGIC ---
   useEffect(() => {
     const performSearch = async () => {
@@ -81,7 +93,7 @@ export default function DashboardHeader() {
         .from("clients")
         .select("id, first_name, surname, business_name")
         .or(
-          `surname.ilike.%${searchQuery}%,business_name.ilike.%${searchQuery}%`
+          `first_name.ilike.%${searchQuery}%,surname.ilike.%${searchQuery}%,business_name.ilike.%${searchQuery}%`
         )
         .limit(3);
 
@@ -104,9 +116,9 @@ export default function DashboardHeader() {
       const combined: SearchResult[] = [
         ...(clients?.map((c) => ({
           id: c.id,
-          title: `${c.first_name} ${c.surname}`,
+          title: `${c.first_name || ""} ${c.surname || ""}`.trim(),
           type: "client" as const,
-          subtitle: c.business_name,
+          subtitle: c.business_name || undefined,
         })) || []),
         ...(tasks?.map((t) => ({
           id: t.id,
@@ -207,7 +219,7 @@ export default function DashboardHeader() {
       if (!user) return;
       const { data } = await supabase
         .from("clients")
-        .select("id, business_name, surname")
+        .select("id, first_name, surname, business_name")
         .eq("va_id", user.id)
         .order("surname", { ascending: true });
       setClients((data as ClientOption[]) || []);
@@ -219,7 +231,7 @@ export default function DashboardHeader() {
     if (!activeClientId) return "";
     const activeClient = clients.find((client) => client.id === activeClientId);
     if (!activeClient) return "";
-    return `${activeClient.surname}${activeClient.business_name ? ` (${activeClient.business_name})` : ""}`;
+    return formatClientLabel(activeClient);
   }, [activeClientId, clients]);
 
   const clientInputValue = isClientFocused
@@ -230,15 +242,17 @@ export default function DashboardHeader() {
     const query = clientQuery.trim().toLowerCase();
     if (!query) return [];
     return clients.filter((client) =>
-      `${client.surname} ${client.business_name}`.toLowerCase().includes(query),
+      `${client.first_name || ""} ${client.surname || ""} ${
+        client.business_name || ""
+      }`
+        .toLowerCase()
+        .includes(query),
     );
   }, [clientQuery, clients]);
 
   const handleSelectClient = (client: ClientOption) => {
     setSelectedClientId(client.id);
-    setClientQuery(
-      `${client.surname}${client.business_name ? ` (${client.business_name})` : ""}`,
-    );
+    setClientQuery(formatClientLabel(client));
     setShowClientResults(false);
     setIsClientFocused(false);
   };
@@ -312,13 +326,27 @@ export default function DashboardHeader() {
                   {result.type === "document" && <FileText size={16} />}
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-[#333333]">
-                    {result.title}
-                  </p>
-                  {result.subtitle && (
-                    <p className="text-[10px] text-gray-400 uppercase font-medium">
-                      {result.subtitle}
+                  {result.type === "client" ? (
+                    <p className="text-sm font-bold text-[#333333]">
+                      {result.title || "Unnamed Client"}
+                      {result.subtitle && (
+                        <span className="font-semibold text-[#525252]">
+                          {" "}
+                          ({result.subtitle})
+                        </span>
+                      )}
                     </p>
+                  ) : (
+                    <>
+                      <p className="text-sm font-bold text-[#333333]">
+                        {result.title}
+                      </p>
+                      {result.subtitle && (
+                        <p className="text-[10px] text-gray-400 uppercase font-medium">
+                          {result.subtitle}
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
               </button>
@@ -374,8 +402,15 @@ export default function DashboardHeader() {
                       onClick={() => handleSelectClient(client)}
                       className="w-full text-left px-3 py-2 text-xs font-semibold text-[#333333] hover:bg-gray-50 transition-colors"
                     >
-                      {client.surname}
-                      {client.business_name ? ` (${client.business_name})` : ""}
+                      <span className="text-[#333333]">
+                        {formatClientName(client) || "Unnamed Client"}
+                      </span>
+                      {client.business_name && (
+                        <span className="text-[#525252]">
+                          {" "}
+                          ({client.business_name})
+                        </span>
+                      )}
                     </button>
                   ))
                 )}

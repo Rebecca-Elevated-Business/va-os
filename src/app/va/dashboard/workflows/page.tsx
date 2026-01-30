@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
-import { FileText, Search, X } from "lucide-react";
+import { FileText, X } from "lucide-react";
 
 type SOPTemplate = {
   id: string;
@@ -94,7 +94,6 @@ export default function SOPLibraryPage() {
   const router = useRouter();
   const [templates, setTemplates] = useState<SOPTemplate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
   const [selectedTemplate, setSelectedTemplate] =
     useState<SOPTemplate | null>(null);
 
@@ -113,17 +112,6 @@ export default function SOPLibraryPage() {
     loadTemplates();
   }, []);
 
-  const filteredTemplates = useMemo(() => {
-    if (!search.trim()) return templates;
-    const value = search.toLowerCase();
-    return templates.filter(
-      (template) =>
-        template.title.toLowerCase().includes(value) ||
-        template.description.toLowerCase().includes(value) ||
-        template.category.toLowerCase().includes(value)
-    );
-  }, [search, templates]);
-
   return (
     <div className="text-black">
       <div className="mb-8 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -135,27 +123,13 @@ export default function SOPLibraryPage() {
             client.
           </p>
         </div>
-        <div className="w-full max-w-md">
-          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">
-            Search Templates
-          </label>
-          <div className="flex items-center gap-2 bg-white border border-[#333333] rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-[#9d4edd]/20">
-            <Search className="h-4 w-4 text-[#9d4edd]" aria-hidden />
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search workflows"
-              className="w-full bg-transparent text-sm text-gray-700 outline-none"
-            />
-          </div>
-        </div>
       </div>
 
       {loading ? (
         <p>Loading blueprints...</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {filteredTemplates.map((template) => (
+          {templates.map((template) => (
             <button
               key={template.id}
               onClick={() => setSelectedTemplate(template)}

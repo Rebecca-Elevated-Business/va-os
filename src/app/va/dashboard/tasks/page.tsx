@@ -106,7 +106,12 @@ export default function TaskCentrePage() {
   // --- STATE ---
   const [tasks, setTasks] = useState<Task[]>([]);
   const [clients, setClients] = useState<
-    { id: string; business_name: string; surname: string }[]
+    {
+      id: string;
+      business_name: string | null;
+      first_name: string | null;
+      surname: string | null;
+    }[]
   >([]);
   const [view, setView] = useState<"list" | "calendar" | "kanban">("list");
   const [loading, setLoading] = useState(true);
@@ -232,7 +237,7 @@ export default function TaskCentrePage() {
     // Fetch Clients
     const { data: clientData } = await supabase
       .from("clients")
-      .select("id, business_name, surname")
+      .select("id, first_name, surname, business_name")
       .eq("va_id", user.id);
 
     if (clientData) setClients(clientData);
@@ -676,10 +681,13 @@ export default function TaskCentrePage() {
   const selectedClient = selectedClientId
     ? clients.find((client) => client.id === selectedClientId)
     : null;
+  const selectedClientName = selectedClient
+    ? `${selectedClient.first_name || ""} ${selectedClient.surname || ""}`.trim()
+    : "";
   const selectedClientLabel = selectedClient
-    ? `${selectedClient.business_name || ""} ${
-        selectedClient.surname || ""
-      }`.trim()
+    ? selectedClientName
+      ? `${selectedClientName}${selectedClient.business_name ? ` (${selectedClient.business_name})` : ""}`
+      : selectedClient.business_name || ""
     : "";
   const typeFilterLabel =
     filterType === "all"
@@ -691,7 +699,9 @@ export default function TaskCentrePage() {
         : `Type: ${filterType.charAt(0).toUpperCase()}${filterType.slice(1)}`;
   const filteredClients = clientSearch.trim()
     ? clients.filter((client) => {
-        const name = `${client.business_name || ""} ${client.surname || ""}`
+        const name = `${client.first_name || ""} ${client.surname || ""} ${
+          client.business_name || ""
+        }`
           .trim()
           .toLowerCase();
         return name.includes(clientSearch.toLowerCase().trim());
@@ -1270,7 +1280,7 @@ export default function TaskCentrePage() {
                   {filteredClients.length > 0 && (
                     <div className="max-h-56 overflow-y-auto rounded-xl border border-gray-100 bg-white">
                       {filteredClients.map((client) => {
-                        const label = `${client.business_name || ""} ${
+                        const name = `${client.first_name || ""} ${
                           client.surname || ""
                         }`.trim();
                         return (
@@ -1279,7 +1289,15 @@ export default function TaskCentrePage() {
                             onClick={() => setSelectedClientId(client.id)}
                             className="w-full text-left px-3 py-2 text-xs font-semibold text-[#333333] hover:bg-gray-50 transition-colors"
                           >
-                            {label || "Unnamed Client"}
+                            <span className="text-[#333333]">
+                              {name || "Unnamed Client"}
+                            </span>
+                            {client.business_name && (
+                              <span className="text-[#525252]">
+                                {" "}
+                                ({client.business_name})
+                              </span>
+                            )}
                           </button>
                         );
                       })}

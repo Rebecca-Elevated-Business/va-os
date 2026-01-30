@@ -4,13 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { usePrompt } from "@/components/ui/PromptProvider";
-import {
-  FileText,
-  FileSignature,
-  ReceiptText,
-  Upload,
-  Search,
-} from "lucide-react";
+import { FileText, FileSignature, ReceiptText, Upload } from "lucide-react";
 
 // Define the document types based on your workflow
 const DOCUMENT_TYPES = [
@@ -50,7 +44,6 @@ export default function DocumentLibraryPage() {
   const [selectedType, setSelectedType] = useState<
     (typeof DOCUMENT_TYPES)[0] | null
   >(null);
-  const [search, setSearch] = useState("");
   const [clients, setClients] = useState<
     { id: string; first_name: string; surname: string; business_name: string }[]
   >([]);
@@ -62,6 +55,21 @@ export default function DocumentLibraryPage() {
     business_name: string;
   } | null>(null);
   const [loadingClients, setLoadingClients] = useState(false);
+  const formatClientName = (client: {
+    first_name: string;
+    surname: string;
+  }) => `${client.first_name} ${client.surname}`.trim();
+  const formatClientLabel = (client: {
+    first_name: string;
+    surname: string;
+    business_name: string;
+  }) => {
+    const name = formatClientName(client);
+    if (client.business_name) {
+      return name ? `${name} (${client.business_name})` : client.business_name;
+    }
+    return name || "Unnamed Client";
+  };
 
   useEffect(() => {
     if (!selectedType || clients.length > 0) return;
@@ -82,16 +90,6 @@ export default function DocumentLibraryPage() {
     setSelectedClient(null);
     setClientSearch("");
   };
-
-  const filteredTypes = useMemo(() => {
-    if (!search.trim()) return DOCUMENT_TYPES;
-    const value = search.toLowerCase();
-    return DOCUMENT_TYPES.filter(
-      (doc) =>
-        doc.title.toLowerCase().includes(value) ||
-        doc.description.toLowerCase().includes(value),
-    );
-  }, [search]);
 
   const filteredClients = useMemo(() => {
     const value = clientSearch.toLowerCase();
@@ -151,24 +149,10 @@ export default function DocumentLibraryPage() {
             Drafts are saved to the client vault for review and sending.
           </p>
         </div>
-        <div className="w-full max-w-md">
-          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 block">
-            Search Document Type
-          </label>
-          <div className="flex items-center gap-2 bg-white border border-[#333333] rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-[#9d4edd]/20">
-            <Search className="h-4 w-4 text-[#9d4edd]" aria-hidden />
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search proposals, invoices, uploads..."
-              className="w-full bg-transparent text-sm text-gray-700 outline-none"
-            />
-          </div>
-        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {filteredTypes.map((doc) => {
+        {DOCUMENT_TYPES.map((doc) => {
           const Icon = doc.icon;
           return (
             <button
@@ -340,9 +324,16 @@ export default function DocumentLibraryPage() {
                   </label>
                   {selectedClient ? (
                     <div className="flex items-center justify-between bg-white border border-purple-100 rounded-2xl px-4 py-3">
-                      <div className="text-sm text-purple-900 font-semibold">
-                        {selectedClient.business_name ||
-                          `${selectedClient.first_name} ${selectedClient.surname}`}
+                      <div className="text-sm font-semibold">
+                        <span className="text-[#333333]">
+                          {formatClientName(selectedClient) || "Unnamed Client"}
+                        </span>
+                        {selectedClient.business_name && (
+                          <span className="text-[#525252]">
+                            {" "}
+                            ({selectedClient.business_name})
+                          </span>
+                        )}
                       </div>
                       <button
                         type="button"
@@ -373,29 +364,31 @@ export default function DocumentLibraryPage() {
                       </div>
                       {clientList.length > 0 && (
                         <div className="bg-white border border-purple-100 rounded-2xl p-2 max-h-48 overflow-y-auto">
-                          {clientList.map((client) => (
-                            <button
-                              key={client.id}
-                              onClick={() => {
-                                setSelectedClient(client);
-                                setClientSearch(
-                                  client.business_name ||
-                                    `${client.first_name} ${client.surname}`,
-                                );
-                              }}
-                              className="w-full text-left px-3 py-2 rounded-xl text-sm text-gray-700 hover:bg-purple-50"
-                            >
-                              <div className="font-semibold text-gray-900">
-                                {client.business_name ||
-                                  `${client.first_name} ${client.surname}`}
-                              </div>
-                              <div className="text-[11px] text-gray-400">
-                                {client.business_name
-                                  ? `${client.first_name} ${client.surname}`
-                                  : "Client"}
-                              </div>
-                            </button>
-                          ))}
+                          {clientList.map((client) => {
+                            const name = formatClientName(client);
+                            return (
+                              <button
+                                key={client.id}
+                                onClick={() => {
+                                  setSelectedClient(client);
+                                  setClientSearch(formatClientLabel(client));
+                                }}
+                                className="w-full text-left px-3 py-2 rounded-xl text-sm text-gray-700 hover:bg-purple-50"
+                              >
+                                <div className="font-semibold">
+                                  <span className="text-[#333333]">
+                                    {name || "Unnamed Client"}
+                                  </span>
+                                  {client.business_name && (
+                                    <span className="text-[#525252]">
+                                      {" "}
+                                      ({client.business_name})
+                                    </span>
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
                         </div>
                       )}
                       {shouldShowEmptyState && (

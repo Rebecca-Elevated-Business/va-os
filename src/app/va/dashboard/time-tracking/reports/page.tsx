@@ -97,6 +97,7 @@ type SavedReportRow = {
   is_archived?: boolean | null;
   clients: {
     business_name: string | null;
+    first_name: string | null;
     surname: string | null;
   } | null;
 };
@@ -105,10 +106,12 @@ type SavedReportRowRaw = Omit<SavedReportRow, "clients"> & {
   clients:
     | {
         business_name: string | null;
+        first_name: string | null;
         surname: string | null;
       }
     | {
         business_name: string | null;
+        first_name: string | null;
         surname: string | null;
       }[]
     | null;
@@ -172,6 +175,23 @@ export default function TimeReportsPage() {
   const [archiveDateFrom, setArchiveDateFrom] = useState("");
   const [archiveDateTo, setArchiveDateTo] = useState("");
 
+  const formatClientName = (client: {
+    first_name: string | null;
+    surname: string | null;
+  }) => `${client.first_name || ""} ${client.surname || ""}`.trim();
+
+  const formatClientLabel = (client: {
+    first_name: string | null;
+    surname: string | null;
+    business_name: string | null;
+  }) => {
+    const name = formatClientName(client);
+    if (client.business_name) {
+      return name ? `${name} (${client.business_name})` : client.business_name;
+    }
+    return name || "Client";
+  };
+
   const normalizeReports = (data: SavedReportRowRaw[] | null) =>
     (data || []).map((row) => ({
       ...row,
@@ -194,7 +214,7 @@ export default function TimeReportsPage() {
       const { data } = await supabase
         .from("time_reports")
         .select(
-          "id, name, client_id, date_from, date_to, total_seconds, entry_count, created_at, is_archived, clients(business_name, surname)"
+          "id, name, client_id, date_from, date_to, total_seconds, entry_count, created_at, is_archived, clients(business_name, first_name, surname)"
         )
         .eq("va_user_id", userId)
         .order("created_at", { ascending: false });
@@ -252,20 +272,12 @@ export default function TimeReportsPage() {
 
   const selectedClientLabel = useMemo(() => {
     if (!selectedClient) return "";
-    return (
-      selectedClient.business_name ||
-      `${selectedClient.first_name || ""} ${selectedClient.surname || ""}`.trim()
-    );
+    return formatClientLabel(selectedClient);
   }, [selectedClient]);
 
   const archiveSelectedClientLabel = useMemo(() => {
     if (!archiveSelectedClient) return "";
-    return (
-      archiveSelectedClient.business_name ||
-      `${archiveSelectedClient.first_name || ""} ${
-        archiveSelectedClient.surname || ""
-      }`.trim()
-    );
+    return formatClientLabel(archiveSelectedClient);
   }, [archiveSelectedClient]);
 
   const filteredArchivedReports = useMemo(() => {
@@ -507,7 +519,7 @@ export default function TimeReportsPage() {
               />
               <input
                 type="text"
-                placeholder="Search client..."
+                placeholder="Search by Client / Business Name"
                 className="w-full pl-11 pr-4 py-3.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold focus:ring-2 focus:ring-[#9d4edd] outline-none"
                 value={selectedClient ? selectedClientLabel : clientSearch}
                 onChange={(event) => {
@@ -529,31 +541,30 @@ export default function TimeReportsPage() {
                       No clients found.
                     </div>
                   ) : (
-                    clientResults.map((client) => (
-                      <button
-                        key={client.id}
-                        onClick={() => {
-                          setSelectedClient(client);
-                          setClientSearch("");
-                          setClientResults([]);
-                        }}
-                        className="w-full text-left px-4 py-3 text-sm font-semibold text-[#333333] hover:bg-gray-50 transition-colors"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="truncate">
-                            {client.business_name ||
-                              `${client.first_name || ""} ${
-                                client.surname || ""
-                              }`.trim()}
+                    clientResults.map((client) => {
+                      const name = formatClientName(client);
+                      return (
+                        <button
+                          key={client.id}
+                          onClick={() => {
+                            setSelectedClient(client);
+                            setClientSearch("");
+                            setClientResults([]);
+                          }}
+                          className="w-full text-left px-4 py-3 text-sm font-semibold text-[#333333] hover:bg-gray-50 transition-colors"
+                        >
+                          <span className="text-[#333333]">
+                            {name || "Unnamed Client"}
                           </span>
                           {client.business_name && (
-                            <span className="text-[11px] font-bold text-gray-400 shrink-0">
-                              {client.surname || "Client"}
+                            <span className="text-[#525252]">
+                              {" "}
+                              ({client.business_name})
                             </span>
                           )}
-                        </div>
-                      </button>
-                    ))
+                        </button>
+                      );
+                    })
                   )}
                 </div>
               )}
@@ -741,7 +752,7 @@ export default function TimeReportsPage() {
                   />
                   <input
                     type="text"
-                    placeholder="Type a client name..."
+                    placeholder="Search by Client / Business Name"
                     className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-gray-200 bg-white text-xs font-semibold focus:ring-2 focus:ring-[#9d4edd] outline-none"
                     value={
                       archiveSelectedClient
@@ -769,22 +780,30 @@ export default function TimeReportsPage() {
                             No clients found.
                           </div>
                         ) : (
-                          archiveClientResults.map((client) => (
-                            <button
-                              key={client.id}
-                              onClick={() => {
-                                setArchiveSelectedClient(client);
-                                setArchiveClientSearch("");
-                                setArchiveClientResults([]);
-                              }}
-                              className="w-full text-left px-3 py-2 text-xs font-semibold text-[#333333] hover:bg-gray-50 transition-colors"
-                            >
-                              {client.business_name ||
-                                `${client.first_name || ""} ${
-                                  client.surname || ""
-                                }`.trim()}
-                            </button>
-                          ))
+                          archiveClientResults.map((client) => {
+                            const name = formatClientName(client);
+                            return (
+                              <button
+                                key={client.id}
+                                onClick={() => {
+                                  setArchiveSelectedClient(client);
+                                  setArchiveClientSearch("");
+                                  setArchiveClientResults([]);
+                                }}
+                                className="w-full text-left px-3 py-2 text-xs font-semibold text-[#333333] hover:bg-gray-50 transition-colors"
+                              >
+                                <span className="text-[#333333]">
+                                  {name || "Unnamed Client"}
+                                </span>
+                                {client.business_name && (
+                                  <span className="text-[#525252]">
+                                    {" "}
+                                    ({client.business_name})
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })
                         )}
                       </div>
                     )}
@@ -853,9 +872,7 @@ export default function TimeReportsPage() {
                     {report.name}
                   </p>
                   <p className="text-xs text-gray-400">
-                    {report.clients?.business_name ||
-                      report.clients?.surname ||
-                      "Client"}{" "}
+                    {report.clients ? formatClientLabel(report.clients) : "Client"}{" "}
                     · {formatDate(report.date_from)} —{" "}
                     {formatDate(report.date_to)}
                   </p>
