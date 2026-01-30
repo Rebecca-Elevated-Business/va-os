@@ -1890,7 +1890,7 @@ export default function ClientProfilePage({
                       <col className="w-32" />
                       <col className="w-24" />
                       <col className="w-24" />
-                      <col className="w-8" />
+                      <col className="w-14" />
                     </colgroup>
                     <thead>
                       <tr className="text-[10px] font-semibold tracking-widest text-gray-500 uppercase">
@@ -1899,7 +1899,7 @@ export default function ClientProfilePage({
                         <th className="px-4 py-2 text-right">End Date</th>
                         <th className="px-4 py-2 text-center">Timer</th>
                         <th className="px-4 py-2 text-right">Time Count</th>
-                        <th className="px-4 py-2" />
+                        <th className="px-4 py-2 pr-6" />
                       </tr>
                     </thead>
                   </table>
@@ -1958,7 +1958,7 @@ export default function ClientProfilePage({
                               <col className="w-32" />
                               <col className="w-24" />
                               <col className="w-24" />
-                              <col className="w-8" />
+                              <col className="w-14" />
                             </colgroup>
                             <tbody
                               className="divide-y divide-gray-100"
@@ -2163,7 +2163,7 @@ export default function ClientProfilePage({
                                       </td>
 
                                       {/* 6. ACTIONS */}
-                                      <td className="px-4 py-3 text-right align-top pt-4">
+                                      <td className="px-4 py-3 pr-6 text-right align-top pt-4">
                                         <div className="relative action-menu-trigger inline-flex justify-end z-50">
                                           <button
                                             onClick={(event) => {
@@ -2385,7 +2385,7 @@ export default function ClientProfilePage({
                                               <td className="px-4 py-3 text-right font-mono text-xs text-[#333333] align-top pt-4">
                                                 {formatTime(child)}
                                               </td>
-                                              <td className="px-4 py-3 text-right align-top pt-4">
+                                      <td className="px-4 py-3 pr-6 text-right align-top pt-4">
                                                 <div className="relative action-menu-trigger inline-flex justify-end z-50">
                                                   <button
                                                     onClick={(event) => {
