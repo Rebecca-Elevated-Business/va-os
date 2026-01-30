@@ -63,6 +63,7 @@ export default function TimeTrackingPage() {
     sessionElapsedSeconds,
     startSession,
     stopSession,
+    startTaskEntry,
   } = useClientSession();
   const { confirm } = usePrompt();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -336,13 +337,16 @@ export default function TimeTrackingPage() {
     );
   };
 
-  const handleSelectTask = (task: Task) => {
+  const handleSelectTask = async (task: Task) => {
     setSelectedTaskId(task.id);
     const clientLabel = task.clients?.surname
       ? ` (${task.clients.surname})`
       : "";
     setSearchValue(`${task.task_name}${clientLabel}`);
     setIsDropdownOpen(false);
+    if (isSessionRunning) {
+      await startTaskEntry(task.id, task.client_id);
+    }
   };
 
   const handleToggleSession = async () => {
