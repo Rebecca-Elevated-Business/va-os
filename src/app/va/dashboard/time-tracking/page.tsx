@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { ChevronDown, Circle, Play, Search, Trash2 } from "lucide-react";
+import { ChevronDown, Circle, Play, Search, Trash2, X } from "lucide-react";
 import TaskModal from "../tasks/TaskModal";
 import { Task } from "../tasks/types";
 import { useClientSession } from "../ClientSessionContext";
@@ -349,6 +349,10 @@ export default function TimeTrackingPage() {
       }
       await stopSession();
       await loadEntries(activeRange.start, activeRange.end);
+      setSessionClientId(null);
+      setSessionClientQuery("");
+      setIsSessionClientFocused(false);
+      setIsSessionDropdownOpen(false);
       return;
     }
     if (!sessionClientId) return;
@@ -411,6 +415,9 @@ export default function TimeTrackingPage() {
           );
         }
       }
+      setSelectedTaskId(null);
+      setSearchValue("");
+      setIsDropdownOpen(false);
     } else {
       const startTime = new Date().toISOString();
       await supabase
@@ -602,7 +609,7 @@ export default function TimeTrackingPage() {
                 <input
                   type="text"
                   placeholder="Select a client to track"
-                  className="w-full pl-11 pr-10 py-3.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold focus:ring-2 focus:ring-[#9d4edd] outline-none"
+                  className="w-full pl-11 pr-12 py-3.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold focus:ring-2 focus:ring-[#9d4edd] outline-none"
                   value={sessionInputValue}
                   onChange={(event) => {
                     const value = event.target.value;
@@ -622,6 +629,21 @@ export default function TimeTrackingPage() {
                     }
                   }}
                 />
+                {sessionClientId && (
+                  <button
+                    type="button"
+                    aria-label="Clear client search"
+                    onClick={() => {
+                      setSessionClientId(null);
+                      setSessionClientQuery("");
+                      setIsSessionClientFocused(false);
+                      setIsSessionDropdownOpen(false);
+                    }}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-500 transition-colors"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
 
                 {isSessionDropdownOpen &&
                   sessionClientQuery.trim().length > 0 && (
@@ -711,7 +733,7 @@ export default function TimeTrackingPage() {
               <input
                 type="text"
                 placeholder="Select a task to track"
-                className="w-full pl-11 pr-10 py-3.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold focus:ring-2 focus:ring-[#9d4edd] outline-none"
+                className="w-full pl-11 pr-12 py-3.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold focus:ring-2 focus:ring-[#9d4edd] outline-none"
                 value={searchValue}
                 onChange={(event) => {
                   const value = event.target.value;
@@ -723,6 +745,20 @@ export default function TimeTrackingPage() {
                   setIsDropdownOpen(searchValue.trim().length > 0)
                 }
               />
+              {selectedTaskId && (
+                <button
+                  type="button"
+                  aria-label="Clear task search"
+                  onClick={() => {
+                    setSelectedTaskId(null);
+                    setSearchValue("");
+                    setIsDropdownOpen(false);
+                  }}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-500 transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              )}
 
               {isDropdownOpen &&
                 searchValue.trim().length > 0 &&
