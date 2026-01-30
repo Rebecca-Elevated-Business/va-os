@@ -253,10 +253,10 @@ export default function VAInboxPage() {
                     e.stopPropagation();
                     toggleStatus(msg.id, "is_starred", !msg.is_starred);
                   }}
-                  className={`mt-1 text-xl transition-all hover:scale-110 ${
+                  className={`mt-1 text-xl transition-all hover:scale-110 active:scale-95 ${
                     msg.is_starred
-                      ? "text-[#9d4edd]"
-                      : "text-gray-200 group-hover:text-gray-300"
+                      ? "text-[#F1D26A]"
+                      : "text-[#F1D26A]/70 group-hover:text-[#F1D26A]"
                   }`}
                 >
                   {msg.is_starred ? "★" : "☆"}
@@ -367,16 +367,17 @@ export default function VAInboxPage() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() =>
-                        toggleStatus(
-                          selectedMsg.id,
-                          "is_starred",
-                          !selectedMsg.is_starred
-                        )
+                        setSelectedMsg((prev) => {
+                          if (!prev) return prev;
+                          const nextValue = !prev.is_starred;
+                          toggleStatus(prev.id, "is_starred", nextValue);
+                          return { ...prev, is_starred: nextValue };
+                        })
                       }
                       className={`text-xl transition-all hover:scale-110 ${
                         selectedMsg.is_starred
-                          ? "text-[#9d4edd]"
-                          : "text-gray-200"
+                          ? "text-[#F1D26A]"
+                          : "text-[#F1D26A]/70"
                       }`}
                     >
                       {selectedMsg.is_starred ? "★" : "☆"}
@@ -401,25 +402,41 @@ export default function VAInboxPage() {
                   >
                     ⚙️ Create Task
                   </button>
-                  <button
-                    onClick={() => {
-                      toggleStatus(
-                        selectedMsg.id,
-                        "is_completed",
-                        !selectedMsg.is_completed
-                      );
-                      setSelectedMsg(null);
-                    }}
-                    className={`py-4 rounded-2xl font-black text-xs tracking-widest border-2 transition-all active:scale-95 ${
-                      selectedMsg.is_completed
-                        ? "border-orange-200 text-orange-600 hover:bg-orange-50"
-                        : "border-green-200 text-green-600 hover:bg-green-50"
-                    }`}
-                  >
-                    {selectedMsg.is_completed
-                      ? "⏪ Undo Complete"
-                      : "✅ Mark Completed"}
-                  </button>
+                  <div className="flex flex-col items-center">
+                    <button
+                      onClick={() => {
+                        toggleStatus(
+                          selectedMsg.id,
+                          "is_completed",
+                          !selectedMsg.is_completed
+                        );
+                        setSelectedMsg(null);
+                      }}
+                      className={`w-full py-4 rounded-2xl font-black text-xs tracking-widest border-2 transition-all active:scale-95 ${
+                        selectedMsg.is_completed
+                          ? "border-orange-200 text-orange-600 hover:bg-orange-50"
+                          : "border-green-200 text-green-600 hover:bg-green-50"
+                      }`}
+                    >
+                      {selectedMsg.is_completed
+                        ? "⏪ Undo Complete"
+                        : "✅ Mark Completed"}
+                    </button>
+                    {selectedMsg.is_read && (
+                      <button
+                        onClick={() => {
+                          toggleStatus(selectedMsg.id, "is_read", false);
+                          setSelectedMsg((prev) =>
+                            prev ? { ...prev, is_read: false } : prev
+                          );
+                          setSelectedMsg(null);
+                        }}
+                        className="mt-2 text-[11px] font-semibold text-gray-400 hover:text-gray-600 transition-colors"
+                      >
+                        Mark as unread
+                      </button>
+                    )}
+                  </div>
                 </div>
                 {selectedMsg.is_completed && (
                   <div className="pt-2">
