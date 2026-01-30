@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
-import { CheckCircle2, Inbox, Star } from "lucide-react";
+import { Check, CheckCircle2, Inbox, Settings, Star } from "lucide-react";
 import { usePrompt } from "@/components/ui/PromptProvider";
 
 type InboxMessage = {
@@ -255,8 +255,8 @@ export default function VAInboxPage() {
                   }}
                   className={`mt-1 text-xl transition-all hover:scale-110 active:scale-95 ${
                     msg.is_starred
-                      ? "text-[#F1D26A]"
-                      : "text-[#F1D26A]/70 group-hover:text-[#F1D26A]"
+                      ? "text-[#EEC644]"
+                      : "text-[#EEC644]/70 group-hover:text-[#EEC644]"
                   }`}
                 >
                   {msg.is_starred ? "★" : "☆"}
@@ -376,15 +376,15 @@ export default function VAInboxPage() {
                       }
                       className={`text-xl transition-all hover:scale-110 ${
                         selectedMsg.is_starred
-                          ? "text-[#F1D26A]"
-                          : "text-[#F1D26A]/70"
+                          ? "text-[#EEC644]"
+                          : "text-[#EEC644]/70"
                       }`}
                     >
                       {selectedMsg.is_starred ? "★" : "☆"}
                     </button>
                     <button
                       onClick={() => setSelectedMsg(null)}
-                      className="w-10 h-10 rounded-full border border-[#525252] text-[#525252] hover:text-[#333333] hover:border-[#333333] flex items-center justify-center text-xl font-bold transition-colors"
+                      className="w-10 h-10 rounded-full border border-[#525252] text-[#525252] hover:text-[#333333] hover:border-[#333333] flex items-center justify-center text-base font-bold transition-colors"
                     >
                       ✕
                     </button>
@@ -395,12 +395,13 @@ export default function VAInboxPage() {
                   &quot;{selectedMsg.message}&quot;
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 pt-4">
+                <div className="grid grid-cols-2 gap-4 pt-4 items-start">
                   <button
                     onClick={() => convertToTask(selectedMsg)}
-                    className="bg-gray-900 text-white py-4 rounded-2xl font-black text-xs tracking-widest hover:bg-black transition-all active:scale-95"
+                    className="w-full inline-flex items-center justify-center gap-2 bg-gray-900 text-white py-4 rounded-2xl font-black text-xs tracking-widest hover:bg-black transition-all active:scale-95"
                   >
-                    ⚙️ Create Task
+                    <Settings size={14} />
+                    Create Task
                   </button>
                   <div className="flex flex-col items-center">
                     <button
@@ -412,15 +413,10 @@ export default function VAInboxPage() {
                         );
                         setSelectedMsg(null);
                       }}
-                      className={`w-full py-4 rounded-2xl font-black text-xs tracking-widest border-2 transition-all active:scale-95 ${
-                        selectedMsg.is_completed
-                          ? "border-orange-200 text-orange-600 hover:bg-orange-50"
-                          : "border-green-200 text-green-600 hover:bg-green-50"
-                      }`}
+                      className="w-full inline-flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-xs tracking-widest border-2 border-[#9d4edd] text-[#9d4edd] hover:bg-purple-50 active:bg-purple-100 transition-all active:scale-95"
                     >
-                      {selectedMsg.is_completed
-                        ? "⏪ Undo Complete"
-                        : "✅ Mark Completed"}
+                      <Check size={14} />
+                      {selectedMsg.is_completed ? "Undo Complete" : "Mark Completed"}
                     </button>
                     {selectedMsg.is_read && (
                       <button
