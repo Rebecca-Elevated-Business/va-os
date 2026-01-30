@@ -3,7 +3,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
-import { Check, CheckCircle2, Inbox, Settings, Star } from "lucide-react";
+import {
+  Check,
+  CheckCircle2,
+  Inbox,
+  RotateCcw,
+  Settings,
+  Star,
+} from "lucide-react";
 import { usePrompt } from "@/components/ui/PromptProvider";
 
 type InboxMessage = {
@@ -415,35 +422,41 @@ export default function VAInboxPage() {
                       }}
                       className="w-full inline-flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-xs tracking-widest border-2 border-[#9d4edd] text-[#9d4edd] hover:bg-purple-50 active:bg-purple-100 transition-all active:scale-95"
                     >
-                      <Check size={14} />
-                      {selectedMsg.is_completed ? "Undo Complete" : "Mark Completed"}
+                      {selectedMsg.is_completed ? (
+                        <RotateCcw size={14} />
+                      ) : (
+                        <Check size={14} />
+                      )}
+                      {selectedMsg.is_completed
+                        ? "Undo Complete"
+                        : "Mark Completed"}
                     </button>
-                    {selectedMsg.is_read && (
-                      <button
-                        onClick={() => {
-                          toggleStatus(selectedMsg.id, "is_read", false);
-                          setSelectedMsg((prev) =>
-                            prev ? { ...prev, is_read: false } : prev
-                          );
-                          setSelectedMsg(null);
-                        }}
-                        className="mt-2 text-[11px] font-semibold text-gray-400 hover:text-gray-600 transition-colors"
-                      >
-                        Mark as unread
-                      </button>
-                    )}
+                    <div className="mt-2 flex items-center justify-center gap-4">
+                      {selectedMsg.is_read && (
+                        <button
+                          onClick={() => {
+                            toggleStatus(selectedMsg.id, "is_read", false);
+                            setSelectedMsg((prev) =>
+                              prev ? { ...prev, is_read: false } : prev
+                            );
+                            setSelectedMsg(null);
+                          }}
+                          className="text-[11px] font-semibold text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                          Mark as unread
+                        </button>
+                      )}
+                      {selectedMsg.is_completed && (
+                        <button
+                          onClick={() => deleteMessage(selectedMsg)}
+                          className="text-[11px] font-semibold text-red-500 hover:text-red-600 transition-colors"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
-                {selectedMsg.is_completed && (
-                  <div className="pt-2">
-                    <button
-                      onClick={() => deleteMessage(selectedMsg)}
-                      className="text-red-600 border border-red-200 rounded-xl px-3 py-2 text-[10px] font-black tracking-widest hover:bg-red-50 transition-colors"
-                    >
-                      DELETE
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
           </div>
