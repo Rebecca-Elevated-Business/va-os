@@ -25,6 +25,10 @@ type InboxMessage = {
   is_completed: boolean;
   is_read: boolean;
   task_id?: string | null;
+  tasks?: {
+    task_name: string;
+    details: string | null;
+  } | null;
   clients: {
     first_name: string;
     surname: string;
@@ -44,7 +48,7 @@ export default function VAInboxPage() {
   const fetchMessages = useCallback(async () => {
     const { data } = await supabase
       .from("client_requests")
-      .select("*, clients(first_name, surname, business_name)")
+      .select("*, clients(first_name, surname, business_name), tasks(task_name, details)")
       .order("created_at", { ascending: false });
 
     if (data) setMessages(data as InboxMessage[]);
@@ -119,6 +123,9 @@ export default function VAInboxPage() {
             item.id === msg.id ? { ...item, task_id: taskData.id } : item
           )
         );
+        setSelectedMsg((prev) =>
+          prev && prev.id === msg.id ? { ...prev, task_id: taskData.id } : prev
+        );
       } else {
         fetchMessages();
       }
@@ -165,7 +172,7 @@ export default function VAInboxPage() {
     onboarding: "Onboarding Complete",
     task_created: "Task Added",
     task_note: "Task Note",
-    task_status: "Task Status Update",
+    task_status: "Task Status",
     task_updated: "Task Updated",
     task_deleted: "Task Deleted",
   };
@@ -175,8 +182,8 @@ export default function VAInboxPage() {
     work: "bg-amber-50 text-amber-700 border-amber-100",
     onboarding: "bg-violet-50 text-violet-700 border-violet-100",
     task_created: "bg-green-50 text-green-700 border-green-100",
-    task_note: "bg-purple-50 text-purple-700 border-purple-100",
-    task_status: "bg-sky-50 text-sky-700 border-sky-100",
+    task_note: "bg-lime-50 text-lime-700 border-lime-100",
+    task_status: "bg-lime-50 text-lime-700 border-lime-100",
     task_updated: "bg-lime-50 text-lime-700 border-lime-100",
     task_deleted: "bg-red-50 text-red-700 border-red-100",
   };
@@ -430,8 +437,33 @@ export default function VAInboxPage() {
                 </div>
 
                 <div className="bg-gray-50 p-8 rounded-3xl border border-gray-100 italic text-gray-700 leading-relaxed shadow-inner">
-                  &quot;{selectedMsg.message}&quot;
+                  {selectedMsg.type === "task_note"
+                    ? "Client added a note on this task."
+                    : selectedMsg.message && `“${selectedMsg.message}”`}
                 </div>
+
+                {(selectedMsg.type === "task_note" ||
+                  selectedMsg.type === "task_created" ||
+                  selectedMsg.type === "task_updated" ||
+                  selectedMsg.type === "task_status") && (
+                  <div className="bg-white p-6 rounded-3xl border border-gray-100 text-gray-700 leading-relaxed shadow-sm">
+                    <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">
+                      {selectedMsg.type === "task_note"
+                        ? "Task Note"
+                        : "Task Details"}
+                    </p>
+                    {selectedMsg.tasks?.task_name && (
+                      <p className="mt-2 text-sm font-bold text-gray-900">
+                        {selectedMsg.tasks.task_name}
+                      </p>
+                    )}
+                    <p className="mt-2 text-sm text-gray-700 whitespace-pre-wrap">
+                      {selectedMsg.type === "task_note"
+                        ? selectedMsg.message
+                        : selectedMsg.tasks?.details || "No details provided."}
+                    </p>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4 pt-4 items-start">
                   {selectedMsg.task_id ? (

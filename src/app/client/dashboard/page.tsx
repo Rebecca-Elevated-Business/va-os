@@ -396,7 +396,7 @@ export default function ClientDashboard() {
     }
     await notifyVa({
       client_id: safeClientId,
-      type: "work",
+      type: "task_status",
       message: `Task status changed: ${clientName || "Client"} set "${task?.task_name || "Task"}" to ${status}`,
       status: "new",
       is_read: false,

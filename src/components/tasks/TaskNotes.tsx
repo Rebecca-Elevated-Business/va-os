@@ -133,8 +133,8 @@ export default function TaskNotes({
         {
           client_id: clientId,
           task_id: taskId,
-          type: "work",
-          message: `Task note: ${clientName || "Client"} added a note on "${taskName || "Task"}"`,
+          type: "task_note",
+          message: text,
           status: "new",
           is_read: false,
           is_completed: false,
