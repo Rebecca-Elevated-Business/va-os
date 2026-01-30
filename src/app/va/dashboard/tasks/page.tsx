@@ -108,9 +108,9 @@ export default function TaskCentrePage() {
   const [clients, setClients] = useState<
     {
       id: string;
-      business_name: string | null;
-      first_name: string | null;
-      surname: string | null;
+      business_name: string;
+      first_name: string;
+      surname: string;
     }[]
   >([]);
   const [view, setView] = useState<"list" | "calendar" | "kanban">("list");
@@ -240,7 +240,15 @@ export default function TaskCentrePage() {
       .select("id, first_name, surname, business_name")
       .eq("va_id", user.id);
 
-    if (clientData) setClients(clientData);
+    if (clientData) {
+      const normalizedClients = clientData.map((client) => ({
+        ...client,
+        business_name: client.business_name || "",
+        first_name: client.first_name || "",
+        surname: client.surname || "",
+      }));
+      setClients(normalizedClients);
+    }
     const { data: profile } = await supabase
       .from("profiles")
       .select("display_name, full_name")
