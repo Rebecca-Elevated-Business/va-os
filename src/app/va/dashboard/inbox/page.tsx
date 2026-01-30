@@ -332,8 +332,14 @@ export default function VAInboxPage() {
 
       {/* POPUP OVERLAY */}
         {selectedMsg && (
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-100 flex items-center justify-center p-6 text-black">
-            <div className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in duration-200">
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-100 flex items-center justify-center p-6 text-black"
+            onClick={() => setSelectedMsg(null)}
+          >
+            <div
+              className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in duration-200"
+              onClick={(event) => event.stopPropagation()}
+            >
               <div className="p-10 space-y-6">
                 <div className="flex justify-between items-start">
                   <div>
@@ -377,7 +383,7 @@ export default function VAInboxPage() {
                     </button>
                     <button
                       onClick={() => setSelectedMsg(null)}
-                      className="text-black hover:bg-gray-100 w-10 h-10 rounded-full flex items-center justify-center text-xl font-bold transition-colors"
+                      className="w-10 h-10 rounded-full border border-[#525252] text-[#525252] hover:text-[#333333] hover:border-[#333333] flex items-center justify-center text-xl font-bold transition-colors"
                     >
                       ✕
                     </button>
