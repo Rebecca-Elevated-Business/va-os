@@ -482,7 +482,7 @@ export default function TimeReportsPage() {
         <div className="flex items-center gap-3 text-sm font-semibold">
           <Link
             href="/va/dashboard/time-tracking"
-            className="text-gray-400 hover:text-[#9d4edd]"
+            className="text-[#333333] hover:text-[#9d4edd]"
           >
             Time Tracking
           </Link>

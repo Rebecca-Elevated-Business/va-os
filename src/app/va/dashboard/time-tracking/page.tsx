@@ -150,8 +150,9 @@ export default function TimeTrackingPage() {
 
     const { data: taskData } = await supabase
       .from("tasks")
-      .select("*, clients(business_name, surname)")
+      .select("*, clients!tasks_client_id_fkey(business_name, surname)")
       .eq("va_id", user.id)
+      .is("deleted_at", null)
       .order("created_at", { ascending: false });
     if (taskData) setTasks(taskData as Task[]);
 
@@ -579,7 +580,7 @@ export default function TimeTrackingPage() {
           <span className="text-gray-300">/</span>
           <Link
             href="/va/dashboard/time-tracking/reports"
-            className="text-gray-400 hover:text-[#9d4edd]"
+            className="text-[#333333] hover:text-[#9d4edd]"
           >
             Reports
           </Link>
