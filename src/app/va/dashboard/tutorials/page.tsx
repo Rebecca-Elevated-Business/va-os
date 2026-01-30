@@ -36,7 +36,6 @@ export default function TutorialsPage() {
           Tutorials
         </h1>
         <p className="text-sm text-gray-500 mt-2">
-          Training resources and walkthroughs to help you get the most out of
           VA-OS.
         </p>
       </header>

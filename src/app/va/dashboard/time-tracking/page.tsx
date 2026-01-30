@@ -112,10 +112,12 @@ export default function TimeTrackingPage() {
     const activeTasks = tasks.filter((task) => !task.deleted_at);
     if (!query) return activeTasks;
     return activeTasks.filter((task) => {
-      const clientName = task.clients?.surname?.toLowerCase() || "";
+      const clientSurname = task.clients?.surname?.toLowerCase() || "";
+      const clientBusiness = task.clients?.business_name?.toLowerCase() || "";
       return (
         task.task_name.toLowerCase().includes(query) ||
-        clientName.includes(query)
+        clientSurname.includes(query) ||
+        clientBusiness.includes(query)
       );
     });
   }, [searchValue, tasks]);
@@ -570,7 +572,6 @@ export default function TimeTrackingPage() {
         <div>
           <h1 className="text-3xl font-bold">Time Tracking</h1>
           <p className="text-sm text-gray-400">
-            Track time entries and manage reports.
           </p>
         </div>
         <div className="flex items-center gap-3 text-sm font-semibold">
@@ -587,8 +588,8 @@ export default function TimeTrackingPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
-          <div className="flex flex-col gap-4">
-            <div className="w-full" ref={sessionDropdownRef}>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+            <div className="w-full lg:w-3/5" ref={sessionDropdownRef}>
               <label className="text-[11px] font-bold text-gray-400 tracking-widest uppercase block mb-2">
                 Client Session
               </label>
@@ -623,38 +624,47 @@ export default function TimeTrackingPage() {
 
                 {isSessionDropdownOpen &&
                   sessionClientQuery.trim().length > 0 && (
-                  <div className="absolute z-30 mt-2 w-full rounded-xl border border-gray-100 bg-white shadow-xl max-h-72 overflow-auto">
-                    {sessionClientOptions.length === 0 ? (
-                      <div className="px-4 py-3 text-sm text-gray-400">
-                        No clients found.
-                      </div>
-                    ) : (
-                      sessionClientOptions.map((client) => (
-                        <button
-                          key={client.id}
-                          onClick={() => {
-                            setSessionClientId(client.id);
-                            setSessionClientQuery(
-                              `${client.surname}${client.business_name ? ` (${client.business_name})` : ""}`,
-                            );
-                            setIsSessionDropdownOpen(false);
-                            setIsSessionClientFocused(false);
-                          }}
-                          className="w-full text-left px-4 py-3 text-sm font-semibold text-[#333333] hover:bg-gray-50 transition-colors"
-                        >
-                          {client.surname}
-                          {client.business_name
-                            ? ` (${client.business_name})`
-                            : ""}
-                        </button>
-                      ))
-                    )}
-                  </div>
-                )}
+                    <div className="absolute z-30 mt-2 w-full rounded-xl border border-gray-100 bg-white shadow-xl max-h-72 overflow-auto">
+                      {sessionClientOptions.length === 0 ? (
+                        <div className="px-4 py-3 text-sm text-gray-400">
+                          No clients found.
+                        </div>
+                      ) : (
+                        sessionClientOptions.map((client) => (
+                          <button
+                            key={client.id}
+                            onClick={() => {
+                              setSessionClientId(client.id);
+                              setSessionClientQuery(
+                                `${client.surname}${client.business_name ? ` (${client.business_name})` : ""}`,
+                              );
+                              setIsSessionDropdownOpen(false);
+                              setIsSessionClientFocused(false);
+                            }}
+                            className="w-full text-left px-4 py-3 text-sm font-semibold text-[#333333] hover:bg-gray-50 transition-colors"
+                          >
+                            {client.surname}
+                            {client.business_name
+                              ? ` (${client.business_name})`
+                              : ""}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-4 mt-3 text-sm">
+                <Link
+                  href="/va/dashboard/crm/add"
+                  className="text-[#9d4edd] font-bold hover:text-[#7b2cbf] underline underline-offset-4"
+                >
+                  Create new client
+                </Link>
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-6">
+            <div className="flex-1 flex items-center justify-between gap-6">
               <div className="text-3xl font-black tracking-widest text-[#333333] font-mono">
                 {formatHms(sessionElapsedSeconds)}
               </div>
@@ -662,13 +672,11 @@ export default function TimeTrackingPage() {
                 onClick={handleToggleSession}
                 disabled={!sessionClientId && !isSessionRunning}
                 className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm shadow-lg transition-all ${
-                  isSessionRunning
-                    ? "bg-red-500 text-white hover:bg-red-600"
-                    : "bg-[#9d4edd] text-white hover:bg-[#7b2cbf]"
-                } ${
                   !sessionClientId && !isSessionRunning
-                    ? "bg-gray-100 text-gray-400 cursor-not-allowed shadow-none"
-                    : ""
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : isSessionRunning
+                      ? "bg-red-500 text-white hover:bg-red-600"
+                      : "bg-[#9d4edd] text-white hover:bg-[#7b2cbf]"
                 }`}
               >
                 {isSessionRunning ? (
@@ -707,20 +715,19 @@ export default function TimeTrackingPage() {
                 onChange={(event) => {
                   const value = event.target.value;
                   setSearchValue(value);
-                  setIsDropdownOpen(true);
+                  setIsDropdownOpen(value.trim().length > 0);
                   if (!value) setSelectedTaskId(null);
                 }}
-                onFocus={() => setIsDropdownOpen(true)}
+                onFocus={() =>
+                  setIsDropdownOpen(searchValue.trim().length > 0)
+                }
               />
 
-              {isDropdownOpen && (
-                <div className="absolute z-30 mt-2 w-full rounded-xl border border-gray-100 bg-white shadow-xl max-h-72 overflow-auto">
-                  {filteredTasks.length === 0 ? (
-                    <div className="px-4 py-3 text-sm text-gray-400">
-                      No tasks found.
-                    </div>
-                  ) : (
-                    filteredTasks.map((task) => (
+              {isDropdownOpen &&
+                searchValue.trim().length > 0 &&
+                filteredTasks.length > 0 && (
+                  <div className="absolute z-30 mt-2 w-full rounded-xl border border-gray-100 bg-white shadow-xl max-h-72 overflow-auto">
+                    {filteredTasks.map((task) => (
                       <button
                         key={task.id}
                         onClick={() => handleSelectTask(task)}
@@ -735,10 +742,9 @@ export default function TimeTrackingPage() {
                           )}
                         </div>
                       </button>
-                    ))
-                  )}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
             </div>
 
             <div className="flex flex-wrap items-center gap-4 mt-3 text-sm">

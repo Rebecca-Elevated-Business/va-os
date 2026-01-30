@@ -477,7 +477,6 @@ export default function TimeReportsPage() {
         <div>
           <h1 className="text-3xl font-bold">Time Reports</h1>
           <p className="text-sm text-gray-400">
-            Generate and save time report snapshots.
           </p>
         </div>
         <div className="flex items-center gap-3 text-sm font-semibold">
