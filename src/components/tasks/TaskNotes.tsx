@@ -132,6 +132,7 @@ export default function TaskNotes({
       await supabase.from("client_requests").insert([
         {
           client_id: clientId,
+          task_id: taskId,
           type: "work",
           message: `Task note: ${clientName || "Client"} added a note on "${taskName || "Task"}"`,
           status: "new",

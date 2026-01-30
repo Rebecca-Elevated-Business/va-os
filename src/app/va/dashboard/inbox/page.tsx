@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
 import {
+  ArrowUpRight,
   Check,
   CheckCircle2,
   Inbox,
@@ -22,6 +24,7 @@ type InboxMessage = {
   is_starred: boolean;
   is_completed: boolean;
   is_read: boolean;
+  task_id?: string | null;
   clients: {
     first_name: string;
     surname: string;
@@ -91,17 +94,34 @@ export default function VAInboxPage() {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) return;
 
-    const { error } = await supabase.from("tasks").insert([
-      {
-        client_id: msg.client_id,
-        va_id: userData.user.id,
-        task_name: `Inbox Req: ${msg.message.substring(0, 40)}...`,
-        is_completed: false,
-        total_minutes: 0,
-      },
-    ]);
+    const { data: taskData, error } = await supabase
+      .from("tasks")
+      .insert([
+        {
+          client_id: msg.client_id,
+          va_id: userData.user.id,
+          task_name: `Inbox Req: ${msg.message.substring(0, 40)}...`,
+          is_completed: false,
+          total_minutes: 0,
+        },
+      ])
+      .select("id")
+      .single();
 
-    if (!error) {
+    if (!error && taskData?.id) {
+      const { error: linkError } = await supabase
+        .from("client_requests")
+        .update({ task_id: taskData.id })
+        .eq("id", msg.id);
+      if (!linkError) {
+        setMessages((prev) =>
+          prev.map((item) =>
+            item.id === msg.id ? { ...item, task_id: taskData.id } : item
+          )
+        );
+      } else {
+        fetchMessages();
+      }
       await alert({
         title: "Task created",
         message: "Converted to client task! Message remains in Inbox.",
@@ -320,15 +340,26 @@ export default function VAInboxPage() {
                         Mark Completed
                       </button>
                     )}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        convertToTask(msg);
-                      }}
-                      className="px-3 py-1.5 rounded-full text-[10px] font-bold border border-gray-200 text-[#333333] hover:bg-gray-50"
-                    >
-                      Create Task
-                    </button>
+                    {msg.task_id ? (
+                      <Link
+                        href={`/va/dashboard/tasks?taskId=${msg.task_id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold border border-gray-200 text-[#333333] hover:bg-gray-50"
+                      >
+                        <ArrowUpRight size={12} />
+                        View Task
+                      </Link>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          convertToTask(msg);
+                        }}
+                        className="px-3 py-1.5 rounded-full text-[10px] font-bold border border-gray-200 text-[#333333] hover:bg-gray-50"
+                      >
+                        Create Task
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -403,13 +434,23 @@ export default function VAInboxPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 pt-4 items-start">
-                  <button
-                    onClick={() => convertToTask(selectedMsg)}
-                    className="w-full inline-flex items-center justify-center gap-2 bg-gray-900 text-white py-4 rounded-2xl font-black text-xs tracking-widest hover:bg-black transition-all active:scale-95"
-                  >
-                    <Settings size={14} />
-                    Create Task
-                  </button>
+                  {selectedMsg.task_id ? (
+                    <Link
+                      href={`/va/dashboard/tasks?taskId=${selectedMsg.task_id}`}
+                      className="w-full inline-flex items-center justify-center gap-2 bg-gray-900 text-white py-4 rounded-2xl font-black text-xs tracking-widest hover:bg-black transition-all active:scale-95"
+                    >
+                      <ArrowUpRight size={14} />
+                      View Task
+                    </Link>
+                  ) : (
+                    <button
+                      onClick={() => convertToTask(selectedMsg)}
+                      className="w-full inline-flex items-center justify-center gap-2 bg-gray-900 text-white py-4 rounded-2xl font-black text-xs tracking-widest hover:bg-black transition-all active:scale-95"
+                    >
+                      <Settings size={14} />
+                      Create Task
+                    </button>
+                  )}
                   <div className="flex flex-col items-center">
                     <button
                       onClick={() => {

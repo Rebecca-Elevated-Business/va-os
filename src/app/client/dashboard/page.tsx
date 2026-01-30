@@ -279,6 +279,7 @@ export default function ClientDashboard() {
     is_read: boolean;
     is_completed: boolean;
     is_starred: boolean;
+    task_id?: string | null;
   }) => {
     const { error } = await supabase.from("client_requests").insert([payload]);
     if (error) {
@@ -302,20 +303,24 @@ export default function ClientDashboard() {
     const safeClientId = clientId;
     const safeVaId = vaId;
     if (!safeClientId || !safeVaId) return;
-    const { error } = await supabase.from("tasks").insert([
-      {
-        client_id: safeClientId,
-        va_id: safeVaId,
-        task_name: payload.task_name,
-        details: payload.details,
-        status: payload.status,
-        is_completed: payload.status === "completed",
-        total_minutes: 0,
-        is_running: false,
-        shared_with_client: true,
-        created_by_client: true,
-      },
-    ]);
+    const { data: createdTask, error } = await supabase
+      .from("tasks")
+      .insert([
+        {
+          client_id: safeClientId,
+          va_id: safeVaId,
+          task_name: payload.task_name,
+          details: payload.details,
+          status: payload.status,
+          is_completed: payload.status === "completed",
+          total_minutes: 0,
+          is_running: false,
+          shared_with_client: true,
+          created_by_client: true,
+        },
+      ])
+      .select("id")
+      .single();
     if (error) {
       await alert({
         title: "Task not created",
@@ -332,6 +337,7 @@ export default function ClientDashboard() {
       is_read: false,
       is_completed: false,
       is_starred: false,
+      task_id: createdTask?.id ?? null,
     });
     await fetchTasks(safeClientId);
   };
@@ -366,6 +372,7 @@ export default function ClientDashboard() {
       is_read: false,
       is_completed: false,
       is_starred: false,
+      task_id: taskId,
     });
     await fetchTasks(safeClientId);
   };
@@ -395,6 +402,7 @@ export default function ClientDashboard() {
       is_read: false,
       is_completed: false,
       is_starred: false,
+      task_id: taskId,
     });
     if (task) {
       await supabase.from("task_activity").insert([
@@ -438,6 +446,7 @@ export default function ClientDashboard() {
       is_read: false,
       is_completed: false,
       is_starred: false,
+      task_id: taskId,
     });
     if (task) {
       await supabase.from("task_activity").insert([
