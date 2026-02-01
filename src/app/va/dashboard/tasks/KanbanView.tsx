@@ -12,6 +12,11 @@ import { Task } from "./types";
 interface KanbanViewProps {
   tasks: Task[];
   onUpdateStatus: (taskId: string, newStatus: string) => void;
+  onReorderTask?: (
+    taskId: string,
+    newStatus: string,
+    beforeTaskId?: string | null,
+  ) => void;
   onToggleTimer: (task: Task) => Promise<void>;
   onAddTask: (status: string) => void;
   filterStatus: string[]; // Added to handle dynamic column hiding
@@ -42,6 +47,7 @@ const COLUMNS = [
 export default function KanbanView({
   tasks,
   onUpdateStatus,
+  onReorderTask,
   onToggleTimer,
   onAddTask,
   filterStatus,
@@ -49,14 +55,22 @@ export default function KanbanView({
   onDeleteTask,
 }: KanbanViewProps) {
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const [draggedStatus, setDraggedStatus] = useState<string | null>(null);
+  const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
   const [actionMenuId, setActionMenuId] = useState<string | null>(null);
   const isDraggingRef = useRef(false);
 
   const handleDrop = (e: React.DragEvent, status: string) => {
     e.preventDefault();
     if (draggedTaskId) {
-      onUpdateStatus(draggedTaskId, status);
+      if (onReorderTask) {
+        onReorderTask(draggedTaskId, status, null);
+      } else {
+        onUpdateStatus(draggedTaskId, status);
+      }
       setDraggedTaskId(null);
+      setDraggedStatus(null);
+      setDragOverTaskId(null);
     }
   };
 
@@ -72,7 +86,17 @@ export default function KanbanView({
     <div className="h-[calc(100vh-180px)] overflow-x-auto pb-2 custom-scrollbar">
       <div className="flex gap-6 h-full min-w-max px-2">
         {visibleColumns.map((col) => {
-          const colTasks = tasks.filter((t) => t.status === col.id);
+          const colTasks = tasks
+            .filter((t) => t.status === col.id)
+            .slice()
+            .sort((a, b) => {
+              const orderA = a.sort_order ?? Number.MAX_SAFE_INTEGER;
+              const orderB = b.sort_order ?? Number.MAX_SAFE_INTEGER;
+              if (orderA !== orderB) return orderA - orderB;
+              const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+              const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+              return timeA - timeB;
+            });
 
           return (
             <div
@@ -108,16 +132,47 @@ export default function KanbanView({
                     onDragStart={() => {
                       isDraggingRef.current = true;
                       setDraggedTaskId(task.id);
+                      setDraggedStatus(col.id);
                     }}
                     onDragEnd={() => {
                       setTimeout(() => {
                         isDraggingRef.current = false;
                       }, 0);
+                      setDraggedTaskId(null);
+                      setDraggedStatus(null);
+                      setDragOverTaskId(null);
+                    }}
+                    onDragOver={(event) => {
+                      if (!draggedTaskId || draggedTaskId === task.id) return;
+                      event.preventDefault();
+                      setDragOverTaskId(task.id);
+                    }}
+                    onDragLeave={() => {
+                      if (dragOverTaskId === task.id) {
+                        setDragOverTaskId(null);
+                      }
+                    }}
+                    onDrop={(event) => {
+                      if (!draggedTaskId || draggedTaskId === task.id) return;
+                      event.preventDefault();
+                      event.stopPropagation();
+                      if (onReorderTask) {
+                        onReorderTask(draggedTaskId, col.id, task.id);
+                      } else if (draggedStatus !== col.id) {
+                        onUpdateStatus(draggedTaskId, col.id);
+                      }
+                      setDraggedTaskId(null);
+                      setDraggedStatus(null);
+                      setDragOverTaskId(null);
                     }}
                     onClick={() => handleCardClick(task)}
                     className={`bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-purple-100 transition-all group ${
                       task.client_deleted_at
                         ? "bg-red-50/60 border-red-100"
+                        : ""
+                    } ${
+                      dragOverTaskId === task.id
+                        ? "ring-1 ring-purple-100 bg-purple-50/60"
                         : ""
                     }`}
                   >

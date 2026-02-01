@@ -233,6 +233,8 @@ export default function ClientProfilePage({
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [draggingParentId, setDraggingParentId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const draggingTaskIdRef = useRef<string | null>(null);
+  const draggingParentIdRef = useRef<string | null>(null);
   const [actionMenuId, setActionMenuId] = useState<string | null>(null);
   const [collapsedStatus, setCollapsedStatus] = useState<Record<string, boolean>>(
     { completed: true },
@@ -526,24 +528,7 @@ export default function ClientProfilePage({
   // 3. Update Status
   const updateTaskStatus = async (task: Task, newStatus: string) => {
     if (task.status === newStatus) return;
-    await supabase
-      .from("tasks")
-      .update({
-        status: newStatus,
-        is_completed: newStatus === "completed",
-      })
-      .eq("id", task.id);
-    setTasks((prev) =>
-      prev.map((item) =>
-        item.id === task.id
-          ? {
-              ...item,
-              status: newStatus,
-              is_completed: newStatus === "completed",
-            }
-          : item,
-      ),
-    );
+    await reorderKanbanTasks(task.id, newStatus, null);
     if (
       task.shared_with_client &&
       task.client_id &&
@@ -807,23 +792,236 @@ export default function ClientProfilePage({
     setExpandedParents((prev) => ({ ...prev, [taskId]: !prev[taskId] }));
   };
 
+  const getTaskStatusValue = (task: Task) =>
+    task.status || (task.is_completed ? "completed" : "todo");
+
+  const orderTasks = (items: Task[]) =>
+    [...items].sort((a, b) => {
+      const orderA = a.sort_order ?? Number.MAX_SAFE_INTEGER;
+      const orderB = b.sort_order ?? Number.MAX_SAFE_INTEGER;
+      if (orderA !== orderB) return orderA - orderB;
+      const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return timeA - timeB;
+    });
+
+  const resequenceTasks = async (items: Task[]) => {
+    await Promise.all(
+      items.map((task, index) =>
+        supabase
+          .from("tasks")
+          .update({ sort_order: index + 1 })
+          .eq("id", task.id),
+      ),
+    );
+  };
+
+  const reorderTopLevelTasks = async (
+    taskId: string,
+    targetStatus: string,
+    targetId?: string | null,
+  ) => {
+    const task = tasks.find((item) => item.id === taskId);
+    if (!task || task.parent_task_id) return;
+    const sourceStatus = getTaskStatusValue(task);
+    const targetTasks = orderTasks(
+      tasks.filter(
+        (item) =>
+          !item.parent_task_id &&
+          getTaskStatusValue(item) === targetStatus &&
+          item.id !== taskId,
+      ),
+    );
+    const insertIndex = targetId
+      ? targetTasks.findIndex((item) => item.id === targetId)
+      : targetTasks.length;
+    if (targetId && insertIndex === -1) return;
+    const movedTask: Task = {
+      ...task,
+      status: targetStatus,
+      is_completed: targetStatus === "completed",
+    };
+    const reorderedTarget = [...targetTasks];
+    reorderedTarget.splice(insertIndex, 0, movedTask);
+    const targetOrderMap = new Map(
+      reorderedTarget.map((item, index) => [item.id, index + 1]),
+    );
+    const sourceTasks =
+      sourceStatus === targetStatus
+        ? reorderedTarget
+        : orderTasks(
+            tasks.filter(
+              (item) =>
+                !item.parent_task_id &&
+                getTaskStatusValue(item) === sourceStatus &&
+                item.id !== taskId,
+            ),
+          );
+    const sourceOrderMap =
+      sourceStatus === targetStatus
+        ? targetOrderMap
+        : new Map(sourceTasks.map((item, index) => [item.id, index + 1]));
+    setTasks((prev) =>
+      prev.map((item) => {
+        if (item.id === taskId) {
+          return {
+            ...item,
+            status: targetStatus,
+            is_completed: targetStatus === "completed",
+            sort_order: targetOrderMap.get(item.id) ?? item.sort_order ?? null,
+          };
+        }
+        if (
+          !item.parent_task_id &&
+          getTaskStatusValue(item) === targetStatus &&
+          targetOrderMap.has(item.id)
+        ) {
+          return {
+            ...item,
+            sort_order: targetOrderMap.get(item.id) ?? item.sort_order ?? null,
+          };
+        }
+        if (
+          !item.parent_task_id &&
+          getTaskStatusValue(item) === sourceStatus &&
+          sourceOrderMap.has(item.id)
+        ) {
+          return {
+            ...item,
+            sort_order: sourceOrderMap.get(item.id) ?? item.sort_order ?? null,
+          };
+        }
+        return item;
+      }),
+    );
+    await supabase
+      .from("tasks")
+      .update({
+        status: targetStatus,
+        is_completed: targetStatus === "completed",
+      })
+      .eq("id", taskId);
+    await Promise.all([
+      resequenceTasks(reorderedTarget),
+      ...(sourceStatus === targetStatus ? [] : [resequenceTasks(sourceTasks)]),
+    ]);
+    draggingTaskIdRef.current = null;
+    draggingParentIdRef.current = null;
+    setDraggingTaskId(null);
+    setDraggingParentId(null);
+    setDropTargetId(null);
+  };
+
+  const reorderKanbanTasks = async (
+    taskId: string,
+    targetStatus: string,
+    targetId?: string | null,
+  ) => {
+    const task = tasks.find((item) => item.id === taskId);
+    if (!task) return;
+    const sourceStatus = getTaskStatusValue(task);
+    const targetTasks = orderTasks(
+      tasks.filter(
+        (item) =>
+          getTaskStatusValue(item) === targetStatus && item.id !== taskId,
+      ),
+    );
+    const insertIndex = targetId
+      ? targetTasks.findIndex((item) => item.id === targetId)
+      : targetTasks.length;
+    if (targetId && insertIndex === -1) return;
+    const movedTask: Task = {
+      ...task,
+      status: targetStatus,
+      is_completed: targetStatus === "completed",
+    };
+    const reorderedTarget = [...targetTasks];
+    reorderedTarget.splice(insertIndex, 0, movedTask);
+    const targetOrderMap = new Map(
+      reorderedTarget.map((item, index) => [item.id, index + 1]),
+    );
+    const sourceTasks =
+      sourceStatus === targetStatus
+        ? reorderedTarget
+        : orderTasks(
+            tasks.filter(
+              (item) =>
+                getTaskStatusValue(item) === sourceStatus &&
+                item.id !== taskId,
+            ),
+          );
+    const sourceOrderMap =
+      sourceStatus === targetStatus
+        ? targetOrderMap
+        : new Map(sourceTasks.map((item, index) => [item.id, index + 1]));
+    setTasks((prev) =>
+      prev.map((item) => {
+        if (item.id === taskId) {
+          return {
+            ...item,
+            status: targetStatus,
+            is_completed: targetStatus === "completed",
+            sort_order: targetOrderMap.get(item.id) ?? item.sort_order ?? null,
+          };
+        }
+        if (
+          getTaskStatusValue(item) === targetStatus &&
+          targetOrderMap.has(item.id)
+        ) {
+          return {
+            ...item,
+            sort_order: targetOrderMap.get(item.id) ?? item.sort_order ?? null,
+          };
+        }
+        if (
+          getTaskStatusValue(item) === sourceStatus &&
+          sourceOrderMap.has(item.id)
+        ) {
+          return {
+            ...item,
+            sort_order: sourceOrderMap.get(item.id) ?? item.sort_order ?? null,
+          };
+        }
+        return item;
+      }),
+    );
+    await supabase
+      .from("tasks")
+      .update({
+        status: targetStatus,
+        is_completed: targetStatus === "completed",
+      })
+      .eq("id", taskId);
+    await Promise.all([
+      resequenceTasks(reorderedTarget),
+      ...(sourceStatus === targetStatus ? [] : [resequenceTasks(sourceTasks)]),
+    ]);
+  };
+
   const handleDropOnParent = async (parentId: string) => {
-    if (!draggingTaskId || draggingTaskId === parentId) return;
+    const dragId = draggingTaskIdRef.current;
+    if (!dragId || dragId === parentId) return;
     await supabase
       .from("tasks")
       .update({ parent_task_id: parentId })
-      .eq("id", draggingTaskId);
+      .eq("id", dragId);
+    draggingTaskIdRef.current = null;
+    draggingParentIdRef.current = null;
     setDraggingTaskId(null);
+    setDraggingParentId(null);
     setDropTargetId(null);
     refreshData();
   };
 
   const handleDropToTopLevel = async () => {
-    if (!draggingTaskId) return;
+    const dragId = draggingTaskIdRef.current;
+    if (!dragId) return;
     await supabase
       .from("tasks")
       .update({ parent_task_id: null })
-      .eq("id", draggingTaskId);
+      .eq("id", dragId);
+    draggingTaskIdRef.current = null;
+    draggingParentIdRef.current = null;
     setDraggingTaskId(null);
     setDraggingParentId(null);
     setDropTargetId(null);
@@ -831,10 +1029,12 @@ export default function ClientProfilePage({
   };
 
   const reorderSubtasks = async (parentId: string, targetId: string) => {
-    if (!draggingTaskId || draggingTaskId === targetId) return;
-    if (draggingParentId !== parentId) return;
+    const dragId = draggingTaskIdRef.current;
+    const dragParentId = draggingParentIdRef.current;
+    if (!dragId || dragId === targetId) return;
+    if (dragParentId !== parentId) return;
     const siblings = subtasksByParent[parentId] || [];
-    const currentIndex = siblings.findIndex((task) => task.id === draggingTaskId);
+    const currentIndex = siblings.findIndex((task) => task.id === dragId);
     const targetIndex = siblings.findIndex((task) => task.id === targetId);
     if (currentIndex === -1 || targetIndex === -1) return;
     const reordered = [...siblings];
@@ -848,6 +1048,8 @@ export default function ClientProfilePage({
           .eq("id", task.id),
       ),
     );
+    draggingTaskIdRef.current = null;
+    draggingParentIdRef.current = null;
     setDraggingTaskId(null);
     setDraggingParentId(null);
     setDropTargetId(null);
@@ -855,28 +1057,15 @@ export default function ClientProfilePage({
   };
 
   const reorderParents = async (targetId: string) => {
-    if (!draggingTaskId || draggingTaskId === targetId) return;
-    const currentIndex = topLevelTasks.findIndex(
-      (task) => task.id === draggingTaskId,
-    );
-    const targetIndex = topLevelTasks.findIndex(
-      (task) => task.id === targetId,
-    );
-    if (currentIndex === -1 || targetIndex === -1) return;
-    const reordered = [...topLevelTasks];
-    const [moved] = reordered.splice(currentIndex, 1);
-    reordered.splice(targetIndex, 0, moved);
-    await Promise.all(
-      reordered.map((task, index) =>
-        supabase
-          .from("tasks")
-          .update({ sort_order: index + 1 })
-          .eq("id", task.id),
-      ),
-    );
-    setDraggingTaskId(null);
-    setDraggingParentId(null);
-    setDropTargetId(null);
+    const dragId = draggingTaskIdRef.current;
+    if (!dragId || dragId === targetId) return;
+    const draggedTask = tasks.find((task) => task.id === dragId);
+    if (!draggedTask || draggedTask.parent_task_id) return;
+    const targetTask = tasks.find((task) => task.id === targetId);
+    const targetStatus = targetTask
+      ? getTaskStatusValue(targetTask)
+      : getTaskStatusValue(draggedTask);
+    await reorderTopLevelTasks(dragId, targetStatus, targetId);
     refreshData();
   };
 
@@ -1150,8 +1339,7 @@ export default function ClientProfilePage({
       <div className="p-10 text-black text-center mt-20">Client not found.</div>
     );
 
-  const getTaskStatus = (task: Task) =>
-    task.status || (task.is_completed ? "completed" : "todo");
+  const getTaskStatus = (task: Task) => getTaskStatusValue(task);
   const visibleTasks = tasks.filter((task) => {
     const status = getTaskStatus(task);
     if (!statusFilter.includes(status)) return false;
@@ -1159,15 +1347,6 @@ export default function ClientProfilePage({
     return true;
   });
   const statusOrder = ["todo", "up_next", "in_progress", "completed"];
-  const orderTasks = (items: Task[]) =>
-    [...items].sort((a, b) => {
-      const orderA = a.sort_order ?? Number.MAX_SAFE_INTEGER;
-      const orderB = b.sort_order ?? Number.MAX_SAFE_INTEGER;
-      if (orderA !== orderB) return orderA - orderB;
-      const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
-      const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
-      return timeA - timeB;
-    });
 
   const topLevelTasks = orderTasks(
     visibleTasks.filter((task) => !task.parent_task_id),
@@ -1939,6 +2118,21 @@ export default function ClientProfilePage({
                       <div
                         key={group.status}
                         className="relative rounded-lg border border-gray-200 bg-white overflow-visible"
+                        onDragOver={(event) => {
+                          if (!draggingTaskIdRef.current) return;
+                          if (draggingParentIdRef.current) return;
+                          event.preventDefault();
+                        }}
+                        onDrop={(event) => {
+                          if (!draggingTaskIdRef.current) return;
+                          if (draggingParentIdRef.current) return;
+                          event.preventDefault();
+                          void reorderTopLevelTasks(
+                            draggingTaskIdRef.current,
+                            group.status,
+                            null,
+                          );
+                        }}
                       >
                         <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-100">
                           <button
@@ -1984,12 +2178,18 @@ export default function ClientProfilePage({
                             <tbody
                               className="divide-y divide-gray-100"
                               onDragOver={(event) => {
-                                if (!draggingTaskId || !draggingParentId)
+                                if (
+                                  !draggingTaskIdRef.current ||
+                                  !draggingParentIdRef.current
+                                )
                                   return;
                                 event.preventDefault();
                               }}
                               onDrop={(event) => {
-                                if (!draggingTaskId || !draggingParentId)
+                                if (
+                                  !draggingTaskIdRef.current ||
+                                  !draggingParentIdRef.current
+                                )
                                   return;
                                 event.preventDefault();
                                 handleDropToTopLevel();
@@ -2011,12 +2211,10 @@ export default function ClientProfilePage({
                                   <Fragment key={task.id}>
                                     <tr
                                       onDragOver={(event) => {
-                                        if (
-                                          !draggingTaskId ||
-                                          draggingTaskId === task.id
-                                        )
+                                        if (!draggingTaskIdRef.current) return;
+                                        if (draggingTaskIdRef.current === task.id)
                                           return;
-                                        if (draggingParentId) return;
+                                        if (draggingParentIdRef.current) return;
                                         event.preventDefault();
                                         setDropTargetId(task.id);
                                       }}
@@ -2027,7 +2225,7 @@ export default function ClientProfilePage({
                                       }}
                                       onDrop={(event) => {
                                         event.preventDefault();
-                                        if (draggingParentId) {
+                                        if (draggingParentIdRef.current) {
                                           handleDropOnParent(task.id);
                                         } else {
                                           reorderParents(task.id);
@@ -2062,6 +2260,9 @@ export default function ClientProfilePage({
                                               setDraggingParentId(
                                                 task.parent_task_id || null,
                                               );
+                                              draggingTaskIdRef.current = task.id;
+                                              draggingParentIdRef.current =
+                                                task.parent_task_id || null;
                                               event.dataTransfer.effectAllowed =
                                                 "move";
                                               event.dataTransfer.setData(
@@ -2074,6 +2275,8 @@ export default function ClientProfilePage({
                                               setDraggingTaskId(null);
                                               setDraggingParentId(null);
                                               setDropTargetId(null);
+                                              draggingTaskIdRef.current = null;
+                                              draggingParentIdRef.current = null;
                                             }}
                                             onClick={(event) =>
                                               event.stopPropagation()
@@ -2294,8 +2497,8 @@ export default function ClientProfilePage({
                                               key={child.id}
                                               onDragOver={(event) => {
                                                 if (
-                                                  !draggingTaskId ||
-                                                  draggingParentId !==
+                                                  !draggingTaskIdRef.current ||
+                                                  draggingParentIdRef.current !==
                                                     child.parent_task_id
                                                 )
                                                   return;
@@ -2309,8 +2512,8 @@ export default function ClientProfilePage({
                                               }}
                                               onDrop={(event) => {
                                                 if (
-                                                  !draggingTaskId ||
-                                                  draggingParentId !==
+                                                  !draggingTaskIdRef.current ||
+                                                  draggingParentIdRef.current !==
                                                     child.parent_task_id
                                                 )
                                                   return;
@@ -2352,6 +2555,11 @@ export default function ClientProfilePage({
                                                         child.parent_task_id ||
                                                           null,
                                                       );
+                                                      draggingTaskIdRef.current =
+                                                        child.id;
+                                                      draggingParentIdRef.current =
+                                                        child.parent_task_id ||
+                                                        null;
                                                       event.dataTransfer.effectAllowed =
                                                         "move";
                                                       event.dataTransfer.setData(
@@ -2364,6 +2572,10 @@ export default function ClientProfilePage({
                                                       setDraggingTaskId(null);
                                                       setDraggingParentId(null);
                                                       setDropTargetId(null);
+                                                      draggingTaskIdRef.current =
+                                                        null;
+                                                      draggingParentIdRef.current =
+                                                        null;
                                                     }}
                                                     onClick={(event) =>
                                                       event.stopPropagation()
@@ -2550,6 +2762,9 @@ export default function ClientProfilePage({
                     if (target) {
                       updateTaskStatus(target, newStatus);
                     }
+                  }}
+                  onReorderTask={(taskId, newStatus, beforeTaskId) => {
+                    void reorderKanbanTasks(taskId, newStatus, beforeTaskId);
                   }}
                   onToggleTimer={toggleTimer}
                   onAddTask={(status) => openTaskModal(undefined, { status })}

@@ -149,10 +149,8 @@ export default function TaskCentrePage() {
   const [draggingStatus, setDraggingStatus] = useState<string | null>(null);
   const [dragOverStatus, setDragOverStatus] = useState<string | null>(null);
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
-  const [draggingTaskStatus, setDraggingTaskStatus] = useState<string | null>(
-    null,
-  );
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
+  const draggingTaskIdRef = useRef<string | null>(null);
   const prefsLoadedRef = useRef<string | null>(null);
 
   // Actions & Modals
@@ -401,43 +399,7 @@ export default function TaskCentrePage() {
 
 
   const updateTaskStatus = async (taskId: string, newStatus: string) => {
-    const task = tasks.find((t) => t.id === taskId);
-    await supabase
-      .from("tasks")
-      .update({
-        status: newStatus,
-        is_completed: newStatus === "completed",
-      })
-      .eq("id", taskId);
-    patchTask(taskId, {
-      status: newStatus,
-      is_completed: newStatus === "completed",
-    });
-    if (
-      task?.shared_with_client &&
-      task.client_id &&
-      task.status !== newStatus
-    ) {
-      await supabase.from("client_notifications").insert([
-        {
-          client_id: task.client_id,
-          task_id: task.id,
-          type: "task_status",
-          message: `${vaDisplayName || "Your VA"} updated your task: ${task.task_name}`,
-        },
-      ]);
-      if (userId) {
-        await supabase.from("task_activity").insert([
-          {
-            task_id: task.id,
-            actor_type: "va",
-            actor_id: userId,
-            action: "status_changed",
-            meta: { from: task.status, to: newStatus },
-          },
-        ]);
-      }
-    }
+    await handleTaskReorder(taskId, newStatus, null);
     setActionMenuId(null);
   };
 
@@ -648,7 +610,7 @@ export default function TaskCentrePage() {
     (status: string) => (event: DragEvent<HTMLButtonElement>) => {
       setDraggingStatus(status);
       event.dataTransfer.effectAllowed = "move";
-      event.dataTransfer.setData("text/plain", status);
+      event.dataTransfer.setData("application/x-task-status", status);
     };
 
   const handleDragOver =
@@ -662,8 +624,17 @@ export default function TaskCentrePage() {
   const handleDrop =
     (targetStatus: string) => (event: DragEvent<HTMLDivElement>) => {
       event.preventDefault();
+      const taskId =
+        draggingTaskIdRef.current ||
+        event.dataTransfer.getData("application/x-task-id") ||
+        event.dataTransfer.getData("text/plain");
+      if (taskId) {
+        void handleTaskReorder(taskId, targetStatus, null);
+        return;
+      }
       const sourceStatus =
-        event.dataTransfer.getData("text/plain") || draggingStatus;
+        event.dataTransfer.getData("application/x-task-status") ||
+        draggingStatus;
       if (!sourceStatus || sourceStatus === targetStatus) return;
       setStatusOrder((prev) => {
         const normalized = normalizeStatusOrder(prev);
@@ -682,91 +653,171 @@ export default function TaskCentrePage() {
     setDragOverStatus(null);
   };
 
-  const reorderTasksInStatus = async (
-    status: string,
-    sourceId: string,
+  const notifyTaskStatusChange = async (task: Task, newStatus: string) => {
+    if (!task.shared_with_client || !task.client_id) return;
+    if (task.status === newStatus) return;
+    await supabase.from("client_notifications").insert([
+      {
+        client_id: task.client_id,
+        task_id: task.id,
+        type: "task_status",
+        message: `${vaDisplayName || "Your VA"} updated your task: ${task.task_name}`,
+      },
+    ]);
+    if (userId) {
+      await supabase.from("task_activity").insert([
+        {
+          task_id: task.id,
+          actor_type: "va",
+          actor_id: userId,
+          action: "status_changed",
+          meta: { from: task.status, to: newStatus },
+        },
+      ]);
+    }
+  };
+
+  const handleTaskReorder = async (
+    taskId: string,
+    targetStatus: string,
     targetId?: string | null,
   ) => {
-    const statusTasks = sortTasksByOrder(
+    const task = tasks.find((item) => item.id === taskId);
+    if (!task) return;
+    const sourceStatus = task.status;
+    const targetTasks = sortTasksByOrder(
       tasks.filter(
-        (task) =>
-          task.status === status &&
-          !task.deleted_at &&
-          task.id !== draftTaskId,
+        (item) =>
+          item.status === targetStatus &&
+          !item.deleted_at &&
+          item.id !== draftTaskId &&
+          item.id !== taskId,
       ),
     );
-    if (statusTasks.length < 2) return;
-    const sourceIndex = statusTasks.findIndex((task) => task.id === sourceId);
-    if (sourceIndex === -1) return;
-    const reordered = [...statusTasks];
-    const [moved] = reordered.splice(sourceIndex, 1);
-    const targetIndex = targetId
-      ? reordered.findIndex((task) => task.id === targetId)
-      : reordered.length;
-    if (targetId && targetIndex === -1) return;
-    reordered.splice(targetIndex, 0, moved);
-    const nextOrders = new Map(
-      reordered.map((task, index) => [task.id, index + 1]),
+    const insertIndex = targetId
+      ? targetTasks.findIndex((item) => item.id === targetId)
+      : targetTasks.length;
+    if (targetId && insertIndex === -1) return;
+    const movedTask: Task = {
+      ...task,
+      status: targetStatus,
+      is_completed: targetStatus === "completed",
+    };
+    const reorderedTarget = [...targetTasks];
+    reorderedTarget.splice(insertIndex, 0, movedTask);
+    const targetOrderMap = new Map(
+      reorderedTarget.map((item, index) => [item.id, index + 1]),
     );
+    const sourceTasks =
+      sourceStatus === targetStatus
+        ? reorderedTarget
+        : sortTasksByOrder(
+            tasks.filter(
+              (item) =>
+                item.status === sourceStatus &&
+                !item.deleted_at &&
+                item.id !== draftTaskId &&
+                item.id !== taskId,
+            ),
+          );
+    const sourceOrderMap =
+      sourceStatus === targetStatus
+        ? targetOrderMap
+        : new Map(
+            sourceTasks.map((item, index) => [item.id, index + 1]),
+          );
     setTasks((prev) =>
-      prev.map((task) =>
-        task.status !== status || task.deleted_at
-          ? task
-          : nextOrders.has(task.id)
-            ? { ...task, sort_order: nextOrders.get(task.id) }
-            : task,
-      ),
+      prev.map((item) => {
+        if (item.id === taskId) {
+          return {
+            ...item,
+            status: targetStatus,
+            is_completed: targetStatus === "completed",
+            sort_order: targetOrderMap.get(item.id) ?? item.sort_order ?? null,
+          };
+        }
+        if (item.status === targetStatus && targetOrderMap.has(item.id)) {
+          return {
+            ...item,
+            sort_order: targetOrderMap.get(item.id) ?? item.sort_order ?? null,
+          };
+        }
+        if (item.status === sourceStatus && sourceOrderMap.has(item.id)) {
+          return {
+            ...item,
+            sort_order: sourceOrderMap.get(item.id) ?? item.sort_order ?? null,
+          };
+        }
+        return item;
+      }),
     );
-    await Promise.all(
-      reordered.map((task, index) =>
+    await supabase
+      .from("tasks")
+      .update({
+        status: targetStatus,
+        is_completed: targetStatus === "completed",
+      })
+      .eq("id", taskId);
+    await Promise.all([
+      ...reorderedTarget.map((item, index) =>
         supabase
           .from("tasks")
           .update({ sort_order: index + 1 })
-          .eq("id", task.id),
+          .eq("id", item.id),
       ),
-    );
+      ...(sourceStatus === targetStatus
+        ? []
+        : sourceTasks.map((item, index) =>
+            supabase
+              .from("tasks")
+              .update({ sort_order: index + 1 })
+              .eq("id", item.id),
+          )),
+    ]);
+    await notifyTaskStatusChange(task, targetStatus);
     setDraggingTaskId(null);
-    setDraggingTaskStatus(null);
     setDragOverTaskId(null);
+    draggingTaskIdRef.current = null;
   };
 
   const handleTaskDragStart =
     (task: Task) => (event: DragEvent<HTMLButtonElement>) => {
       setDraggingTaskId(task.id);
-      setDraggingTaskStatus(task.status);
+      draggingTaskIdRef.current = task.id;
       event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("application/x-task-id", task.id);
       event.dataTransfer.setData("text/plain", task.id);
     };
 
   const handleTaskDragOver =
     (task: Task) => (event: DragEvent<HTMLDivElement>) => {
-      if (!draggingTaskId || draggingTaskId === task.id) return;
-      if (draggingTaskStatus && draggingTaskStatus !== task.status) return;
+      const dragId = draggingTaskIdRef.current;
+      if (!dragId || dragId === task.id) return;
       event.preventDefault();
       setDragOverTaskId(task.id);
     };
 
   const handleTaskDrop =
     (task: Task) => async (event: DragEvent<HTMLDivElement>) => {
-      if (!draggingTaskId || draggingTaskId === task.id) return;
-      if (draggingTaskStatus && draggingTaskStatus !== task.status) return;
+      const dragId = draggingTaskIdRef.current;
+      if (!dragId || dragId === task.id) return;
       event.preventDefault();
       event.stopPropagation();
-      await reorderTasksInStatus(task.status, draggingTaskId, task.id);
+      await handleTaskReorder(dragId, task.status, task.id);
     };
 
   const handleTaskDropToEnd =
     (status: string) => async (event: DragEvent<HTMLDivElement>) => {
-      if (!draggingTaskId) return;
-      if (draggingTaskStatus && draggingTaskStatus !== status) return;
+      const dragId = draggingTaskIdRef.current;
+      if (!dragId) return;
       event.preventDefault();
-      await reorderTasksInStatus(status, draggingTaskId, null);
+      await handleTaskReorder(dragId, status, null);
     };
 
   const handleTaskDragEnd = () => {
     setDraggingTaskId(null);
-    setDraggingTaskStatus(null);
     setDragOverTaskId(null);
+    draggingTaskIdRef.current = null;
   };
 
   const handleViewChange = (nextView: "list" | "calendar" | "kanban") => {
@@ -1136,12 +1187,7 @@ export default function TaskCentrePage() {
                         <div
                           className="divide-y divide-gray-100"
                           onDragOver={(event) => {
-                            if (!draggingTaskId) return;
-                            if (
-                              draggingTaskStatus &&
-                              draggingTaskStatus !== group.status
-                            )
-                              return;
+                            if (!draggingTaskIdRef.current) return;
                             event.preventDefault();
                           }}
                           onDrop={handleTaskDropToEnd(group.status)}
@@ -1185,6 +1231,21 @@ export default function TaskCentrePage() {
                               >
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-2 min-w-0">
+                                    {!isDraft && (
+                                      <button
+                                        type="button"
+                                        draggable
+                                        onDragStart={handleTaskDragStart(task)}
+                                        onDragEnd={handleTaskDragEnd}
+                                        onClick={(event) =>
+                                          event.stopPropagation()
+                                        }
+                                        className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing transition-colors"
+                                        aria-label="Drag to reorder"
+                                      >
+                                        <GripVertical size={14} />
+                                      </button>
+                                    )}
                                     <span
                                       className={`text-sm font-semibold text-[#333333] truncate ${
                                         task.status === "completed"
@@ -1292,19 +1353,6 @@ export default function TaskCentrePage() {
                                     </span>
                                   ) : (
                                     <>
-                                      <button
-                                        type="button"
-                                        draggable
-                                        onDragStart={handleTaskDragStart(task)}
-                                        onDragEnd={handleTaskDragEnd}
-                                        onClick={(event) =>
-                                          event.stopPropagation()
-                                        }
-                                        className="text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing transition-colors"
-                                        aria-label="Drag to reorder"
-                                      >
-                                        <GripVertical size={14} />
-                                      </button>
                                       <button
                                         onClick={(event) => {
                                           event.stopPropagation();
@@ -1530,6 +1578,9 @@ export default function TaskCentrePage() {
         <KanbanView
           tasks={filteredTasks}
           onUpdateStatus={handleKanbanUpdate}
+          onReorderTask={(taskId, newStatus, beforeTaskId) =>
+            handleTaskReorder(taskId, newStatus, beforeTaskId ?? null)
+          }
           onToggleTimer={async (task) => {
             if (isSessionRunning) return;
             await toggleTimer(task);
