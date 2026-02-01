@@ -1,11 +1,7 @@
 "use client";
 import Image from "next/image";
 import { Plus, Trash2 } from "lucide-react";
-import {
-  Allura,
-  Dancing_Script,
-  Sacramento,
-} from "next/font/google";
+import { Allura, Dancing_Script, Sacramento } from "next/font/google";
 import type {
   BookingExtraField,
   BookingFormContent,
@@ -115,7 +111,7 @@ export default function BookingFormDocument({
 
   const updateField = (
     field: keyof BookingFormContent,
-    value: BookingFormContent[keyof BookingFormContent]
+    value: BookingFormContent[keyof BookingFormContent],
   ) => {
     onUpdate?.({ [field]: value } as Partial<BookingFormContent>);
   };
@@ -124,28 +120,30 @@ export default function BookingFormDocument({
     onUpdate?.({ services });
   };
 
-  const getHiddenFields = (section: "section1" | "section2" | "section3" | "section4" | "section5") =>
+  const getHiddenFields = (
+    section: "section1" | "section2" | "section3" | "section4" | "section5",
+  ) =>
     (content[
       `${section}_hidden_fields` as keyof BookingFormContent
     ] as string[]) || [];
 
   const isFieldHidden = (
     section: "section1" | "section2" | "section3" | "section4" | "section5",
-    fieldId: string
+    fieldId: string,
   ) => getHiddenFields(section).includes(fieldId);
 
   const getExtraFields = (
-    section: "section1" | "section2" | "section3" | "section4" | "section5"
+    section: "section1" | "section2" | "section3" | "section4" | "section5",
   ) =>
     (content[
       `${section}_extra_fields` as keyof BookingFormContent
     ] as BookingExtraField[]) || [];
 
   const getVisibleExtraFields = (
-    section: "section1" | "section2" | "section3" | "section4" | "section5"
+    section: "section1" | "section2" | "section3" | "section4" | "section5",
   ) =>
     getExtraFields(section).filter(
-      (field) => field.title.trim() || field.value.trim()
+      (field) => field.title.trim() || field.value.trim(),
     );
 
   return (
@@ -160,11 +158,11 @@ export default function BookingFormDocument({
             unoptimized={heroUrl.startsWith("data:")}
           />
         ) : (
-          <div className="h-full w-full bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700" />
+          <div className="h-full w-full bg-linear-to-r from-slate-900 via-slate-800 to-slate-700" />
         )}
         <div className="absolute inset-0 bg-linear-to-t from-black/55 via-black/20 to-transparent" />
         <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-10 text-white">
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-center text-white !text-white">
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-center text-whi">
             {content.hero_title}
           </h1>
           <div className="mt-4 text-xs md:text-sm space-y-1 text-left max-w-md text-white/90">
@@ -201,9 +199,7 @@ export default function BookingFormDocument({
                 label="Client business name:"
                 value={content.client_business_name}
                 readOnly={readOnlyAll || readOnlyClientSection}
-                onChange={(value) =>
-                  updateField("client_business_name", value)
-                }
+                onChange={(value) => updateField("client_business_name", value)}
               />
             )}
             {!isFieldHidden("section1", "client_contact_name") && (
@@ -211,9 +207,7 @@ export default function BookingFormDocument({
                 label="Client contact name:"
                 value={content.client_contact_name}
                 readOnly={readOnlyAll || readOnlyClientSection}
-                onChange={(value) =>
-                  updateField("client_contact_name", value)
-                }
+                onChange={(value) => updateField("client_contact_name", value)}
               />
             )}
             {!isFieldHidden("section1", "client_job_title") && (
@@ -424,7 +418,7 @@ export default function BookingFormDocument({
                   onChange={(e) =>
                     updateField(
                       "personal_data_processing",
-                      e.target.value === "yes" ? "yes" : "no"
+                      e.target.value === "yes" ? "yes" : "no",
                     )
                   }
                 >
@@ -675,11 +669,9 @@ export default function BookingFormDocument({
             clients, prospects, suppliers, or other people, please provide us
             with a Data Processing Agreement (DPA) or help us complete a Data
             Processing Form.
-
             {"\n\n"}Accepting this BOOKING creates a legal agreement made up of
             the terms set out above and our TERMS and (if applicable) the
             completed DPA or Data Processing Form.
-
             {"\n\n"}Our AGREEMENT begins when you sign and return this BOOKING
             or you tell us to start work, preferably in writing.
           </div>
@@ -709,9 +701,7 @@ export default function BookingFormDocument({
                   <input
                     type="checkbox"
                     checked={clientAgreed}
-                    onChange={(e) =>
-                      onClientAgreeChange?.(e.target.checked)
-                    }
+                    onChange={(e) => onClientAgreeChange?.(e.target.checked)}
                   />
                   I have read and agree to the terms & conditions.
                 </label>
@@ -729,7 +719,8 @@ export default function BookingFormDocument({
                     onChange={(e) =>
                       updateField(
                         "client_signature_style",
-                        e.target.value as BookingFormContent["client_signature_style"]
+                        e.target
+                          .value as BookingFormContent["client_signature_style"],
                       )
                     }
                     disabled={signatureLocked}
@@ -775,8 +766,7 @@ export default function BookingFormDocument({
             <FieldRow
               label="Date and time:"
               value={
-                content.client_signed_at ||
-                new Date().toLocaleString("en-GB")
+                content.client_signed_at || new Date().toLocaleString("en-GB")
               }
               readOnly
             />
