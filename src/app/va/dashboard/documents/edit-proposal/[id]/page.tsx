@@ -249,18 +249,6 @@ export default function EditProposalPage({
 
   return (
     <div className="p-6 max-w-5xl mx-auto text-black pb-40">
-      <div className="mb-8 p-4 bg-purple-50 border border-purple-100 rounded-2xl flex items-start gap-4">
-        <span className="text-xl">💡</span>
-        <div>
-          <p className="font-bold text-[#9d4edd] text-sm">VA Training Note</p>
-          <p className="text-xs text-purple-700/70 leading-relaxed">
-            Your professional template has been pre-filled below. You can edit
-            any text, hide sections you don&apos;t need, or add extra items to
-            tailor the proposal for your client.
-          </p>
-        </div>
-      </div>
-
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between mb-10 pb-6 border-b">
         <div>
           <Link
