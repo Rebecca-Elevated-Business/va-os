@@ -25,7 +25,7 @@ export default function ClientTaskBoard({
     : COLUMNS;
 
   return (
-    <div className="h-[520px] overflow-x-auto pb-2 custom-scrollbar">
+    <div className="h-130 overflow-x-auto pb-2 custom-scrollbar">
       <div className="flex gap-4 h-full min-w-max px-1">
         {filteredColumns.map((col) => {
           const colTasks = tasks.filter((t) => t.status === col.id);
