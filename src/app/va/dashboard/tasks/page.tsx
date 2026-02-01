@@ -558,6 +558,7 @@ export default function TaskCentrePage() {
     : null;
   const filteredTasks = tasks.filter(
     (task) =>
+      !task.deleted_at &&
       matchesTypeFilter(task) &&
       (!showSharedOnly || Boolean(task.shared_with_client)),
   );
