@@ -412,7 +412,7 @@ export default function EditBookingFormPage({
           >
             Back to Client Profile
           </Link>
-          <h1 className="text-3xl font-black tracking-tight uppercase">
+          <h1 className="text-3xl font-black tracking-tight">
             Booking Form Builder
           </h1>
           <p className="text-xs font-bold text-gray-400">
