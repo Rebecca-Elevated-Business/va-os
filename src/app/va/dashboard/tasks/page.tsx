@@ -478,13 +478,14 @@ export default function TaskCentrePage() {
       const baseMinutes = Number.isFinite(task.total_minutes)
         ? task.total_minutes
         : 0;
+      const nextTotalMinutes = Math.max(0, Math.round(baseMinutes + sessionMins));
       const { error: updateError } = await supabase
         .from("tasks")
         .update({
           is_running: false,
           start_time: null,
           end_time: endTime,
-          total_minutes: baseMinutes + sessionMins,
+          total_minutes: nextTotalMinutes,
         })
         .eq("id", task.id);
       if (updateError) {
@@ -510,7 +511,7 @@ export default function TaskCentrePage() {
         is_running: false,
         start_time: null,
         end_time: endTime,
-        total_minutes: baseMinutes + sessionMins,
+        total_minutes: nextTotalMinutes,
       });
     } else {
       const startTime = new Date().toISOString();

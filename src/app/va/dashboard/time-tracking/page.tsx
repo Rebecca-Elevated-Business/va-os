@@ -405,6 +405,7 @@ export default function TimeTrackingPage() {
       const baseMinutes = Number.isFinite(selectedTask.total_minutes)
         ? selectedTask.total_minutes
         : 0;
+      const nextTotalMinutes = Math.max(0, Math.round(baseMinutes + sessionMins));
 
       const { data: entryData } = await supabase
         .from("time_entries")
@@ -428,7 +429,7 @@ export default function TimeTrackingPage() {
           is_running: false,
           start_time: null,
           end_time: endTime,
-          total_minutes: baseMinutes + sessionMins,
+          total_minutes: nextTotalMinutes,
         })
         .eq("id", selectedTask.id);
       if (updateError) {
@@ -446,7 +447,7 @@ export default function TimeTrackingPage() {
         is_running: false,
         start_time: null,
         end_time: endTime,
-        total_minutes: baseMinutes + sessionMins,
+        total_minutes: nextTotalMinutes,
       });
 
       if (entryData) {

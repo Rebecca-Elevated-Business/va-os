@@ -473,6 +473,10 @@ export default function ClientProfilePage({
       const baseMinutes = Number.isFinite(task.total_minutes)
         ? task.total_minutes
         : 0;
+      const nextTotalMinutes = Math.max(
+        0,
+        Math.round(baseMinutes + currentSessionMinutes),
+      );
 
       const { error: updateError } = await supabase
         .from("tasks")
@@ -480,7 +484,7 @@ export default function ClientProfilePage({
           is_running: false,
           start_time: null,
           end_time: endTime,
-          total_minutes: baseMinutes + currentSessionMinutes,
+          total_minutes: nextTotalMinutes,
         })
         .eq("id", task.id);
       if (updateError) {
