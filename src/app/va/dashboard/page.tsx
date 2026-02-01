@@ -580,7 +580,7 @@ export default function VADashboard() {
             </p>
           </div>
           <div className="p-6 space-y-4 min-h-55 flex flex-col">
-            <div className="text-4xl font-semibold text-gray-900 flex items-baseline gap-2">
+            <div className="text-4xl font-semibold text-[#333333] flex items-baseline gap-2">
               <span>
                 {todayDuration.hours}h{" "}
                 {String(todayDuration.minutes).padStart(2, "0")}m
