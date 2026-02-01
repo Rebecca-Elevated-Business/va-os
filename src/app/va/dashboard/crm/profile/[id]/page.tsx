@@ -17,6 +17,7 @@ import {
   ChevronDown,
   ChevronRight,
   Filter,
+  GripVertical,
   MoreHorizontal,
   Edit2,
   Trash2,
@@ -2009,18 +2010,6 @@ export default function ClientProfilePage({
                                 return (
                                   <Fragment key={task.id}>
                                     <tr
-                                      draggable
-                                      onDragStart={() => {
-                                        setDraggingTaskId(task.id);
-                                        setDraggingParentId(
-                                          task.parent_task_id || null,
-                                        );
-                                      }}
-                                      onDragEnd={() => {
-                                        setDraggingTaskId(null);
-                                        setDraggingParentId(null);
-                                        setDropTargetId(null);
-                                      }}
                                       onDragOver={(event) => {
                                         if (
                                           !draggingTaskId ||
@@ -2064,6 +2053,36 @@ export default function ClientProfilePage({
                                       {/* 1. TASK NAME */}
                                       <td className="px-4 py-3">
                                         <div className="flex items-start gap-2">
+                                          <button
+                                            type="button"
+                                            draggable
+                                            onDragStart={(event) => {
+                                              event.stopPropagation();
+                                              setDraggingTaskId(task.id);
+                                              setDraggingParentId(
+                                                task.parent_task_id || null,
+                                              );
+                                              event.dataTransfer.effectAllowed =
+                                                "move";
+                                              event.dataTransfer.setData(
+                                                "text/plain",
+                                                task.id,
+                                              );
+                                            }}
+                                            onDragEnd={(event) => {
+                                              event.stopPropagation();
+                                              setDraggingTaskId(null);
+                                              setDraggingParentId(null);
+                                              setDropTargetId(null);
+                                            }}
+                                            onClick={(event) =>
+                                              event.stopPropagation()
+                                            }
+                                            className="mt-1 text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing transition-colors"
+                                            aria-label="Drag to reorder"
+                                          >
+                                            <GripVertical size={14} />
+                                          </button>
                                           {hasSubtasks(task.id) ? (
                                             <button
                                               type="button"
@@ -2273,18 +2292,6 @@ export default function ClientProfilePage({
                                           return (
                                             <tr
                                               key={child.id}
-                                              draggable
-                                              onDragStart={() => {
-                                                setDraggingTaskId(child.id);
-                                                setDraggingParentId(
-                                                  child.parent_task_id || null,
-                                                );
-                                              }}
-                                              onDragEnd={() => {
-                                                setDraggingTaskId(null);
-                                                setDraggingParentId(null);
-                                                setDropTargetId(null);
-                                              }}
                                               onDragOver={(event) => {
                                                 if (
                                                   !draggingTaskId ||
@@ -2333,6 +2340,39 @@ export default function ClientProfilePage({
                                             >
                                               <td className="px-4 py-3">
                                                 <div className="flex items-center gap-2 pl-6">
+                                                  <button
+                                                    type="button"
+                                                    draggable
+                                                    onDragStart={(event) => {
+                                                      event.stopPropagation();
+                                                      setDraggingTaskId(
+                                                        child.id,
+                                                      );
+                                                      setDraggingParentId(
+                                                        child.parent_task_id ||
+                                                          null,
+                                                      );
+                                                      event.dataTransfer.effectAllowed =
+                                                        "move";
+                                                      event.dataTransfer.setData(
+                                                        "text/plain",
+                                                        child.id,
+                                                      );
+                                                    }}
+                                                    onDragEnd={(event) => {
+                                                      event.stopPropagation();
+                                                      setDraggingTaskId(null);
+                                                      setDraggingParentId(null);
+                                                      setDropTargetId(null);
+                                                    }}
+                                                    onClick={(event) =>
+                                                      event.stopPropagation()
+                                                    }
+                                                    className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing transition-colors"
+                                                    aria-label="Drag to reorder"
+                                                  >
+                                                    <GripVertical size={14} />
+                                                  </button>
                                                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                                                     Subtask
                                                   </span>

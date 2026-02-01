@@ -148,6 +148,11 @@ export default function TaskCentrePage() {
     useState<ColumnVisibility>(DEFAULT_COLUMNS);
   const [draggingStatus, setDraggingStatus] = useState<string | null>(null);
   const [dragOverStatus, setDragOverStatus] = useState<string | null>(null);
+  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
+  const [draggingTaskStatus, setDraggingTaskStatus] = useState<string | null>(
+    null,
+  );
+  const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
   const prefsLoadedRef = useRef<string | null>(null);
 
   // Actions & Modals
@@ -601,21 +606,25 @@ export default function TaskCentrePage() {
   const activeTaskId =
     selectedTask?.id || (isCreatingNew ? draftTaskId : null);
   const orderedStatuses = normalizeStatusOrder(statusOrder);
+  const sortTasksByOrder = (items: Task[]) =>
+    [...items].sort((a, b) => {
+      if (a.id === draftTaskId) return -1;
+      if (b.id === draftTaskId) return 1;
+      const orderA = a.sort_order ?? Number.MAX_SAFE_INTEGER;
+      const orderB = b.sort_order ?? Number.MAX_SAFE_INTEGER;
+      if (orderA !== orderB) return orderA - orderB;
+      const timeA = a.due_date ? new Date(a.due_date).getTime() : 0;
+      const timeB = b.due_date ? new Date(b.due_date).getTime() : 0;
+      return timeB - timeA;
+    });
   const groupedTasks = orderedStatuses
     .map((status) => ({
       status,
-      items: listTasks
-        .filter((t) => t.status === status && filterStatus.includes(status))
-        .sort(
-          (a, b) => {
-            if (a.id === draftTaskId) return -1;
-            if (b.id === draftTaskId) return 1;
-            return (
-              new Date(b.due_date || 0).getTime() -
-              new Date(a.due_date || 0).getTime()
-            );
-          },
+      items: sortTasksByOrder(
+        listTasks.filter(
+          (t) => t.status === status && filterStatus.includes(status),
         ),
+      ),
     }))
     .filter((group) => group.items.length > 0);
 
@@ -625,7 +634,7 @@ export default function TaskCentrePage() {
     ...(columnVisibility.endDate ? ["110px"] : []),
     ...(columnVisibility.timer ? ["56px"] : []),
     ...(columnVisibility.timeCount ? ["90px"] : []),
-    "32px",
+    "64px",
   ].join(" ");
 
   const handleToggleStatus = (status: string) => {
@@ -671,6 +680,93 @@ export default function TaskCentrePage() {
   const handleDragEnd = () => {
     setDraggingStatus(null);
     setDragOverStatus(null);
+  };
+
+  const reorderTasksInStatus = async (
+    status: string,
+    sourceId: string,
+    targetId?: string | null,
+  ) => {
+    const statusTasks = sortTasksByOrder(
+      tasks.filter(
+        (task) =>
+          task.status === status &&
+          !task.deleted_at &&
+          task.id !== draftTaskId,
+      ),
+    );
+    if (statusTasks.length < 2) return;
+    const sourceIndex = statusTasks.findIndex((task) => task.id === sourceId);
+    if (sourceIndex === -1) return;
+    const reordered = [...statusTasks];
+    const [moved] = reordered.splice(sourceIndex, 1);
+    const targetIndex = targetId
+      ? reordered.findIndex((task) => task.id === targetId)
+      : reordered.length;
+    if (targetId && targetIndex === -1) return;
+    reordered.splice(targetIndex, 0, moved);
+    const nextOrders = new Map(
+      reordered.map((task, index) => [task.id, index + 1]),
+    );
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.status !== status || task.deleted_at
+          ? task
+          : nextOrders.has(task.id)
+            ? { ...task, sort_order: nextOrders.get(task.id) }
+            : task,
+      ),
+    );
+    await Promise.all(
+      reordered.map((task, index) =>
+        supabase
+          .from("tasks")
+          .update({ sort_order: index + 1 })
+          .eq("id", task.id),
+      ),
+    );
+    setDraggingTaskId(null);
+    setDraggingTaskStatus(null);
+    setDragOverTaskId(null);
+  };
+
+  const handleTaskDragStart =
+    (task: Task) => (event: DragEvent<HTMLButtonElement>) => {
+      setDraggingTaskId(task.id);
+      setDraggingTaskStatus(task.status);
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", task.id);
+    };
+
+  const handleTaskDragOver =
+    (task: Task) => (event: DragEvent<HTMLDivElement>) => {
+      if (!draggingTaskId || draggingTaskId === task.id) return;
+      if (draggingTaskStatus && draggingTaskStatus !== task.status) return;
+      event.preventDefault();
+      setDragOverTaskId(task.id);
+    };
+
+  const handleTaskDrop =
+    (task: Task) => async (event: DragEvent<HTMLDivElement>) => {
+      if (!draggingTaskId || draggingTaskId === task.id) return;
+      if (draggingTaskStatus && draggingTaskStatus !== task.status) return;
+      event.preventDefault();
+      event.stopPropagation();
+      await reorderTasksInStatus(task.status, draggingTaskId, task.id);
+    };
+
+  const handleTaskDropToEnd =
+    (status: string) => async (event: DragEvent<HTMLDivElement>) => {
+      if (!draggingTaskId) return;
+      if (draggingTaskStatus && draggingTaskStatus !== status) return;
+      event.preventDefault();
+      await reorderTasksInStatus(status, draggingTaskId, null);
+    };
+
+  const handleTaskDragEnd = () => {
+    setDraggingTaskId(null);
+    setDraggingTaskStatus(null);
+    setDragOverTaskId(null);
   };
 
   const handleViewChange = (nextView: "list" | "calendar" | "kanban") => {
@@ -1037,7 +1133,19 @@ export default function TaskCentrePage() {
                       </div>
 
                       {!isCollapsed && (
-                        <div className="divide-y divide-gray-100">
+                        <div
+                          className="divide-y divide-gray-100"
+                          onDragOver={(event) => {
+                            if (!draggingTaskId) return;
+                            if (
+                              draggingTaskStatus &&
+                              draggingTaskStatus !== group.status
+                            )
+                              return;
+                            event.preventDefault();
+                          }}
+                          onDrop={handleTaskDropToEnd(group.status)}
+                        >
                           {group.items.map((task) => {
                             const catKey =
                               task.category ||
@@ -1051,6 +1159,13 @@ export default function TaskCentrePage() {
                             return (
                               <div
                                 key={task.id}
+                                onDragOver={handleTaskDragOver(task)}
+                                onDragLeave={() => {
+                                  if (dragOverTaskId === task.id) {
+                                    setDragOverTaskId(null);
+                                  }
+                                }}
+                                onDrop={handleTaskDrop(task)}
                                 onClick={() => {
                                   if (isDraft) return;
                                   openEditModal(task);
@@ -1061,6 +1176,10 @@ export default function TaskCentrePage() {
                                     : clientDeleted
                                       ? "bg-red-50/60 hover:bg-red-50/80"
                                       : "hover:bg-gray-50/70"
+                                } ${
+                                  dragOverTaskId === task.id
+                                    ? "bg-purple-50/80 ring-1 ring-purple-100"
+                                    : ""
                                 }`}
                                 style={{ gridTemplateColumns: columnTemplate }}
                               >
@@ -1166,13 +1285,26 @@ export default function TaskCentrePage() {
                                   </div>
                                 )}
 
-                                <div className="relative action-menu-trigger flex justify-end">
+                                <div className="relative action-menu-trigger flex items-center justify-end gap-2">
                                   {isDraft ? (
                                     <span className="text-xs text-gray-300">
                                       -
                                     </span>
                                   ) : (
                                     <>
+                                      <button
+                                        type="button"
+                                        draggable
+                                        onDragStart={handleTaskDragStart(task)}
+                                        onDragEnd={handleTaskDragEnd}
+                                        onClick={(event) =>
+                                          event.stopPropagation()
+                                        }
+                                        className="text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing transition-colors"
+                                        aria-label="Drag to reorder"
+                                      >
+                                        <GripVertical size={14} />
+                                      </button>
                                       <button
                                         onClick={(event) => {
                                           event.stopPropagation();
