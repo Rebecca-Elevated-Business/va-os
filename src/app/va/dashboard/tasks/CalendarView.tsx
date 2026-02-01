@@ -282,6 +282,12 @@ export default function CalendarView({
                   key={day.toISOString()}
                   className="bg-white p-2 border-r border-b border-gray-50 last:border-r-0 h-full"
                   onClick={() => onAddTask(format(day, "yyyy-MM-dd"))}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    handleDropToSlot(day);
+                  }}
                 >
                   <div
                     className={`text-xs font-bold ${
@@ -294,6 +300,12 @@ export default function CalendarView({
                     {dayTasks.slice(0, 3).map((task) => (
                       <div
                         key={task.id}
+                        draggable
+                        onDragStart={(event) => {
+                          event.dataTransfer.setData("text/plain", task.id);
+                          setDraggedTask(task);
+                        }}
+                        onDragEnd={() => setDraggedTask(null)}
                         className="flex items-center bg-white border border-gray-100 rounded px-2 py-1 shadow-sm text-[10px] font-bold text-[#333333] hover:border-purple-100 transition-all"
                         onClick={(event) => {
                           event.stopPropagation();
