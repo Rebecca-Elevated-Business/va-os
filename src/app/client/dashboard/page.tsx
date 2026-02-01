@@ -526,7 +526,6 @@ export default function ClientDashboard() {
                 tasks={tasks}
                 onOpenTask={openTaskModal}
                 onAddTask={openNewTaskModal}
-                onStatusChange={updateTaskStatus}
               />
             )}
           </div>

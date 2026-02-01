@@ -1,6 +1,5 @@
 "use client";
 
-import { useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import type { ClientTask } from "./ClientTaskModal";
 
@@ -8,7 +7,6 @@ type ClientTaskBoardProps = {
   tasks: ClientTask[];
   onOpenTask: (task: ClientTask) => void;
   onAddTask: (status: string) => void;
-  onStatusChange: (taskId: string, status: string) => void;
 };
 
 const COLUMNS = [
@@ -22,19 +20,7 @@ export default function ClientTaskBoard({
   tasks,
   onOpenTask,
   onAddTask,
-  onStatusChange,
 }: ClientTaskBoardProps) {
-  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
-  const isDraggingRef = useRef(false);
-
-  const handleDrop = (e: React.DragEvent, status: string) => {
-    e.preventDefault();
-    if (draggedTaskId) {
-      onStatusChange(draggedTaskId, status);
-      setDraggedTaskId(null);
-    }
-  };
-
   return (
     <div className="h-[520px] overflow-x-auto pb-2 custom-scrollbar">
       <div className="flex gap-6 h-full min-w-max px-2">
@@ -45,8 +31,6 @@ export default function ClientTaskBoard({
             <div
               key={col.id}
               className="flex-1 w-72 flex flex-col bg-gray-50/60 rounded-2xl border border-gray-100 h-full"
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => handleDrop(e, col.id)}
             >
               <div className="p-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -69,18 +53,8 @@ export default function ClientTaskBoard({
                 {colTasks.map((task) => (
                   <div
                     key={task.id}
-                    draggable
-                    onDragStart={() => {
-                      isDraggingRef.current = true;
-                      setDraggedTaskId(task.id);
-                    }}
-                    onDragEnd={() => {
-                      setTimeout(() => {
-                        isDraggingRef.current = false;
-                      }, 0);
-                    }}
                     onClick={() => onOpenTask(task)}
-                    className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-purple-100 transition-all"
+                    className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-purple-100 transition-all"
                   >
                     <h4
                       className={`font-bold text-sm text-[#333333] leading-snug ${
@@ -100,8 +74,8 @@ export default function ClientTaskBoard({
                 ))}
 
                 {colTasks.length === 0 && (
-                  <div className="h-20 border-2 border-dashed border-gray-100 rounded-xl flex items-center justify-center text-[10px] font-bold text-gray-400 tracking-widest">
-                    Drop here
+                  <div className="h-20 border border-dashed border-gray-100 rounded-xl flex items-center justify-center text-[10px] font-bold text-gray-400 tracking-widest">
+                    No tasks
                   </div>
                 )}
               </div>
