@@ -337,6 +337,36 @@ export default function TaskModal({
     onClose();
   };
 
+  const handleDeleteTask = async () => {
+    if (!task?.id) return;
+    const ok = await confirm({
+      title: "Delete task?",
+      message: "Delete this task permanently?",
+      confirmLabel: "Delete",
+      tone: "danger",
+    });
+    if (!ok) return;
+    const deletedAt = new Date().toISOString();
+    const { error } = await supabase
+      .from("tasks")
+      .update({ deleted_at: deletedAt })
+      .eq("id", task.id);
+    if (error) {
+      await alert({
+        title: "Task not deleted",
+        message: error.message || "Unknown error deleting task.",
+        tone: "danger",
+      });
+      return;
+    }
+    if (onSaved) {
+      onSaved({ ...task, deleted_at: deletedAt });
+    } else {
+      await onFallbackRefresh?.();
+    }
+    onClose();
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -357,9 +387,20 @@ export default function TaskModal({
         onClick={isSide ? (event) => event.stopPropagation() : undefined}
       >
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
-          <h2 className="text-lg font-black text-[#333333]">
-            {task ? "Edit Task" : "New Task"}
-          </h2>
+          <div className="flex flex-col">
+            <h2 className="text-lg font-black text-[#333333]">
+              {task ? "Edit Task" : "New Task"}
+            </h2>
+            {task?.id && (
+              <button
+                type="button"
+                onClick={handleDeleteTask}
+                className="mt-1 text-[10px] font-bold text-red-600 underline-offset-2 hover:underline hover:text-red-700 self-start"
+              >
+                Delete Task
+              </button>
+            )}
+          </div>
           <div className="w-full sm:w-44">
             <label className="sr-only" htmlFor="task-status-select">
               Status
