@@ -1230,8 +1230,8 @@ export default function TaskCentrePage() {
                                 style={{ gridTemplateColumns: columnTemplate }}
                               >
                                 <div className="min-w-0">
-                                  <div className="flex items-center gap-2 min-w-0">
-                                    {!isDraft && (
+                                  <div className="flex items-start gap-2 min-w-0">
+                                    {!isDraft ? (
                                       <button
                                         type="button"
                                         draggable
@@ -1240,49 +1240,53 @@ export default function TaskCentrePage() {
                                         onClick={(event) =>
                                           event.stopPropagation()
                                         }
-                                        className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing transition-colors"
+                                        className="mt-0.5 text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing transition-colors"
                                         aria-label="Drag to reorder"
                                       >
                                         <GripVertical size={14} />
                                       </button>
+                                    ) : (
+                                      <div className="w-4" />
                                     )}
-                                    <span
-                                      className={`text-sm font-semibold text-[#333333] truncate ${
-                                        task.status === "completed"
-                                          ? "line-through opacity-50"
-                                          : ""
-                                      }`}
-                                    >
-                                      {task.id === draftTaskId ? (
-                                        <span className="italic text-gray-400">
-                                          New task
+                                    <div className="min-w-0">
+                                      <span
+                                        className={`text-sm font-semibold text-[#333333] truncate ${
+                                          task.status === "completed"
+                                            ? "line-through opacity-50"
+                                            : ""
+                                        }`}
+                                      >
+                                        {task.id === draftTaskId ? (
+                                          <span className="italic text-gray-400">
+                                            New task
+                                          </span>
+                                        ) : (
+                                          task.task_name
+                                        )}
+                                      </span>
+                                      <div className="mt-1 flex items-center gap-2">
+                                        {task.clients && (
+                                          <span className="text-xs font-medium text-gray-400">
+                                            {task.clients.surname}
+                                          </span>
+                                        )}
+                                        <span
+                                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${catConfig.chipClassName}`}
+                                        >
+                                          {catConfig.label}
                                         </span>
-                                      ) : (
-                                        task.task_name
-                                      )}
-                                    </span>
-                                  </div>
-                                  <div className="mt-1 flex items-center gap-2">
-                                    {task.clients && (
-                                      <span className="text-xs font-medium text-gray-400">
-                                        {task.clients.surname}
-                                      </span>
-                                    )}
-                                    <span
-                                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${catConfig.chipClassName}`}
-                                    >
-                                      {catConfig.label}
-                                    </span>
-                                    {task.shared_with_client && (
-                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-100">
-                                        Shared
-                                      </span>
-                                    )}
-                                    {clientDeleted && (
-                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-50 text-red-600 border border-red-100">
-                                        Client deleted
-                                      </span>
-                                    )}
+                                        {task.shared_with_client && (
+                                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-100">
+                                            Shared
+                                          </span>
+                                        )}
+                                        {clientDeleted && (
+                                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-50 text-red-600 border border-red-100">
+                                            Client deleted
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
 
