@@ -30,7 +30,7 @@ type ClientNotification = {
   created_at: string;
 };
 
-const STATUS_OPTIONS = [
+const TASK_STATUS_FILTERS = [
   { id: "todo", label: "To Do" },
   { id: "up_next", label: "Up Next" },
   { id: "in_progress", label: "In Progress" },
@@ -53,6 +53,10 @@ export default function ClientDashboard() {
     "documents" | "agreements" | "tasks" | "requests"
   >("documents");
   const [alertsOpen, setAlertsOpen] = useState(false);
+  const [statusFilterOpen, setStatusFilterOpen] = useState(false);
+  const [visibleStatuses, setVisibleStatuses] = useState<string[]>(
+    TASK_STATUS_FILTERS.map((status) => status.id),
+  );
 
   // Dashboard Logic State
   const [clientName, setClientName] = useState("");
@@ -70,7 +74,6 @@ export default function ClientDashboard() {
   // Task Modal State
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [activeTask, setActiveTask] = useState<ClientTask | null>(null);
-  const [taskModalStatus, setTaskModalStatus] = useState("todo");
   const alertMenuRef = useRef<HTMLDivElement | null>(null);
 
   const fetchTasks = useCallback(async (clientIdValue: string) => {
@@ -260,17 +263,15 @@ export default function ClientDashboard() {
     }
   };
 
-  const openNewTaskModal = (status: string) => {
+  const openNewTaskModal = () => {
     if (!clientId) return;
     setActiveTask(null);
-    setTaskModalStatus(status);
     setTaskModalOpen(true);
   };
 
   const openTaskModal = (task: ClientTask) => {
     if (!clientId) return;
     setActiveTask(task);
-    setTaskModalStatus(task.status || "todo");
     setTaskModalOpen(true);
   };
 
@@ -297,6 +298,20 @@ export default function ClientDashboard() {
       return false;
     }
     return true;
+  };
+
+  const toggleStatusFilter = (statusId: string) => {
+    setVisibleStatuses((prev) => {
+      if (prev.includes(statusId)) {
+        if (prev.length === 1) return prev;
+        return prev.filter((status) => status !== statusId);
+      }
+      return [...prev, statusId];
+    });
+  };
+
+  const resetStatusFilters = () => {
+    setVisibleStatuses(TASK_STATUS_FILTERS.map((status) => status.id));
   };
 
   const createTask = async (payload: {
@@ -382,90 +397,6 @@ export default function ClientDashboard() {
     await fetchTasks(safeClientId);
   };
 
-  const updateTaskStatus = async (taskId: string, status: string) => {
-    if (!ensureClientReady()) return;
-    const safeClientId = clientId;
-    if (!safeClientId) return;
-    const task = tasks.find((t) => t.id === taskId);
-    const { error } = await supabase
-      .from("tasks")
-      .update({ status, is_completed: status === "completed" })
-      .eq("id", taskId);
-    if (error) {
-      await alert({
-        title: "Status not updated",
-        message: error.message,
-        tone: "danger",
-      });
-      return;
-    }
-    await notifyVa({
-      client_id: safeClientId,
-      type: "task_status",
-      message: `Task status changed: ${clientName || "Client"} set "${task?.task_name || "Task"}" to ${status}`,
-      status: "new",
-      is_read: false,
-      is_completed: false,
-      is_starred: false,
-      task_id: taskId,
-    });
-    if (task) {
-      await supabase.from("task_activity").insert([
-        {
-          task_id: task.id,
-          actor_type: "client",
-          actor_id: safeClientId,
-          action: "status_changed",
-          meta: { to: status },
-        },
-      ]);
-    }
-    await fetchTasks(safeClientId);
-  };
-
-  const deleteTask = async (taskId: string) => {
-    if (!ensureClientReady()) return;
-    const safeClientId = clientId;
-    if (!safeClientId) return;
-    const task = tasks.find((t) => t.id === taskId);
-    const { error } = await supabase
-      .from("tasks")
-      .update({
-        client_deleted_at: new Date().toISOString(),
-        client_deleted_by: safeClientId,
-      })
-      .eq("id", taskId);
-    if (error) {
-      await alert({
-        title: "Task not deleted",
-        message: error.message,
-        tone: "danger",
-      });
-      return;
-    }
-    await notifyVa({
-      client_id: safeClientId,
-      type: "work",
-      message: `Task deleted: ${clientName || "Client"} removed "${task?.task_name || "Task"}"`,
-      status: "new",
-      is_read: false,
-      is_completed: false,
-      is_starred: false,
-      task_id: taskId,
-    });
-    if (task) {
-      await supabase.from("task_activity").insert([
-        {
-          task_id: task.id,
-          actor_type: "client",
-          actor_id: safeClientId,
-          action: "task_deleted",
-        },
-      ]);
-    }
-    await fetchTasks(safeClientId);
-  };
-
   const markNotificationRead = async (notificationId: string) => {
     await supabase
       .from("client_notifications")
@@ -493,6 +424,10 @@ export default function ClientDashboard() {
       ),
     );
   };
+
+  const filteredTasks = tasks.filter((task) =>
+    visibleStatuses.includes(task.status),
+  );
 
   const alertNotifications = clientNotifications.filter(
     (note) => !note.type?.toLowerCase().includes("task"),
@@ -683,7 +618,7 @@ export default function ClientDashboard() {
             activeTab === "documents" ? "block" : "hidden"
           }`}
         >
-          <div className="p-8 border-b border-gray-100 bg-purple-50 flex justify-between items-center">
+          <div className="p-8 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
             <div>
               <h2 className="text-lg font-black text-[#9d4edd]">
                 Document Vault
@@ -692,7 +627,7 @@ export default function ClientDashboard() {
                 Access your issued proposals, contracts, and invoices.
               </p>
             </div>
-            <div className="text-2xl">📂</div>
+            <div className="text-2xl" />
           </div>
 
           <div className="p-0">
@@ -767,7 +702,7 @@ export default function ClientDashboard() {
               Service Agreements
             </h2>
             <p className="text-xs text-gray-500 font-medium mt-1">
-              Authorised rules of engagement and service parameters.
+              Access and agree workflows with your VA
             </p>
           </div>
 
@@ -824,30 +759,83 @@ export default function ClientDashboard() {
             activeTab === "tasks" ? "block" : "hidden"
           }`}
         >
-          <div className="p-8 border-b border-gray-100 bg-purple-50 flex justify-between items-center">
+          <div className="p-8 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
             <div>
               <h2 className="text-lg font-black text-[#9d4edd]">Task Board</h2>
               <p className="text-xs text-gray-500 font-medium mt-1">
                 Track shared work with your VA.
               </p>
             </div>
-            <button
-              onClick={() => openNewTaskModal("todo")}
-              className="px-4 py-2 text-xs font-bold text-white bg-[#9d4edd] rounded-lg shadow-sm hover:bg-[#7b2cbf]"
-            >
-              Add Task
-            </button>
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <button
+                  onClick={() => setStatusFilterOpen((prev) => !prev)}
+                  className="px-4 py-2 text-xs font-bold text-gray-600 bg-white border border-gray-200 rounded-lg shadow-sm hover:border-gray-300"
+                >
+                  Filter by status
+                </button>
+                {statusFilterOpen && (
+                  <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-gray-100 bg-white shadow-lg p-4 z-10">
+                    <p className="text-[10px] font-black text-gray-400 tracking-widest mb-3">
+                      Visible statuses
+                    </p>
+                    <div className="space-y-2">
+                      {TASK_STATUS_FILTERS.map((status) => {
+                        const checked = visibleStatuses.includes(status.id);
+                        return (
+                          <label
+                            key={status.id}
+                            className="flex items-center gap-2 text-xs font-semibold text-gray-700"
+                          >
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-gray-300 text-[#9d4edd] focus:ring-[#9d4edd]"
+                              checked={checked}
+                              onChange={() => toggleStatusFilter(status.id)}
+                            />
+                            <span
+                              className={`px-2 py-1 rounded-full border text-[10px] font-bold ${
+                                checked
+                                  ? "border-[#9d4edd] text-[#9d4edd] bg-purple-50"
+                                  : "border-gray-200 text-gray-500"
+                              }`}
+                            >
+                              {status.label}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    <button
+                      onClick={resetStatusFilters}
+                      className="mt-3 text-[10px] font-bold text-gray-400 hover:text-gray-600"
+                    >
+                      Show all statuses
+                    </button>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={openNewTaskModal}
+                className="px-4 py-2 text-xs font-bold text-white bg-[#9d4edd] rounded-lg shadow-sm hover:bg-[#7b2cbf]"
+              >
+                Add Task
+              </button>
+            </div>
           </div>
           <div className="p-6">
             {tasks.length === 0 ? (
               <div className="p-8 text-center text-gray-400 italic text-sm">
                 No shared tasks yet.
               </div>
+            ) : filteredTasks.length === 0 ? (
+              <div className="p-8 text-center text-gray-400 italic text-sm">
+                No tasks match your current filters.
+              </div>
             ) : (
               <ClientTaskBoard
-                tasks={tasks}
+                tasks={filteredTasks}
                 onOpenTask={openTaskModal}
-                onAddTask={openNewTaskModal}
               />
             )}
           </div>
@@ -932,18 +920,14 @@ export default function ClientDashboard() {
         </section>
 
         <ClientTaskModal
-          key={`${activeTask?.id || "new"}-${taskModalStatus}-${taskModalOpen ? "open" : "closed"}`}
+          key={`${activeTask?.id || "new"}-${taskModalOpen ? "open" : "closed"}`}
           isOpen={taskModalOpen}
           onClose={() => setTaskModalOpen(false)}
           task={activeTask}
-          defaultStatus={taskModalStatus}
           clientId={clientId || ""}
           clientName={clientName || "Client"}
-          statusOptions={STATUS_OPTIONS}
           onCreate={createTask}
           onUpdate={updateTask}
-          onStatusChange={updateTaskStatus}
-          onDelete={deleteTask}
         />
       </div>
     </main>

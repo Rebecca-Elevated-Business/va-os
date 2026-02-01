@@ -14,16 +14,12 @@ export type ClientTask = {
   created_by_client?: boolean;
 };
 
-type StatusOption = { id: string; label: string };
-
 type ClientTaskModalProps = {
   isOpen: boolean;
   onClose: () => void;
   task?: ClientTask | null;
-  defaultStatus?: string;
   clientId: string;
   clientName: string;
-  statusOptions: StatusOption[];
   onCreate: (payload: {
     task_name: string;
     details: string | null;
@@ -33,28 +29,22 @@ type ClientTaskModalProps = {
     task_name: string;
     details: string | null;
   }) => Promise<void>;
-  onStatusChange: (taskId: string, status: string) => Promise<void>;
-  onDelete: (taskId: string) => Promise<void>;
 };
 
 export default function ClientTaskModal({
   isOpen,
   onClose,
   task,
-  defaultStatus = "todo",
   clientId,
   clientName,
-  statusOptions,
   onCreate,
   onUpdate,
-  onStatusChange,
-  onDelete,
 }: ClientTaskModalProps) {
   const isEditing = Boolean(task);
   const canEditFields = task?.created_by_client ?? true;
   const [formName, setFormName] = useState(task?.task_name || "");
   const [formDetails, setFormDetails] = useState(task?.details || "");
-  const [formStatus, setFormStatus] = useState(task?.status || defaultStatus);
+  const createStatus = task?.status || "todo";
   const [saving, setSaving] = useState(false);
 
   const modalTitle = useMemo(
@@ -72,23 +62,14 @@ export default function ClientTaskModal({
           details: formDetails.trim() || null,
         });
       }
-      if (formStatus !== task.status) {
-        await onStatusChange(task.id, formStatus);
-      }
     } else {
       await onCreate({
         task_name: formName.trim(),
         details: formDetails.trim() || null,
-        status: formStatus,
+        status: createStatus,
       });
     }
     setSaving(false);
-    onClose();
-  };
-
-  const handleDelete = async () => {
-    if (!task) return;
-    await onDelete(task.id);
     onClose();
   };
 
@@ -136,23 +117,6 @@ export default function ClientTaskModal({
             />
           </div>
 
-          <div>
-            <label className="text-[10px] font-black text-[#333333] tracking-widest block mb-1">
-              Status
-            </label>
-            <select
-              className="w-full rounded-lg border border-gray-100 bg-white p-2 text-xs font-bold text-[#333333]"
-              value={formStatus}
-              onChange={(e) => setFormStatus(e.target.value)}
-            >
-              {statusOptions.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
           {task?.id && (
             <TaskNotes
               taskId={task.id}
@@ -166,17 +130,7 @@ export default function ClientTaskModal({
           )}
         </div>
 
-        <div className="flex items-center justify-between border-t border-gray-100 px-6 py-4">
-          {task?.id ? (
-            <button
-              onClick={handleDelete}
-              className="text-xs font-bold text-red-600"
-            >
-              Delete task
-            </button>
-          ) : (
-            <span />
-          )}
+        <div className="flex items-center justify-end border-t border-gray-100 px-6 py-4">
           <div className="flex gap-3">
             <button
               onClick={onClose}

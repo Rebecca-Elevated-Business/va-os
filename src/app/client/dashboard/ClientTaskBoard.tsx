@@ -1,12 +1,10 @@
 "use client";
 
-import { Plus } from "lucide-react";
 import type { ClientTask } from "./ClientTaskModal";
 
 type ClientTaskBoardProps = {
   tasks: ClientTask[];
   onOpenTask: (task: ClientTask) => void;
-  onAddTask: (status: string) => void;
 };
 
 const COLUMNS = [
@@ -19,42 +17,36 @@ const COLUMNS = [
 export default function ClientTaskBoard({
   tasks,
   onOpenTask,
-  onAddTask,
 }: ClientTaskBoardProps) {
   return (
     <div className="h-[520px] overflow-x-auto pb-2 custom-scrollbar">
-      <div className="flex gap-6 h-full min-w-max px-2">
+      <div className="flex gap-4 h-full min-w-max px-1">
         {COLUMNS.map((col) => {
           const colTasks = tasks.filter((t) => t.status === col.id);
 
           return (
             <div
               key={col.id}
-              className="flex-1 w-72 flex flex-col bg-gray-50/60 rounded-2xl border border-gray-100 h-full"
+              className="flex-1 w-64 flex flex-col bg-white rounded-2xl h-full"
             >
-              <div className="p-4 flex items-center justify-between">
+              <div className="px-4 pt-4 pb-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm font-bold text-[#333333]">
                     {col.title}
                   </h3>
-                  <span className="bg-white px-2 py-0.5 rounded-full text-[10px] font-bold text-[#333333] border border-gray-100">
+                  <span className="bg-gray-50 px-2 py-0.5 rounded-full text-[10px] font-bold text-[#333333] border border-gray-100">
                     {colTasks.length}
                   </span>
                 </div>
-                <button
-                  onClick={() => onAddTask(col.id)}
-                  className="text-[#333333] hover:text-[#9d4edd] transition-colors p-1"
-                >
-                  <Plus size={14} />
-                </button>
+                <span />
               </div>
 
-              <div className="p-3 space-y-3 overflow-y-auto flex-1 custom-scrollbar">
+              <div className="px-3 pb-4 space-y-3 overflow-y-auto flex-1 custom-scrollbar">
                 {colTasks.map((task) => (
                   <div
                     key={task.id}
                     onClick={() => onOpenTask(task)}
-                    className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-purple-100 transition-all"
+                    className="bg-gray-50 p-3 rounded-xl shadow-md border border-gray-100 hover:shadow-lg hover:border-purple-100 transition-all"
                   >
                     <h4
                       className={`font-bold text-sm text-[#333333] leading-snug ${
@@ -74,7 +66,7 @@ export default function ClientTaskBoard({
                 ))}
 
                 {colTasks.length === 0 && (
-                  <div className="h-20 border border-dashed border-gray-100 rounded-xl flex items-center justify-center text-[10px] font-bold text-gray-400 tracking-widest">
+                  <div className="h-20 border border-dashed border-gray-100 rounded-xl flex items-center justify-center text-[10px] font-bold text-gray-400 tracking-widest bg-gray-50/60">
                     No tasks
                   </div>
                 )}
