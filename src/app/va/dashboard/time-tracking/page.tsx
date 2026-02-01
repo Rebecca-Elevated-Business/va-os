@@ -65,7 +65,7 @@ export default function TimeTrackingPage() {
     stopSession,
     startTaskEntry,
   } = useClientSession();
-  const { confirm } = usePrompt();
+  const { confirm, alert } = usePrompt();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [clients, setClients] = useState<
     {
@@ -402,6 +402,9 @@ export default function TimeTrackingPage() {
         ),
       );
       const sessionMins = elapsedSeconds / 60;
+      const baseMinutes = Number.isFinite(selectedTask.total_minutes)
+        ? selectedTask.total_minutes
+        : 0;
 
       const { data: entryData } = await supabase
         .from("time_entries")
@@ -419,21 +422,31 @@ export default function TimeTrackingPage() {
         )
         .single();
 
-      await supabase
+      const { error: updateError } = await supabase
         .from("tasks")
         .update({
           is_running: false,
           start_time: null,
           end_time: endTime,
-          total_minutes: selectedTask.total_minutes + sessionMins,
+          total_minutes: baseMinutes + sessionMins,
         })
         .eq("id", selectedTask.id);
+      if (updateError) {
+        await alert({
+          title: "Timer not stopped",
+          message:
+            updateError.message ||
+            "We couldn't stop this timer. Please try again.",
+          tone: "danger",
+        });
+        return;
+      }
 
       patchTask(selectedTask.id, {
         is_running: false,
         start_time: null,
         end_time: endTime,
-        total_minutes: selectedTask.total_minutes + sessionMins,
+        total_minutes: baseMinutes + sessionMins,
       });
 
       if (entryData) {

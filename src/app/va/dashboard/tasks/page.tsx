@@ -94,7 +94,7 @@ const normalizeStatusOrder = (order: string[]) => {
 import { useClientSession } from "../ClientSessionContext";
 
 export default function TaskCentrePage() {
-  const { confirm } = usePrompt();
+  const { confirm, alert } = usePrompt();
   const {
     activeEntry,
     isRunning: isSessionRunning,
@@ -475,15 +475,28 @@ export default function TaskCentrePage() {
         ),
       );
       const sessionMins = elapsedSeconds / 60;
-      await supabase
+      const baseMinutes = Number.isFinite(task.total_minutes)
+        ? task.total_minutes
+        : 0;
+      const { error: updateError } = await supabase
         .from("tasks")
         .update({
           is_running: false,
           start_time: null,
           end_time: endTime,
-          total_minutes: task.total_minutes + sessionMins,
+          total_minutes: baseMinutes + sessionMins,
         })
         .eq("id", task.id);
+      if (updateError) {
+        await alert({
+          title: "Timer not stopped",
+          message:
+            updateError.message ||
+            "We couldn't stop this timer. Please try again.",
+          tone: "danger",
+        });
+        return;
+      }
       await supabase.from("time_entries").insert([
         {
           task_id: task.id,
@@ -497,7 +510,7 @@ export default function TaskCentrePage() {
         is_running: false,
         start_time: null,
         end_time: endTime,
-        total_minutes: task.total_minutes + sessionMins,
+        total_minutes: baseMinutes + sessionMins,
       });
     } else {
       const startTime = new Date().toISOString();
@@ -520,7 +533,10 @@ export default function TaskCentrePage() {
   };
 
   const formatTime = (task: Task) => {
-    let totalSecs = task.total_minutes * 60;
+    const baseMinutes = Number.isFinite(task.total_minutes)
+      ? task.total_minutes
+      : 0;
+    let totalSecs = baseMinutes * 60;
     if (task.is_running && task.start_time && now > 0) {
       totalSecs += (now - new Date(task.start_time).getTime()) / 1000;
     }

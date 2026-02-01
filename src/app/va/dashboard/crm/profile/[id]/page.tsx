@@ -470,16 +470,29 @@ export default function ClientProfilePage({
       const elapsedSeconds = Math.max(0, Math.round((end - start) / 1000));
       const currentSessionMinutes = elapsedSeconds / 60;
       const endTime = new Date().toISOString();
+      const baseMinutes = Number.isFinite(task.total_minutes)
+        ? task.total_minutes
+        : 0;
 
-      await supabase
+      const { error: updateError } = await supabase
         .from("tasks")
         .update({
           is_running: false,
           start_time: null,
           end_time: endTime,
-          total_minutes: task.total_minutes + currentSessionMinutes,
+          total_minutes: baseMinutes + currentSessionMinutes,
         })
         .eq("id", task.id);
+      if (updateError) {
+        await alert({
+          title: "Timer not stopped",
+          message:
+            updateError.message ||
+            "We couldn't stop this timer. Please try again.",
+          tone: "danger",
+        });
+        return;
+      }
       await supabase.from("time_entries").insert([
         {
           task_id: task.id,
@@ -973,7 +986,10 @@ export default function ClientProfilePage({
   // --- HELPER: Format Time Display ---
   const formatTime = (task: Task) => {
     // 1. Convert stored minutes to seconds so we can do precise math
-    let totalSeconds = task.total_minutes * 60;
+    const baseMinutes = Number.isFinite(task.total_minutes)
+      ? task.total_minutes
+      : 0;
+    let totalSeconds = baseMinutes * 60;
 
     // 2. If running, add the live elapsed seconds
     if (task.is_running && task.start_time) {
