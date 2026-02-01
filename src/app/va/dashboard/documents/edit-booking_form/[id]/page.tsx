@@ -333,6 +333,7 @@ export default function EditBookingFormPage({
       if (!doc) return;
       const shouldIssue = Boolean(options?.issue);
       const silent = Boolean(options?.silent);
+      const wasIssued = doc.status === "issued";
 
       if (silent) {
         setAutosaving(true);
@@ -358,6 +359,15 @@ export default function EditBookingFormPage({
       }
 
       if (!error) {
+        if (shouldIssue && !wasIssued) {
+          await supabase.from("client_notifications").insert([
+            {
+              client_id: doc.client_id,
+              type: "document_issued",
+              message: `New document available: ${doc.title}`,
+            },
+          ]);
+        }
         lastSavedRef.current = JSON.stringify({
           content: doc.content,
           status: shouldIssue ? "issued" : doc.status,

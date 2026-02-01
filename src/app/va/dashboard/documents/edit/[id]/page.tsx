@@ -55,6 +55,7 @@ export default function EditDocumentPage({
     if (!doc) return;
     setSaving(true);
 
+    const wasIssued = doc.status === "issued";
     const updates = {
       content: doc.content,
       title: doc.title,
@@ -69,6 +70,15 @@ export default function EditDocumentPage({
 
     setSaving(false);
     if (!error && isIssuing) {
+      if (!wasIssued) {
+        await supabase.from("client_notifications").insert([
+          {
+            client_id: doc.client_id,
+            type: "document_issued",
+            message: `New document available: ${doc.title}`,
+          },
+        ]);
+      }
       await alert({
         title: "Document issued",
         message: "Document Issued to Client!",

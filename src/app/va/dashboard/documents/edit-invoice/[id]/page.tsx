@@ -286,6 +286,7 @@ export default function EditInvoicePage({
       const shouldIssue = Boolean(options?.issue);
       const silent = Boolean(options?.silent);
       const status = options?.status || (shouldIssue ? "issued" : doc.status);
+      const wasIssued = doc.status === "issued";
 
       if (shouldIssue) {
         const requiredFields = [
@@ -340,6 +341,15 @@ export default function EditInvoicePage({
       }
 
       if (!error) {
+        if (shouldIssue && !wasIssued) {
+          await supabase.from("client_notifications").insert([
+            {
+              client_id: doc.client_id,
+              type: "document_issued",
+              message: `New document available: ${doc.title}`,
+            },
+          ]);
+        }
         lastSavedRef.current = JSON.stringify({
           content: doc.content,
           status,

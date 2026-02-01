@@ -128,6 +128,13 @@ export default function AgreementPortalView({
       .eq("id", id);
 
     if (!error) {
+      await supabase.from("client_notifications").insert([
+        {
+          client_id: agreement.client_id,
+          type: "agreement_issued",
+          message: `New service agreement available: ${agreement.title}`,
+        },
+      ]);
       await supabase.from("agreement_logs").insert([
         {
           agreement_id: id,

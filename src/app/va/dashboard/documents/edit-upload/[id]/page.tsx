@@ -92,6 +92,7 @@ export default function EditUploadPage({
       return;
     }
 
+    const wasIssued = doc.status === "issued";
     const { error } = await supabase
       .from("client_documents")
       .update({
@@ -102,6 +103,15 @@ export default function EditUploadPage({
       .eq("id", id);
 
     if (!error) {
+      if (isIssuing && !wasIssued) {
+        await supabase.from("client_notifications").insert([
+          {
+            client_id: doc.client_id,
+            type: "document_issued",
+            message: `New document available: ${doc.title}`,
+          },
+        ]);
+      }
       await alert({
         title: isIssuing ? "Document issued" : "Draft saved",
         message: isIssuing ? "Document Issued!" : "Draft Saved.",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { usePrompt } from "@/components/ui/PromptProvider";
@@ -49,6 +49,10 @@ export default function ClientDashboard() {
   const [clientNotifications, setClientNotifications] = useState<
     ClientNotification[]
   >([]);
+  const [activeTab, setActiveTab] = useState<
+    "documents" | "agreements" | "tasks" | "requests"
+  >("documents");
+  const [alertsOpen, setAlertsOpen] = useState(false);
 
   // Dashboard Logic State
   const [clientName, setClientName] = useState("");
@@ -67,6 +71,7 @@ export default function ClientDashboard() {
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [activeTask, setActiveTask] = useState<ClientTask | null>(null);
   const [taskModalStatus, setTaskModalStatus] = useState("todo");
+  const alertMenuRef = useRef<HTMLDivElement | null>(null);
 
   const fetchTasks = useCallback(async (clientIdValue: string) => {
     const { data } = await supabase
@@ -473,6 +478,47 @@ export default function ClientDashboard() {
     );
   };
 
+  const markAllAlertsRead = async () => {
+    const unreadIds = alertNotifications
+      .filter((note) => !note.is_read)
+      .map((note) => note.id);
+    if (unreadIds.length === 0) return;
+    await supabase
+      .from("client_notifications")
+      .update({ is_read: true })
+      .in("id", unreadIds);
+    setClientNotifications((prev) =>
+      prev.map((note) =>
+        unreadIds.includes(note.id) ? { ...note, is_read: true } : note,
+      ),
+    );
+  };
+
+  const alertNotifications = clientNotifications.filter(
+    (note) => !note.type?.toLowerCase().includes("task"),
+  );
+  const unreadAlertCount = alertNotifications.filter((note) => !note.is_read)
+    .length;
+
+  useEffect(() => {
+    if (!alertsOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!alertMenuRef.current) return;
+      if (!alertMenuRef.current.contains(event.target as Node)) {
+        setAlertsOpen(false);
+      }
+    };
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setAlertsOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [alertsOpen]);
+
   if (loading)
     return (
       <div className="p-10 text-gray-500 italic">Loading your portal...</div>
@@ -484,98 +530,162 @@ export default function ClientDashboard() {
         {/* Diagnostic bar removed */}
 
         {/* Header Section */}
-        <div className="flex justify-between items-center mb-2">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-2">
           <div>
             <h1 className="text-3xl font-black text-gray-900 tracking-tight">
               Welcome, {clientName || "Client"}
             </h1>
           </div>
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 text-sm font-bold text-gray-600 hover:text-[#9d4edd] border border-gray-300 rounded-lg bg-white transition-all shadow-sm"
-          >
-            Sign Out
-          </button>
-        </div>
-
-        {/* SECTION 1: TASK BOARD */}
-        <section className="bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-8 border-b border-gray-100 bg-purple-50 flex justify-between items-center">
-            <div>
-              <h2 className="text-lg font-black text-[#9d4edd] uppercase tracking-wide">
-                Task Board
-              </h2>
-              <p className="text-xs text-gray-500 font-medium mt-1">
-                Track shared work with your VA.
-              </p>
+          <div className="flex items-center gap-3">
+            <div className="relative" ref={alertMenuRef}>
+              <button
+                type="button"
+                onClick={() => setAlertsOpen((prev) => !prev)}
+                className="relative rounded-full border border-gray-200 bg-white p-2 text-gray-600 hover:text-[#9d4edd] shadow-sm transition-all"
+                aria-label="View alerts"
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 7h18s-3 0-3-7" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+                {unreadAlertCount > 0 && (
+                  <span className="absolute -top-1 -right-1 h-4 min-w-4 rounded-full bg-[#9d4edd] px-1 text-[10px] font-bold text-white">
+                    {unreadAlertCount}
+                  </span>
+                )}
+              </button>
+              {alertsOpen && (
+                <div className="absolute right-0 mt-2 w-72 rounded-2xl border border-gray-100 bg-white shadow-xl">
+                  <div className="border-b border-gray-100 px-4 py-3 text-sm font-semibold text-gray-900 flex items-center justify-between gap-2">
+                    <span>Alerts</span>
+                    <button
+                      type="button"
+                      onClick={markAllAlertsRead}
+                      className="text-[11px] font-semibold text-[#9d4edd] hover:text-[#7b2cbf]"
+                    >
+                      Mark all as read
+                    </button>
+                  </div>
+                  {alertNotifications.length === 0 ? (
+                    <div className="px-4 py-4 text-xs text-gray-400">
+                      No alerts yet.
+                    </div>
+                  ) : (
+                    <div className="max-h-72 overflow-auto">
+                      {alertNotifications.map((note) => (
+                        <button
+                          key={note.id}
+                          onClick={() => markNotificationRead(note.id)}
+                          className={`w-full text-left px-4 py-3 text-xs transition-colors ${
+                            note.is_read
+                              ? "text-gray-500 hover:bg-gray-50"
+                              : "text-gray-900 bg-purple-50/50 hover:bg-purple-50"
+                          }`}
+                        >
+                          <div className="font-semibold">{note.message}</div>
+                          <div className="mt-1 text-[10px] text-gray-400">
+                            {format(new Date(note.created_at), "d MMM, HH:mm")}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <button
-              onClick={() => openNewTaskModal("todo")}
-              className="px-4 py-2 text-xs font-bold text-white bg-[#9d4edd] rounded-lg shadow-sm hover:bg-[#7b2cbf]"
+              onClick={handleLogout}
+              className="px-4 py-2 text-sm font-bold text-gray-600 hover:text-[#9d4edd] border border-gray-300 rounded-lg bg-white transition-all shadow-sm"
             >
-              Add Task
+              Sign Out
             </button>
           </div>
-          <div className="p-6">
-            {tasks.length === 0 ? (
-              <div className="p-8 text-center text-gray-400 italic text-sm">
-                No shared tasks yet.
-              </div>
-            ) : (
-              <ClientTaskBoard
-                tasks={tasks}
-                onOpenTask={openTaskModal}
-                onAddTask={openNewTaskModal}
-              />
-            )}
-          </div>
-        </section>
+        </div>
 
-        {/* SECTION 2: NOTIFICATIONS */}
-        <section className="bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-8 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-            <div>
-              <h2 className="text-lg font-black text-[#333333] uppercase tracking-wide">
-                Notifications
-              </h2>
-              <p className="text-xs text-gray-500 font-medium mt-1">
-                Updates from your VA.
-              </p>
+        {alertNotifications.length > 0 && (
+          <div className="rounded-3xl border border-purple-100 bg-purple-50/40 px-6 py-4">
+            <div className="text-xs font-semibold text-[#9d4edd]">
+              Latest alerts
+            </div>
+            <div className="mt-3 space-y-2">
+              {alertNotifications.slice(0, 3).map((note) => (
+                <div
+                  key={note.id}
+                  className="flex items-center justify-between gap-4 text-sm text-gray-700"
+                >
+                  <span className="font-medium">{note.message}</span>
+                  <span className="text-[11px] text-gray-400">
+                    {format(new Date(note.created_at), "d MMM, HH:mm")}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
-          <div className="p-6">
-            {clientNotifications.length === 0 ? (
-              <div className="p-6 text-center text-gray-400 italic text-sm">
-                No updates yet.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {clientNotifications.map((note) => (
-                  <button
-                    key={note.id}
-                    onClick={() => markNotificationRead(note.id)}
-                    className={`w-full text-left rounded-xl border px-4 py-3 transition-colors ${
-                      note.is_read
-                        ? "border-gray-100 bg-white text-gray-500"
-                        : "border-purple-100 bg-purple-50/40 text-[#333333]"
-                    }`}
-                  >
-                    <div className="text-xs font-bold">{note.message}</div>
-                    <div className="text-[10px] text-gray-400 mt-1">
-                      {format(new Date(note.created_at), "d MMM, HH:mm")}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
+        )}
+
+        <div className="rounded-3xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
+          <div className="flex flex-wrap gap-2 text-sm font-semibold text-gray-500">
+            <button
+              onClick={() => setActiveTab("documents")}
+              className={`rounded-full px-4 py-2 transition-colors ${
+                activeTab === "documents"
+                  ? "bg-[#9d4edd] text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              Document Vault
+            </button>
+            <button
+              onClick={() => setActiveTab("agreements")}
+              className={`rounded-full px-4 py-2 transition-colors ${
+                activeTab === "agreements"
+                  ? "bg-[#9d4edd] text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              Service Agreements
+            </button>
+            <button
+              onClick={() => setActiveTab("tasks")}
+              className={`rounded-full px-4 py-2 transition-colors ${
+                activeTab === "tasks"
+                  ? "bg-[#9d4edd] text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              Task Board
+            </button>
+            <button
+              onClick={() => setActiveTab("requests")}
+              className={`rounded-full px-4 py-2 transition-colors ${
+                activeTab === "requests"
+                  ? "bg-[#9d4edd] text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              Request Centre
+            </button>
           </div>
-        </section>
+        </div>
 
         {/* SECTION 3: DOCUMENT VAULT */}
-        <section className="bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden">
+        <section
+          className={`bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden ${
+            activeTab === "documents" ? "block" : "hidden"
+          }`}
+        >
           <div className="p-8 border-b border-gray-100 bg-purple-50 flex justify-between items-center">
             <div>
-              <h2 className="text-lg font-black text-[#9d4edd] uppercase tracking-wide">
+              <h2 className="text-lg font-black text-[#9d4edd]">
                 Document Vault
               </h2>
               <p className="text-xs text-gray-500 font-medium mt-1">
@@ -588,7 +698,7 @@ export default function ClientDashboard() {
           <div className="p-0">
             <table className="w-full text-left">
               <thead>
-                <tr className="text-[10px] uppercase tracking-widest text-gray-400 border-b border-gray-50 bg-gray-50/30">
+                <tr className="text-[10px] text-gray-400 border-b border-gray-50 bg-gray-50/30">
                   <th className="px-8 py-4 font-black">Document Name</th>
                   <th className="px-8 py-4 font-black">Type</th>
                   <th className="px-8 py-4 font-black">Status</th>
@@ -619,13 +729,13 @@ export default function ClientDashboard() {
                       </td>
                       <td className="px-8 py-5">
                         <span
-                          className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                          className={`px-3 py-1 rounded-full text-[10px] font-bold ${
                             doc.status === "paid" || doc.status === "signed"
                               ? "bg-green-100 text-green-700"
                               : "bg-yellow-100 text-yellow-700"
                           }`}
                         >
-                          {doc.status}
+                          {doc.status.replace("_", " ")}
                         </span>
                       </td>
                       <td className="px-8 py-5 text-right">
@@ -633,7 +743,7 @@ export default function ClientDashboard() {
                           onClick={() =>
                             router.push(`/client/documents/view/${doc.id}`)
                           }
-                          className="bg-gray-900 text-white px-5 py-2 rounded-lg font-bold text-xs hover:bg-[#9d4edd] transition-colors uppercase tracking-wider"
+                          className="bg-gray-900 text-white px-5 py-2 rounded-lg font-bold text-xs hover:bg-[#9d4edd] transition-colors"
                         >
                           View
                         </button>
@@ -647,10 +757,14 @@ export default function ClientDashboard() {
         </section>
 
         {/* SECTION 2: SERVICE AGREEMENTS */}
-        <section className="bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden">
+        <section
+          className={`bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden ${
+            activeTab === "agreements" ? "block" : "hidden"
+          }`}
+        >
           <div className="p-8 border-b border-gray-100 bg-gray-50/50">
-            <h2 className="text-lg font-black text-gray-800 uppercase tracking-wide">
-              Operational Agreements
+            <h2 className="text-lg font-black text-gray-800">
+              Service Agreements
             </h2>
             <p className="text-xs text-gray-500 font-medium mt-1">
               Authorised rules of engagement and service parameters.
@@ -677,7 +791,7 @@ export default function ClientDashboard() {
                       <p className="text-xs text-gray-500 font-medium mt-1">
                         Status:{" "}
                         <span
-                          className={`uppercase font-black tracking-wider ${
+                          className={`font-semibold ${
                             ag.status === "active"
                               ? "text-green-600"
                               : "text-[#9d4edd]"
@@ -689,12 +803,10 @@ export default function ClientDashboard() {
                     </div>
                   </div>
                   <button
-                    className="bg-[#9d4edd] text-white px-6 py-3 rounded-xl font-bold text-xs shadow-md hover:bg-[#7b2cbf] transition-all uppercase tracking-wider"
-                      onClick={() =>
-                        router.push(
-                          `/va/dashboard/workflows/portal-view/${ag.id}`
-                        )
-                      }
+                    className="bg-[#9d4edd] text-white px-6 py-3 rounded-xl font-bold text-xs shadow-md hover:bg-[#7b2cbf] transition-all"
+                    onClick={() =>
+                      router.push(`/va/dashboard/workflows/portal-view/${ag.id}`)
+                    }
                   >
                     {ag.status === "pending_client"
                       ? "Review & Sign"
@@ -706,10 +818,49 @@ export default function ClientDashboard() {
           )}
         </section>
 
-        {/* SECTION 3: REQUEST CENTRE (Updated with Real Logic) */}
-        <section className="bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden">
+        {/* SECTION 3: TASK BOARD */}
+        <section
+          className={`bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden ${
+            activeTab === "tasks" ? "block" : "hidden"
+          }`}
+        >
+          <div className="p-8 border-b border-gray-100 bg-purple-50 flex justify-between items-center">
+            <div>
+              <h2 className="text-lg font-black text-[#9d4edd]">Task Board</h2>
+              <p className="text-xs text-gray-500 font-medium mt-1">
+                Track shared work with your VA.
+              </p>
+            </div>
+            <button
+              onClick={() => openNewTaskModal("todo")}
+              className="px-4 py-2 text-xs font-bold text-white bg-[#9d4edd] rounded-lg shadow-sm hover:bg-[#7b2cbf]"
+            >
+              Add Task
+            </button>
+          </div>
+          <div className="p-6">
+            {tasks.length === 0 ? (
+              <div className="p-8 text-center text-gray-400 italic text-sm">
+                No shared tasks yet.
+              </div>
+            ) : (
+              <ClientTaskBoard
+                tasks={tasks}
+                onOpenTask={openTaskModal}
+                onAddTask={openNewTaskModal}
+              />
+            )}
+          </div>
+        </section>
+
+        {/* SECTION 4: REQUEST CENTRE (Updated with Real Logic) */}
+        <section
+          className={`bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden ${
+            activeTab === "requests" ? "block" : "hidden"
+          }`}
+        >
           <div className="p-8 border-b border-gray-100 bg-blue-50/30">
-            <h2 className="text-lg font-black text-gray-800 uppercase tracking-wide">
+            <h2 className="text-lg font-black text-gray-800">
               Request Centre
             </h2>
             <p className="text-xs text-gray-500 font-medium mt-1">
@@ -732,7 +883,7 @@ export default function ClientDashboard() {
                   checked={requestType === "work"}
                   onChange={() => setRequestType("work")}
                 />
-                <span className="font-black text-xs uppercase tracking-widest">
+                <span className="font-black text-xs tracking-widest">
                   Request Work
                 </span>
               </label>
@@ -749,7 +900,7 @@ export default function ClientDashboard() {
                   checked={requestType === "meeting"}
                   onChange={() => setRequestType("meeting")}
                 />
-                <span className="font-black text-xs uppercase tracking-widest">
+                <span className="font-black text-xs tracking-widest">
                   Request Meeting
                 </span>
               </label>
@@ -772,7 +923,7 @@ export default function ClientDashboard() {
               <button
                 type="submit"
                 disabled={!requestMessage || sending}
-                className="bg-[#9d4edd] text-white px-8 py-3 rounded-2xl font-black text-xs shadow-xl shadow-purple-100 hover:bg-[#7b2cbf] h-24 disabled:opacity-50 uppercase tracking-widest transition-all"
+                className="bg-[#9d4edd] text-white px-8 py-3 rounded-2xl font-black text-xs shadow-xl shadow-purple-100 hover:bg-[#7b2cbf] h-24 disabled:opacity-50 tracking-widest transition-all"
               >
                 {sending ? "Sending..." : "Send Request"}
               </button>
