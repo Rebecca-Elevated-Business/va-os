@@ -75,6 +75,7 @@ export default function ClientDashboard() {
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [activeTask, setActiveTask] = useState<ClientTask | null>(null);
   const alertMenuRef = useRef<HTMLDivElement | null>(null);
+  const statusFilterRef = useRef<HTMLDivElement | null>(null);
 
   const fetchTasks = useCallback(async (clientIdValue: string) => {
     const { data } = await supabase
@@ -454,6 +455,25 @@ export default function ClientDashboard() {
     };
   }, [alertsOpen]);
 
+  useEffect(() => {
+    if (!statusFilterOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!statusFilterRef.current) return;
+      if (!statusFilterRef.current.contains(event.target as Node)) {
+        setStatusFilterOpen(false);
+      }
+    };
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setStatusFilterOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [statusFilterOpen]);
+
   if (loading)
     return (
       <div className="p-10 text-gray-500 italic">Loading your portal...</div>
@@ -767,7 +787,7 @@ export default function ClientDashboard() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <div className="relative">
+              <div className="relative" ref={statusFilterRef}>
                 <button
                   onClick={() => setStatusFilterOpen((prev) => !prev)}
                   className="px-4 py-2 text-xs font-bold text-gray-600 bg-white border border-gray-200 rounded-lg shadow-sm hover:border-gray-300"
@@ -836,6 +856,7 @@ export default function ClientDashboard() {
               <ClientTaskBoard
                 tasks={filteredTasks}
                 onOpenTask={openTaskModal}
+                visibleStatuses={visibleStatuses}
               />
             )}
           </div>

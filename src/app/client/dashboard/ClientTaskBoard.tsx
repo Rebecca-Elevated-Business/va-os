@@ -5,6 +5,7 @@ import type { ClientTask } from "./ClientTaskModal";
 type ClientTaskBoardProps = {
   tasks: ClientTask[];
   onOpenTask: (task: ClientTask) => void;
+  visibleStatuses?: string[];
 };
 
 const COLUMNS = [
@@ -17,11 +18,16 @@ const COLUMNS = [
 export default function ClientTaskBoard({
   tasks,
   onOpenTask,
+  visibleStatuses,
 }: ClientTaskBoardProps) {
+  const filteredColumns = visibleStatuses?.length
+    ? COLUMNS.filter((col) => visibleStatuses.includes(col.id))
+    : COLUMNS;
+
   return (
     <div className="h-[520px] overflow-x-auto pb-2 custom-scrollbar">
       <div className="flex gap-4 h-full min-w-max px-1">
-        {COLUMNS.map((col) => {
+        {filteredColumns.map((col) => {
           const colTasks = tasks.filter((t) => t.status === col.id);
 
           return (
