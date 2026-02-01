@@ -110,8 +110,8 @@ export default function ProposalDocument({
 
         {content.show_scope && (
           <section>
-            <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">
-              Proposed Scope of Work
+            <h2 className="text-sm font-semibold text-gray-500 mb-4">
+              Proposed scope of work
             </h2>
             <div className="space-y-4">
               {content.scope_items.map((item) => (
@@ -132,14 +132,14 @@ export default function ProposalDocument({
         {content.show_investment && (
           <section className="rounded-3xl border border-gray-100 p-6 md:p-8 bg-white shadow-sm">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div className="text-3xl font-black text-gray-900">
+              <div className="text-3xl font-semibold text-[#333333]">
                 {formatPrice(content.investment.price)}
               </div>
               <div className="text-left md:text-right">
-                <p className="text-xs font-black text-gray-400 uppercase tracking-widest">
+                <p className="text-sm font-semibold text-gray-500">
                   Investment
                 </p>
-                <p className="text-lg font-bold text-gray-900">
+                <p className="text-lg font-semibold text-[#333333]">
                   {investmentLabel(content)}
                 </p>
                 <p className="text-sm text-gray-500">
@@ -176,8 +176,8 @@ export default function ProposalDocument({
 
         {content.show_next_steps && (
           <section className="bg-gray-50 border border-gray-100 rounded-3xl p-6 md:p-8">
-            <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">
-              What Happens Next
+            <h2 className="text-sm font-semibold text-gray-500 mb-4">
+              Next Steps
             </h2>
             <ol className="space-y-3 text-sm text-gray-700">
               {content.next_steps.map((step, index) => (
@@ -203,10 +203,10 @@ export default function ProposalDocument({
         )}
 
         <footer className="pt-6 border-t border-gray-100">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
+          <p className="text-sm font-semibold text-gray-500 mb-2">
             Kind regards,
           </p>
-          <p className="text-lg font-black text-gray-900 whitespace-pre-wrap">
+          <p className="text-lg font-semibold text-[#333333] whitespace-pre-wrap">
             {content.signature_text}
           </p>
         </footer>
