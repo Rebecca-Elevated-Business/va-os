@@ -924,7 +924,7 @@ export default function ClientDashboard() {
                 placeholder={
                   requestType === "work"
                     ? "Describe the task you need help with..."
-                    : "Propose a date and time for a quick sync..."
+                    : "Propose a date and time for a meeting, and summary of what you'd like to discuss."
                 }
                 value={requestMessage}
                 onChange={(e) => setRequestMessage(e.target.value)}
