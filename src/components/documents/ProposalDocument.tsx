@@ -81,7 +81,7 @@ export default function ProposalDocument({
         )}
         <div className="absolute inset-0 bg-linear-to-t from-black/55 via-black/20 to-transparent" />
         <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-10 text-white">
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-center text-white">
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-center text-white!">
             {content.hero_title}
           </h1>
           <div className="mt-4 text-xs md:text-sm space-y-1 text-left max-w-md text-white/90">
