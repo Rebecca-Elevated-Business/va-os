@@ -75,6 +75,12 @@ function CreateDocumentForm() {
     loadClients();
   }, [clientIdParam]);
 
+  const typeLabels: Record<string, string> = {
+    proposal: "Proposal",
+    booking_form: "Booking Form",
+    invoice: "Invoice",
+  };
+
   const handleCreate = async () => {
     if (!selectedClient || !selectedType) return;
     setLoading(true); // Now using the state
@@ -85,7 +91,7 @@ function CreateDocumentForm() {
         {
           client_id: selectedClient.id,
           type: selectedType,
-          title: `Draft ${selectedType.replace("_", " ")}`,
+          title: typeLabels[selectedType] ?? selectedType.replace("_", " "),
           status: "draft",
           content: { sections: [] },
         },

@@ -106,6 +106,12 @@ export default function DocumentLibraryPage() {
   const clientList = canShowResults ? filteredClients : [];
   const shouldShowEmptyState = canShowResults && clientList.length === 0;
 
+  const typeLabels: Record<string, string> = {
+    proposal: "Proposal",
+    booking_form: "Booking Form",
+    invoice: "Invoice",
+  };
+
   const handleGenerate = async () => {
     if (!selectedType || !selectedClient) return;
     const { data, error } = await supabase
@@ -114,7 +120,8 @@ export default function DocumentLibraryPage() {
         {
           client_id: selectedClient.id,
           type: selectedType.id,
-          title: `Draft ${selectedType.id.replace("_", " ")}`,
+          title:
+            typeLabels[selectedType.id] ?? selectedType.id.replace("_", " "),
           status: "draft",
           content: { sections: [] },
         },
