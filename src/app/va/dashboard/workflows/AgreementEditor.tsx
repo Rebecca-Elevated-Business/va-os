@@ -211,7 +211,7 @@ export default function AgreementEditor({
                           key={opt}
                           className="group/option flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100"
                         >
-                          <div className="w-5 h-5 rounded border-2 border-[#333333]" />
+                          <div className="w-5 h-5 rounded border-2 border-[#333333] ml-[3px]" />
                           <span className="text-sm text-[#333333] font-normal flex-1">
                             {opt}
                           </span>
@@ -235,7 +235,7 @@ export default function AgreementEditor({
 
                 {item.type === "checkbox" && (
                   <div className="flex items-center gap-3">
-                    <div className="w-5 h-5 border-2 border-[#333333] rounded" />
+                    <div className="w-5 h-5 border-2 border-[#333333] rounded ml-[3px]" />
                     <span className="text-sm font-normal text-[#333333]">
                       {item.label}
                     </span>
