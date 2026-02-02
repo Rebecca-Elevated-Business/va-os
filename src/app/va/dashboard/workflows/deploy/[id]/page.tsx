@@ -41,10 +41,6 @@ export default function DeployAgreementPage({
   const { id } = use(params);
   const router = useRouter();
   const { alert } = usePrompt();
-  const defaultAuthorisationDisclaimer =
-    "I understand this workflow agreement describes how work will be delivered and does not amend or replace the booking agreement.";
-  const defaultAuthorisationConfirmation =
-    'By clicking "Authorise Workflow", I confirm that the details provided above are accurate and I grant permission for the VA to proceed with these specific instruction parameters.';
 
   // Data State
   const [template, setTemplate] = useState<Template | null>(null);
@@ -203,38 +199,6 @@ export default function DeployAgreementPage({
     );
   };
 
-  const handleSaveAuthorisationDefaults = async () => {
-    if (!agreement || !template) return;
-    const nextDefaultStructure = {
-      ...template.default_structure,
-      authorisation_disclaimer:
-        agreement.custom_structure.authorisation_disclaimer ??
-        defaultAuthorisationDisclaimer,
-      authorisation_confirmation:
-        agreement.custom_structure.authorisation_confirmation ??
-        defaultAuthorisationConfirmation,
-    };
-
-    const { error } = await supabase
-      .from("sop_templates")
-      .update({ default_structure: nextDefaultStructure })
-      .eq("id", template.id);
-
-    if (error) {
-      await alert({
-        title: "Error saving defaults",
-        message: `Error saving: ${error.message}`,
-        tone: "danger",
-      });
-      return;
-    }
-
-    setTemplate({ ...template, default_structure: nextDefaultStructure });
-    await alert({
-      title: "Defaults saved",
-      message: "Authorisation text saved as template defaults.",
-    });
-  };
 
   if (!template) return <div className="p-10">Loading...</div>;
 
@@ -478,12 +442,6 @@ export default function DeployAgreementPage({
                     className="border border-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:border-gray-300 hover:text-gray-900 transition-all"
                   >
                     Preview
-                  </button>
-                  <button
-                    onClick={handleSaveAuthorisationDefaults}
-                    className="border border-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:border-gray-300 hover:text-gray-900 transition-all"
-                  >
-                    Save as Template Defaults
                   </button>
                   <button
                     onClick={handleSave}
