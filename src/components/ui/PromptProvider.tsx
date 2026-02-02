@@ -26,31 +26,48 @@ type AlertOptions = {
   tone?: PromptTone;
 };
 
+type PromptOptions = {
+  title?: string;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  tone?: PromptTone;
+  placeholder?: string;
+  defaultValue?: string;
+};
+
 type PromptState = {
   open: boolean;
-  type: "confirm" | "alert";
+  type: "confirm" | "alert" | "prompt";
   title?: string;
   message: string;
   confirmLabel: string;
   cancelLabel?: string;
   tone: PromptTone;
+  placeholder?: string;
+  defaultValue?: string;
 };
 
 type PromptContextValue = {
   confirm: (options: ConfirmOptions) => Promise<boolean>;
   alert: (options: AlertOptions) => Promise<void>;
+  prompt: (options: PromptOptions) => Promise<string | null>;
 };
 
 const PromptContext = createContext<PromptContextValue | undefined>(undefined);
 
 export function PromptProvider({ children }: { children: React.ReactNode }) {
-  const resolverRef = useRef<((value: boolean) => void) | null>(null);
+  const resolverRef = useRef<
+    ((value: boolean | string | null) => void) | null
+  >(null);
   const [state, setState] = useState<PromptState | null>(null);
+  const [promptValue, setPromptValue] = useState("");
 
-  const closePrompt = useCallback((result: boolean) => {
+  const closePrompt = useCallback((result: boolean | string | null) => {
     resolverRef.current?.(result);
     resolverRef.current = null;
     setState(null);
+    setPromptValue("");
   }, []);
 
   const confirm = useCallback((options: ConfirmOptions) => {
@@ -82,7 +99,28 @@ export function PromptProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const value = useMemo(() => ({ confirm, alert }), [confirm, alert]);
+  const prompt = useCallback((options: PromptOptions) => {
+    return new Promise<string | null>((resolve) => {
+      resolverRef.current = resolve;
+      setPromptValue(options.defaultValue || "");
+      setState({
+        open: true,
+        type: "prompt",
+        title: options.title || "Enter a value",
+        message: options.message,
+        confirmLabel: options.confirmLabel || "Add",
+        cancelLabel: options.cancelLabel || "Cancel",
+        tone: options.tone || "default",
+        placeholder: options.placeholder,
+        defaultValue: options.defaultValue,
+      });
+    });
+  }, []);
+
+  const value = useMemo(
+    () => ({ confirm, alert, prompt }),
+    [confirm, alert, prompt]
+  );
 
   return (
     <PromptContext.Provider value={value}>
@@ -99,11 +137,28 @@ export function PromptProvider({ children }: { children: React.ReactNode }) {
               <p className="text-sm text-gray-600 leading-relaxed">
                 {state.message}
               </p>
+              {state.type === "prompt" && (
+                <input
+                  autoFocus
+                  type="text"
+                  className="mt-4 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none focus:border-[#9d4edd] focus:ring-2 focus:ring-[#9d4edd]/20"
+                  placeholder={state.placeholder}
+                  value={promptValue}
+                  onChange={(event) => setPromptValue(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      closePrompt(promptValue);
+                    }
+                  }}
+                />
+              )}
               <div className="mt-6 flex items-center justify-end gap-3">
-                {state.type === "confirm" && (
+                {(state.type === "confirm" || state.type === "prompt") && (
                   <button
                     type="button"
-                    onClick={() => closePrompt(false)}
+                    onClick={() =>
+                      closePrompt(state.type === "prompt" ? null : false)
+                    }
                     className="px-4 py-2 text-sm font-bold text-gray-400 hover:text-black"
                   >
                     {state.cancelLabel}
@@ -111,7 +166,9 @@ export function PromptProvider({ children }: { children: React.ReactNode }) {
                 )}
                 <button
                   type="button"
-                  onClick={() => closePrompt(true)}
+                  onClick={() =>
+                    closePrompt(state.type === "prompt" ? promptValue : true)
+                  }
                   className={`px-5 py-2 rounded-xl text-sm font-bold shadow-sm transition-all ${
                     state.tone === "danger"
                       ? "bg-red-500 text-white hover:bg-red-600"

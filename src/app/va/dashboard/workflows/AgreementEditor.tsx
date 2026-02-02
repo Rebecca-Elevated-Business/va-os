@@ -1,6 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
+import { usePrompt } from "@/components/ui/PromptProvider";
 
 export type AgreementItem = {
   id: string;
@@ -48,22 +49,29 @@ export default function AgreementEditor({
   onChange,
   showFooterNote = true,
 }: AgreementEditorProps) {
+  const { prompt } = usePrompt();
+
   const removeItem = (sectionIndex: number, itemIndex: number) => {
     const newStructure = cloneStructure(agreement.custom_structure);
     newStructure.sections[sectionIndex].items.splice(itemIndex, 1);
     onChange({ ...agreement, custom_structure: newStructure });
   };
 
-  const addOption = (sectionIndex: number, itemIndex: number) => {
-    const option = window.prompt("Enter new option:");
-    if (!option) return;
+  const addOption = async (sectionIndex: number, itemIndex: number) => {
+    const option = await prompt({
+      title: "Add option",
+      message: "Enter new option:",
+      placeholder: "Option label",
+      confirmLabel: "Add",
+    });
+    if (!option?.trim()) return;
 
     const newStructure = cloneStructure(agreement.custom_structure);
     const item = newStructure.sections[sectionIndex].items[itemIndex];
     if (item.options) {
-      item.options.push(option);
+      item.options.push(option.trim());
     } else {
-      item.options = [option];
+      item.options = [option.trim()];
     }
     onChange({ ...agreement, custom_structure: newStructure });
   };
@@ -135,7 +143,7 @@ export default function AgreementEditor({
                       ))}
                     </div>
                     <button
-                      onClick={() => addOption(sIndex, iIndex)}
+                      onClick={() => void addOption(sIndex, iIndex)}
                       className="bg-purple-50 text-[#9d4edd] border border-purple-100 px-3 py-1 rounded-full text-xs font-bold hover:bg-purple-100"
                     >
                       + Add Option
