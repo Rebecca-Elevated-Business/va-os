@@ -219,6 +219,7 @@ export default function ClientProfilePage({
   const [portalSetupOpen, setPortalSetupOpen] = useState(false);
   const [portalTabsDraft, setPortalTabsDraft] = useState<PortalTabId[]>([]);
   const [portalTabsSaving, setPortalTabsSaving] = useState(false);
+  const [portalTabsSaved, setPortalTabsSaved] = useState(false);
   const [deleteClientBusy, setDeleteClientBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [newNote, setNewNote] = useState("");
@@ -1200,6 +1201,9 @@ export default function ClientProfilePage({
     setPortalTabsSaving(false);
     if (!error) {
       setClient({ ...client, portal_tabs_enabled: portalTabsDraft });
+      setPortalTabsSaved(true);
+      setTimeout(() => setPortalTabsSaved(false), 2000);
+      setTimeout(() => setPortalManageOpen(false), 1200);
     }
   };
 
@@ -1681,6 +1685,11 @@ export default function ClientProfilePage({
               >
                 {portalTabsSaving ? "Saving..." : "Save Portal Areas"}
               </button>
+              {portalTabsSaved && (
+                <p className="mt-2 text-xs font-semibold text-green-600">
+                  Portal areas saved.
+                </p>
+              )}
             </div>
           </div>
           <div className="mt-6 border-t border-gray-100 pt-4">
