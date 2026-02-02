@@ -40,7 +40,7 @@ export default function VAInboxPage() {
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"inbox" | "starred" | "completed">(
-    "inbox"
+    "inbox",
   );
   const [selectedMsg, setSelectedMsg] = useState<InboxMessage | null>(null);
   const [deleteAllStep, setDeleteAllStep] = useState<
@@ -51,7 +51,9 @@ export default function VAInboxPage() {
   const fetchMessages = useCallback(async () => {
     const { data } = await supabase
       .from("client_requests")
-      .select("*, clients(first_name, surname, business_name), tasks(task_name, details)")
+      .select(
+        "*, clients(first_name, surname, business_name), tasks(task_name, details)",
+      )
       .order("created_at", { ascending: false });
 
     if (data) setMessages(data as InboxMessage[]);
@@ -70,7 +72,7 @@ export default function VAInboxPage() {
         },
         () => {
           fetchMessages();
-        }
+        },
       )
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
@@ -86,7 +88,7 @@ export default function VAInboxPage() {
   const toggleStatus = async (id: string, field: string, value: boolean) => {
     // Optimistic update for UI speed
     setMessages((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, [field]: value } : m))
+      prev.map((m) => (m.id === id ? { ...m, [field]: value } : m)),
     );
 
     const { error } = await supabase
@@ -123,11 +125,11 @@ export default function VAInboxPage() {
       if (!linkError) {
         setMessages((prev) =>
           prev.map((item) =>
-            item.id === msg.id ? { ...item, task_id: taskData.id } : item
-          )
+            item.id === msg.id ? { ...item, task_id: taskData.id } : item,
+          ),
         );
         setSelectedMsg((prev) =>
-          prev && prev.id === msg.id ? { ...prev, task_id: taskData.id } : prev
+          prev && prev.id === msg.id ? { ...prev, task_id: taskData.id } : prev,
         );
       } else {
         fetchMessages();
@@ -160,7 +162,9 @@ export default function VAInboxPage() {
   };
 
   const deleteAllCompleted = async () => {
-    const completedIds = messages.filter((m) => m.is_completed).map((m) => m.id);
+    const completedIds = messages
+      .filter((m) => m.is_completed)
+      .map((m) => m.id);
     if (completedIds.length === 0) {
       setDeleteAllStep(null);
       return;
@@ -181,10 +185,12 @@ export default function VAInboxPage() {
     if (activeTab === "completed") return m.is_completed;
     return !m.is_completed;
   });
-  const inboxCount = messages.filter((m) => !m.is_read && !m.is_completed)
-    .length;
-  const starredCount = messages.filter((m) => m.is_starred && !m.is_completed)
-    .length;
+  const inboxCount = messages.filter(
+    (m) => !m.is_read && !m.is_completed,
+  ).length;
+  const starredCount = messages.filter(
+    (m) => m.is_starred && !m.is_completed,
+  ).length;
   const typeLabels: Record<string, string> = {
     meeting: "Meeting Request",
     document: "Document Uploaded",
@@ -226,188 +232,188 @@ export default function VAInboxPage() {
       <div className="flex h-[calc(100vh-160px)] bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
         {/* SIDEBAR TABS */}
         <aside className="w-64 border-r border-gray-50 bg-gray-50/50 p-6 space-y-2">
-        <button
-          onClick={() => setActiveTab("inbox")}
-          className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-all ${
-            activeTab === "inbox"
-              ? "bg-[#D9BAF2] text-[#333333] shadow-sm"
-              : "text-[#333333] hover:bg-gray-100"
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            <Inbox size={16} className="text-[#333333]" /> Inbox
-          </div>
-          {inboxCount > 0 && (
-            <span className="bg-red-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center">
-              {inboxCount}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab("starred")}
-          className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-all ${
-            activeTab === "starred"
-              ? "bg-[#D9BAF2] text-[#333333] shadow-sm"
-              : "text-[#333333] hover:bg-gray-100"
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            <Star size={16} className="text-[#333333]" /> Starred
-          </div>
-          {starredCount > 0 && (
-            <span className="bg-gray-200 text-[#333333] text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center">
-              {starredCount}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab("completed")}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
-            activeTab === "completed"
-              ? "bg-[#D9BAF2] text-[#333333] shadow-sm"
-              : "text-[#333333] hover:bg-gray-100"
-          }`}
-        >
-          <CheckCircle2 size={16} className="text-[#333333]" /> Completed
-        </button>
+          <button
+            onClick={() => setActiveTab("inbox")}
+            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-all ${
+              activeTab === "inbox"
+                ? "bg-[#D9BAF2] text-[#333333] shadow-sm"
+                : "text-[#333333] hover:bg-gray-100"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <Inbox size={16} className="text-[#333333]" /> Inbox
+            </div>
+            {inboxCount > 0 && (
+              <span className="bg-red-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center">
+                {inboxCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab("starred")}
+            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-all ${
+              activeTab === "starred"
+                ? "bg-[#D9BAF2] text-[#333333] shadow-sm"
+                : "text-[#333333] hover:bg-gray-100"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <Star size={16} className="text-[#333333]" /> Starred
+            </div>
+            {starredCount > 0 && (
+              <span className="bg-gray-200 text-[#333333] text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center">
+                {starredCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab("completed")}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
+              activeTab === "completed"
+                ? "bg-[#D9BAF2] text-[#333333] shadow-sm"
+                : "text-[#333333] hover:bg-gray-100"
+            }`}
+          >
+            <CheckCircle2 size={16} className="text-[#333333]" /> Completed
+          </button>
         </aside>
 
-      {/* FEED LIST */}
+        {/* FEED LIST */}
         <main className="flex-1 overflow-y-auto">
-        <div className="border-b border-gray-100 px-8 py-6">
-          <div className="flex items-center justify-between gap-4">
-            <h2 className="text-lg font-bold text-[#333333]">
-              Notification Feed
-            </h2>
-            {activeTab === "completed" && filteredMessages.length > 0 && (
-              <button
-                onClick={() => setDeleteAllStep("confirm")}
-                className="text-xs font-semibold text-[#525252] hover:text-red-500 transition-colors"
-              >
-                Delete All
-              </button>
-            )}
-          </div>
-          <p className="text-xs text-gray-400">
-            {activeTab === "inbox"
-              ? "Unread and active requests"
-              : activeTab === "starred"
-                ? "Flagged items needing attention"
-                : "Completed items"}
-          </p>
-        </div>
-
-        {filteredMessages.length === 0 ? (
-          <div className="p-20 text-center text-gray-400 italic">
-            No messages here.
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-50">
-            {filteredMessages.map((msg) => (
-              <div
-                key={msg.id}
-                onClick={() => {
-                  setSelectedMsg(msg);
-                  if (!msg.is_read) toggleStatus(msg.id, "is_read", true);
-                }}
-                className={`group flex items-start gap-4 px-8 py-5 transition-colors cursor-pointer hover:bg-purple-50/40 ${
-                  !msg.is_read ? "bg-purple-50/20" : ""
-                } ${msg.is_completed ? "text-gray-400" : "text-[#333333]"}`}
-              >
+          <div className="border-b border-gray-100 px-8 py-6">
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-lg font-bold text-[#333333]">
+                Notification Feed
+              </h2>
+              {activeTab === "completed" && filteredMessages.length > 0 && (
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleStatus(msg.id, "is_starred", !msg.is_starred);
-                  }}
-                  className={`mt-1 text-xl transition-all hover:scale-110 active:scale-95 ${
-                    msg.is_starred
-                      ? "text-[#EEC644]"
-                      : "text-[#EEC644]/70 group-hover:text-[#EEC644]"
-                  }`}
+                  onClick={() => setDeleteAllStep("confirm")}
+                  className="text-xs font-semibold text-[#525252] hover:text-red-500 transition-colors"
                 >
-                  {msg.is_starred ? "★" : "☆"}
+                  Delete All
                 </button>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3">
-                    <h3
-                      className={`text-sm font-bold leading-tight ${
-                        !msg.is_read ? "text-[#333333]" : "text-[#333333]"
-                      }`}
-                    >
-                      {msg.clients.first_name} {msg.clients.surname}
-                    </h3>
-                    <span
-                      className={`px-2.5 py-0.5 rounded-full text-[9px] font-black border ${getTypeClasses(
-                        msg.type
-                      )}`}
-                    >
-                      {getTypeLabel(msg.type)}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-400 mt-0 leading-tight">
-                    {msg.clients.business_name}
-                  </p>
-                  <p className="text-sm text-gray-600 mt-2 truncate">
-                    {msg.message}
-                  </p>
-                </div>
-
-                <div className="flex flex-col items-end gap-3">
-                  <span className="text-[11px] font-bold text-gray-400">
-                    {format(new Date(msg.created_at), "dd MMM, HH:mm")}
-                  </span>
-                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
-                    {msg.is_completed ? (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleStatus(msg.id, "is_completed", false);
-                        }}
-                        className="px-3 py-1.5 rounded-full text-[10px] font-bold border border-gray-200 text-gray-600 hover:bg-gray-50"
-                      >
-                        Undo Complete
-                      </button>
-                    ) : (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleStatus(msg.id, "is_completed", true);
-                        }}
-                        className="px-3 py-1.5 rounded-full text-[10px] font-bold border border-green-200 text-green-700 hover:bg-green-50"
-                      >
-                        Mark Completed
-                      </button>
-                    )}
-                    {msg.task_id ? (
-                      <Link
-                        href={`/va/dashboard/tasks?taskId=${msg.task_id}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold border border-gray-200 text-[#333333] hover:bg-gray-50"
-                      >
-                        <ArrowUpRight size={12} />
-                        View Task
-                      </Link>
-                    ) : (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          convertToTask(msg);
-                        }}
-                        className="px-3 py-1.5 rounded-full text-[10px] font-bold border border-gray-200 text-[#333333] hover:bg-gray-50"
-                      >
-                        Create Task
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+              )}
+            </div>
+            <p className="text-xs text-gray-400">
+              {activeTab === "inbox"
+                ? "Unread and active requests"
+                : activeTab === "starred"
+                  ? "Flagged items needing attention"
+                  : "Completed items"}
+            </p>
           </div>
-        )}
+
+          {filteredMessages.length === 0 ? (
+            <div className="p-20 text-center text-gray-400 italic">
+              No messages here.
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-50">
+              {filteredMessages.map((msg) => (
+                <div
+                  key={msg.id}
+                  onClick={() => {
+                    setSelectedMsg(msg);
+                    if (!msg.is_read) toggleStatus(msg.id, "is_read", true);
+                  }}
+                  className={`group flex items-start gap-4 px-8 py-5 transition-colors cursor-pointer hover:bg-purple-50/40 ${
+                    !msg.is_read ? "bg-purple-50/20" : ""
+                  } ${msg.is_completed ? "text-gray-400" : "text-[#333333]"}`}
+                >
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleStatus(msg.id, "is_starred", !msg.is_starred);
+                    }}
+                    className={`mt-1 text-xl transition-all hover:scale-110 active:scale-95 ${
+                      msg.is_starred
+                        ? "text-[#EEC644]"
+                        : "text-[#EEC644]/70 group-hover:text-[#EEC644]"
+                    }`}
+                  >
+                    {msg.is_starred ? "★" : "☆"}
+                  </button>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3">
+                      <h3
+                        className={`text-sm font-bold leading-tight ${
+                          !msg.is_read ? "text-[#333333]" : "text-[#333333]"
+                        }`}
+                      >
+                        {msg.clients.first_name} {msg.clients.surname}
+                      </h3>
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[9px] font-black border ${getTypeClasses(
+                          msg.type,
+                        )}`}
+                      >
+                        {getTypeLabel(msg.type)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0 leading-tight">
+                      {msg.clients.business_name}
+                    </p>
+                    <p className="text-sm text-gray-600 mt-2 truncate">
+                      {msg.message}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col items-end gap-3">
+                    <span className="text-[11px] font-bold text-gray-400">
+                      {format(new Date(msg.created_at), "dd MMM, HH:mm")}
+                    </span>
+                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+                      {msg.is_completed ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleStatus(msg.id, "is_completed", false);
+                          }}
+                          className="px-3 py-1.5 rounded-full text-[10px] font-bold border border-gray-200 text-gray-600 hover:bg-gray-50"
+                        >
+                          Undo Complete
+                        </button>
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleStatus(msg.id, "is_completed", true);
+                          }}
+                          className="px-3 py-1.5 rounded-full text-[10px] font-bold border border-green-200 text-green-700 hover:bg-green-50"
+                        >
+                          Mark Completed
+                        </button>
+                      )}
+                      {msg.task_id ? (
+                        <Link
+                          href={`/va/dashboard/tasks?taskId=${msg.task_id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold border border-gray-200 text-[#333333] hover:bg-gray-50"
+                        >
+                          <ArrowUpRight size={12} />
+                          View Task
+                        </Link>
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            convertToTask(msg);
+                          }}
+                          className="px-3 py-1.5 rounded-full text-[10px] font-bold border border-gray-200 text-[#333333] hover:bg-gray-50"
+                        >
+                          Create Task
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </main>
 
-      {/* POPUP OVERLAY */}
+        {/* POPUP OVERLAY */}
         {selectedMsg && (
           <div
             className="fixed inset-0 bg-black/40 backdrop-blur-sm z-100 flex items-center justify-center p-6 text-black"
@@ -422,7 +428,7 @@ export default function VAInboxPage() {
                   <div>
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black border ${getTypeClasses(
-                        selectedMsg.type
+                        selectedMsg.type,
                       )}`}
                     >
                       {getTypeLabel(selectedMsg.type)}
@@ -437,7 +443,7 @@ export default function VAInboxPage() {
                     <p className="text-xs text-gray-400 mt-1">
                       {format(
                         new Date(selectedMsg.created_at),
-                        "dd MMM yyyy, HH:mm"
+                        "dd MMM yyyy, HH:mm",
                       )}
                     </p>
                   </div>
@@ -521,7 +527,7 @@ export default function VAInboxPage() {
                         toggleStatus(
                           selectedMsg.id,
                           "is_completed",
-                          !selectedMsg.is_completed
+                          !selectedMsg.is_completed,
                         );
                         setSelectedMsg(null);
                       }}
@@ -542,7 +548,7 @@ export default function VAInboxPage() {
                           onClick={() => {
                             toggleStatus(selectedMsg.id, "is_read", false);
                             setSelectedMsg((prev) =>
-                              prev ? { ...prev, is_read: false } : prev
+                              prev ? { ...prev, is_read: false } : prev,
                             );
                             setSelectedMsg(null);
                           }}
@@ -573,7 +579,7 @@ export default function VAInboxPage() {
             onClick={() => setDeleteAllStep(null)}
           >
             <div
-              className="bg-white w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in duration-200"
+              className="bg-white w-full max-w-lg rounded-4xl shadow-2xl overflow-hidden animate-in zoom-in duration-200"
               onClick={(event) => event.stopPropagation()}
             >
               <div className="p-8 space-y-4">

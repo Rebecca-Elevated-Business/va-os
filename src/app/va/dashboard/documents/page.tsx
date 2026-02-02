@@ -4,9 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { usePrompt } from "@/components/ui/PromptProvider";
-import { FileText, FileSignature, ReceiptText, Search, Upload } from "lucide-react";
-
-// Define the document types based on your workflow
+import {
+  FileText,
+  FileSignature,
+  ReceiptText,
+  Search,
+  Upload,
+} from "lucide-react";
 const DOCUMENT_TYPES = [
   {
     id: "proposal",
@@ -38,6 +42,21 @@ const DOCUMENT_TYPES = [
   },
 ];
 
+const formatClientName = (client: { first_name: string; surname: string }) =>
+  `${client.first_name} ${client.surname}`.trim();
+
+const formatClientLabel = (client: {
+  first_name: string;
+  surname: string;
+  business_name: string;
+}) => {
+  const name = formatClientName(client);
+  if (client.business_name) {
+    return name ? `${name} (${client.business_name})` : client.business_name;
+  }
+  return name || "Unnamed Client";
+};
+
 export default function DocumentLibraryPage() {
   const router = useRouter();
   const { alert } = usePrompt();
@@ -55,21 +74,6 @@ export default function DocumentLibraryPage() {
     business_name: string;
   } | null>(null);
   const [loadingClients, setLoadingClients] = useState(false);
-  const formatClientName = (client: {
-    first_name: string;
-    surname: string;
-  }) => `${client.first_name} ${client.surname}`.trim();
-  const formatClientLabel = (client: {
-    first_name: string;
-    surname: string;
-    business_name: string;
-  }) => {
-    const name = formatClientName(client);
-    if (client.business_name) {
-      return name ? `${name} (${client.business_name})` : client.business_name;
-    }
-    return name || "Unnamed Client";
-  };
 
   useEffect(() => {
     if (!selectedType || clients.length > 0) return;
