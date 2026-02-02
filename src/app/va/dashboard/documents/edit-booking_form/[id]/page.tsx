@@ -130,7 +130,7 @@ export default function EditBookingFormPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const { alert } = usePrompt();
+  const { alert, confirm } = usePrompt();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -381,7 +381,7 @@ export default function EditBookingFormPage({
         }
       }
     },
-    [doc, id, router]
+    [alert, doc, id, router]
   );
 
   useEffect(() => {
@@ -412,6 +412,25 @@ export default function EditBookingFormPage({
       </div>
     );
 
+  const handlePreview = () => {
+    window.open(`/va/dashboard/documents/preview/${id}`, "_blank");
+  };
+
+  const handleSaveDraft = () => {
+    persistDoc({ issue: false });
+  };
+
+  const handleIssue = async () => {
+    const ok = await confirm({
+      title: "Issue to client?",
+      message:
+        "Are you sure you want to issue this booking form to the client?",
+      confirmLabel: "Issue to Client",
+    });
+    if (!ok) return;
+    persistDoc({ issue: true });
+  };
+
   return (
     <div className="p-6 max-w-5xl mx-auto text-black pb-40 font-sans">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between mb-10 pb-6 border-b border-gray-100">
@@ -432,26 +451,24 @@ export default function EditBookingFormPage({
         </div>
         <div className="flex flex-wrap gap-3">
           <button
-            onClick={() =>
-              window.open(`/va/dashboard/documents/preview/${id}`, "_blank")
-            }
-            className="px-6 py-2 border rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
+            onClick={handlePreview}
+            className="border border-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:border-gray-300 hover:text-gray-900 transition-all"
           >
             Preview
           </button>
           <button
-            onClick={() => persistDoc({ issue: false })}
+            onClick={handleSaveDraft}
             disabled={saving}
-            className="px-6 py-2 border rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
+            className="border border-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:border-gray-300 hover:text-gray-900 transition-all disabled:opacity-60"
           >
-            {saving ? "Saving..." : "Save Draft"}
+            {saving ? "Saving..." : "Save as Draft"}
           </button>
           <button
-            onClick={() => persistDoc({ issue: true })}
+            onClick={handleIssue}
             disabled={saving}
-            className="px-6 py-2 bg-[#9d4edd] text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-[#7b2cbf] shadow-xl shadow-purple-100 transition-all"
+            className="bg-[#9d4edd] text-white px-6 py-2 rounded-lg font-bold shadow-md hover:bg-[#7b2cbf] transition-all disabled:opacity-60"
           >
-            Issue for Signature
+            Issue to Client
           </button>
         </div>
       </div>
@@ -1527,6 +1544,31 @@ export default function EditBookingFormPage({
         <p className="text-xs text-gray-400">
           Client signatures become active once this booking form is issued.
         </p>
+      </div>
+
+      <div className="pt-10">
+        <div className="flex flex-wrap items-center justify-center gap-4">
+          <button
+            onClick={handlePreview}
+            className="border border-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:border-gray-300 hover:text-gray-900 transition-all"
+          >
+            Preview
+          </button>
+          <button
+            onClick={handleSaveDraft}
+            disabled={saving}
+            className="border border-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:border-gray-300 hover:text-gray-900 transition-all disabled:opacity-60"
+          >
+            {saving ? "Saving..." : "Save as Draft"}
+          </button>
+          <button
+            onClick={handleIssue}
+            disabled={saving}
+            className="bg-[#9d4edd] text-white px-6 py-2 rounded-lg font-bold shadow-md hover:bg-[#7b2cbf] transition-all disabled:opacity-60"
+          >
+            Issue to Client
+          </button>
+        </div>
       </div>
     </div>
   );
