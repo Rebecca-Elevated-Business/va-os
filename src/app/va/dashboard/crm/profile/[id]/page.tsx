@@ -135,17 +135,18 @@ const formatEntryTime = (value: string) =>
     minute: "2-digit",
   });
 
-  const formatDateCell = (dateValue: string | null | undefined) => {
-    if (!dateValue) return "-";
-    return format(new Date(dateValue), "d MMM");
-  };
-  const formatDocStatus = (status: string) => {
-    if (status === "draft") return "Draft";
-    if (status === "pending_client") return "Issued";
-    if (status === "authorised") return "Accepted";
-    if (status === "accepted") return "Accepted";
-    return "Issued";
-  };
+const formatDateCell = (dateValue: string | null | undefined) => {
+  if (!dateValue) return "-";
+  return format(new Date(dateValue), "d MMM");
+};
+
+const formatDocStatus = (status: string) => {
+  if (status === "draft") return "Draft";
+  if (status === "pending_client") return "Issued";
+  if (status === "authorised") return "Accepted";
+  if (status === "accepted") return "Accepted";
+  return "Issued";
+};
 
 // --- COMPONENT ---
 export default function ClientProfilePage({
@@ -262,9 +263,7 @@ export default function ClientProfilePage({
   });
   const [activeTab, setActiveTab] = useState<CrmTabId>("overview");
 
-  // --- DATA FETCHING ---
   const refreshData = useCallback(async () => {
-    // 1. Fetch Client
     const { data: clientData } = await supabase
       .from("clients")
       .select("*")
@@ -272,7 +271,6 @@ export default function ClientProfilePage({
       .single();
     if (clientData) setClient(clientData);
 
-    // 2. Fetch Notes
     const { data: notesData } = await supabase
       .from("client_notes")
       .select("*")
@@ -280,7 +278,6 @@ export default function ClientProfilePage({
       .order("created_at", { ascending: false });
     if (notesData) setNotes(notesData || []);
 
-    // 3. Fetch Tasks
     const { data: tasksData } = await supabase
       .from("tasks")
       .select("*")
@@ -454,23 +451,19 @@ export default function ClientProfilePage({
 
   useEffect(() => {
     async function fetchAgreements() {
-      console.log("Fetching agreements for Client ID:", id); // Debug Log 1
-
-      const { data, error } = await supabase // Capture 'error'
+      const { data, error } = await supabase
         .from("client_agreements")
         .select("*")
         .eq("client_id", id)
         .order("created_at", { ascending: false });
 
       if (error) {
-        console.error("Error fetching agreements:", error.message); // Debug Log 2
+        console.error("Error fetching agreements:", error.message);
       } else {
-        console.log("Agreements found:", data); // Debug Log 3
         if (data) setClientAgreements(data);
       }
     }
     fetchAgreements();
-    // New: Fetch Documents (Proposals, Booking Forms, Invoices)
     async function fetchDocuments() {
       const { data: docData } = await supabase
         .from("client_documents")
@@ -483,23 +476,17 @@ export default function ClientProfilePage({
   }, [id]);
 
 
-  // --- GLOBAL TICKER ---
-  // Updates the UI every second so any running tasks show their time ticking up
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
   }, []);
 
-  // --- ACTIONS ---
-
-  // 1. Toggle Timer (Play/Stop logic)
   const toggleTimer = async (task: Task) => {
     if (isSessionRunning) return;
     if (task.is_running) {
-      // STOPPING: Calculate elapsed time and add to total
       if (!task.start_time) return;
       const start = new Date(task.start_time).getTime();
-      const end = new Date().getTime(); // Use new Date() object instead of Date.now()
+      const end = new Date().getTime();
       const elapsedSeconds = Math.max(0, Math.round((end - start) / 1000));
       const currentSessionMinutes = elapsedSeconds / 60;
       const endTime = new Date().toISOString();
@@ -541,7 +528,6 @@ export default function ClientProfilePage({
       ]);
     } else {
       const startTime = new Date().toISOString();
-      // STARTING: Mark as running and save start timestamp
       await supabase
         .from("tasks")
         .update({
@@ -555,7 +541,6 @@ export default function ClientProfilePage({
     refreshData();
   };
 
-  // 3. Update Status
   const updateTaskStatus = async (task: Task, newStatus: string) => {
     if (task.status === newStatus) return;
     await reorderKanbanTasks(task.id, newStatus, null);
@@ -586,7 +571,6 @@ export default function ClientProfilePage({
     }
   };
 
-  // 4. Update Client Info
   const handleUpdateClient = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!client) return;
@@ -645,7 +629,6 @@ export default function ClientProfilePage({
     refreshData();
   };
 
-  // 5. Add Internal Note
   const addNote = async () => {
     if (!newNote.trim()) return;
     const { data: userData } = await supabase.auth.getUser();
@@ -697,7 +680,6 @@ export default function ClientProfilePage({
     setEditingNoteContent("");
     refreshData();
   };
-  // 6. Delete Task
   const deleteTask = async (taskId: string) => {
     const ok = await confirm({
       title: "Delete task?",
@@ -732,7 +714,6 @@ export default function ClientProfilePage({
     }
   };
 
-  // New: Function to delete a service agreement
   const revokeAgreement = async (agreementId: string) => {
     const ok = await confirm({
       title: "Revoke agreement?",
@@ -1254,20 +1235,16 @@ export default function ClientProfilePage({
     }
   };
 
-  // --- HELPER: Format Time Display ---
   const formatTime = (task: Task) => {
-    // 1. Convert stored minutes to seconds so we can do precise math
     const baseMinutes = Number.isFinite(task.total_minutes)
       ? task.total_minutes
       : 0;
     let totalSeconds = baseMinutes * 60;
 
-    // 2. If running, add the live elapsed seconds
     if (task.is_running && task.start_time) {
       totalSeconds += (now - new Date(task.start_time).getTime()) / 1000;
     }
 
-    // 3. Calculate hours, minutes, AND seconds
     const hrs = Math.floor(totalSeconds / 3600);
     const mins = Math.floor((totalSeconds % 3600) / 60);
     const secs = Math.floor(totalSeconds % 60);
@@ -1495,7 +1472,6 @@ export default function ClientProfilePage({
 
   return (
     <div className="flex flex-col h-full text-black space-y-8 pb-20">
-      {/* 1. HEADER */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">
@@ -1716,7 +1692,6 @@ export default function ClientProfilePage({
         </div>
       )}
 
-      {/* 2. CLIENT INFORMATION (Horizontal Layout) */}
       {activeTab === "overview" && (
         <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-visible">
           <form onSubmit={handleUpdateClient}>
@@ -2151,7 +2126,6 @@ export default function ClientProfilePage({
         </section>
       )}
 
-      {/* 3. TASK MANAGER (Table Layout) */}
       {activeTab === "tasks" && (
         <section className="rounded-xl pb-8">
           <div className="p-0">
