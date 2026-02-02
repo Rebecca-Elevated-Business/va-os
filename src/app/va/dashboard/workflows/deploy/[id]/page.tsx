@@ -33,6 +33,8 @@ type Template = {
   } | null;
 };
 
+type AgreementWithClientId = Agreement & { client_id: string };
+
 export default function DeployAgreementPage({
   params,
 }: {
@@ -45,9 +47,9 @@ export default function DeployAgreementPage({
   // Data State
   const [template, setTemplate] = useState<Template | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
-  const [agreement, setAgreement] = useState<
-    (Agreement & { client_id: string }) | null
-  >(null);
+  const [agreement, setAgreement] = useState<AgreementWithClientId | null>(
+    null
+  );
 
   // Search/Selection State
   const [search, setSearch] = useState("");
@@ -189,6 +191,14 @@ export default function DeployAgreementPage({
 
   const handleSave = async () => {
     await persistAgreement(true);
+  };
+
+  const handleAgreementChange = (nextAgreement: Agreement) => {
+    setAgreement((current) =>
+      current
+        ? { ...nextAgreement, client_id: current.client_id }
+        : ({ ...nextAgreement, client_id: "" } as AgreementWithClientId)
+    );
   };
 
   const handleIssueToClient = async () => {
@@ -504,7 +514,10 @@ export default function DeployAgreementPage({
                 </div>
               </div>
 
-              <AgreementEditor agreement={agreement} onChange={setAgreement} />
+              <AgreementEditor
+                agreement={agreement}
+                onChange={handleAgreementChange}
+              />
 
               <div className="pt-6">
                 <div className="flex flex-wrap items-center justify-center gap-4">
