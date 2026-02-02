@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { usePrompt } from "@/components/ui/PromptProvider";
 
-type AgreementValue = string | string[] | undefined;
+type AgreementValue = string | string[] | boolean | undefined;
 
 type AgreementItem = {
   id: string;
@@ -274,9 +274,11 @@ export default function AgreementPortalView({
                   .filter((item) => !item.hidden)
                   .map((item) => (
                   <div key={item.id} className="flex flex-col gap-2">
-                    <label className="text-sm font-normal text-[#333333]">
-                      {item.label}
-                    </label>
+                    {item.type !== "checkbox" && (
+                      <label className="text-sm font-normal text-[#333333]">
+                        {item.label}
+                      </label>
+                    )}
 
                     {item.type === "textarea" ? (
                       <textarea
@@ -331,6 +333,25 @@ export default function AgreementPortalView({
                           </div>
                         ))}
                       </div>
+                    ) : item.type === "checkbox" ? (
+                      <label className="flex items-center gap-3">
+                        <input
+                          disabled={isReadOnly}
+                          type="checkbox"
+                          className="w-5 h-5 rounded border-[#333333] text-[#333333] accent-[#333333]"
+                          checked={Boolean(item.value)}
+                          onChange={(event) =>
+                            handleUpdateValue(
+                              section.id,
+                              item.id,
+                              event.target.checked
+                            )
+                          }
+                        />
+                        <span className="text-sm font-normal text-[#333333]">
+                          {item.label}
+                        </span>
+                      </label>
                     ) : (
                       <input
                         disabled={isReadOnly}

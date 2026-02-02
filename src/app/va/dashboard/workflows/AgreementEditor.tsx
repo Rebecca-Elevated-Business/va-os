@@ -3,12 +3,15 @@
 import { useMemo, useState } from "react";
 import { usePrompt } from "@/components/ui/PromptProvider";
 
+type AgreementValue = string | string[] | boolean | undefined;
+
 export type AgreementItem = {
   id: string;
   label: string;
   type: "text" | "textarea" | "date" | "checkbox" | "checkbox_group";
   options?: string[];
   placeholder?: string;
+  value?: AgreementValue;
   hidden?: boolean;
   hidden_options?: string[];
 };
@@ -185,6 +188,17 @@ export default function AgreementEditor({
     onChange({ ...agreement, custom_structure: newStructure });
   };
 
+  const updateItemValue = (
+    sectionIndex: number,
+    itemIndex: number,
+    value: AgreementValue
+  ) => {
+    const newStructure = cloneStructure(agreement.custom_structure);
+    const item = newStructure.sections[sectionIndex].items[itemIndex];
+    item.value = value;
+    onChange({ ...agreement, custom_structure: newStructure });
+  };
+
   return (
     <div className="space-y-8">
       {agreement.custom_structure.sections.map((section, sIndex) => (
@@ -293,15 +307,38 @@ export default function AgreementEditor({
                                 (opt) => !item.hidden_options?.includes(opt)
                               )
                               .map((opt) => (
-                                <div
+                                <label
                                   key={opt}
-                                  className="group/option flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100"
+                                  className="group/option flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100 cursor-pointer"
                                 >
-                                  <div className="w-5 h-5 rounded border-2 border-[#333333] ml-[3px]" />
+                                  <input
+                                    type="checkbox"
+                                    className="w-5 h-5 rounded border-[#333333] text-[#333333] accent-[#333333] ml-[3px]"
+                                    checked={
+                                      Array.isArray(item.value)
+                                        ? item.value.includes(opt)
+                                        : false
+                                    }
+                                    onChange={(event) => {
+                                      const currentValues = Array.isArray(
+                                        item.value
+                                      )
+                                        ? item.value
+                                        : [];
+                                      const nextValues = event.target.checked
+                                        ? [...currentValues, opt]
+                                        : currentValues.filter((v) => v !== opt);
+                                      updateItemValue(
+                                        sIndex,
+                                        iIndex,
+                                        nextValues
+                                      );
+                                    }}
+                                  />
                                   <span className="text-sm text-[#333333] font-normal flex-1">
                                     {opt}
                                   </span>
-                                </div>
+                                </label>
                               ))}
                           </div>
                           <button
@@ -313,19 +350,45 @@ export default function AgreementEditor({
                         </div>
                       )}
 
-                      {(item.type === "text" ||
-                        item.type === "date" ||
-                        item.type === "textarea") && (
-                        <div className="bg-gray-50 rounded border border-gray-200 border-dashed w-full h-10" />
+                      {(item.type === "text" || item.type === "date") && (
+                        <input
+                          type={item.type}
+                          className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-[#333333] outline-none focus:border-[#9d4edd] focus:ring-2 focus:ring-[#9d4edd]/20"
+                          value={(item.value as string) || ""}
+                          onChange={(event) =>
+                            updateItemValue(sIndex, iIndex, event.target.value)
+                          }
+                        />
+                      )}
+
+                      {item.type === "textarea" && (
+                        <textarea
+                          className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-[#333333] outline-none focus:border-[#9d4edd] focus:ring-2 focus:ring-[#9d4edd]/20 min-h-24"
+                          value={(item.value as string) || ""}
+                          onChange={(event) =>
+                            updateItemValue(sIndex, iIndex, event.target.value)
+                          }
+                        />
                       )}
 
                       {item.type === "checkbox" && (
-                        <div className="flex items-center gap-3">
-                          <div className="w-5 h-5 border-2 border-[#333333] rounded ml-[3px]" />
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="w-5 h-5 rounded border-[#333333] text-[#333333] accent-[#333333] ml-[3px]"
+                            checked={Boolean(item.value)}
+                            onChange={(event) =>
+                              updateItemValue(
+                                sIndex,
+                                iIndex,
+                                event.target.checked
+                              )
+                            }
+                          />
                           <span className="text-sm font-normal text-[#333333]">
                             {item.label}
                           </span>
-                        </div>
+                        </label>
                       )}
                     </>
                   )}
