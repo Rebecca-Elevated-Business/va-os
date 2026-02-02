@@ -3196,12 +3196,14 @@ export default function ClientProfilePage({
                                 <button
                                   onClick={() =>
                                     router.push(
-                                      `/va/dashboard/workflows/portal-view/${ag.id}`,
+                                      ag.status === "draft"
+                                        ? `/va/dashboard/workflows/edit/${ag.id}`
+                                        : `/va/dashboard/workflows/portal-view/${ag.id}`
                                     )
                                   }
                                   className="text-xs font-bold text-[#9d4edd] hover:underline"
                                 >
-                                  {ag.status === "draft" ? "Edit & Issue" : "View"}
+                                  {ag.status === "draft" ? "Edit" : "View"}
                                 </button>
                                 <button
                                   onClick={() => deleteAgreement(ag.id)}
