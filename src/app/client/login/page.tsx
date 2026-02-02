@@ -18,7 +18,6 @@ export default function ClientLoginPage() {
     setError(null);
     setResetMessage(null);
 
-    // 1. Sign in the user
     const { data, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -30,7 +29,6 @@ export default function ClientLoginPage() {
       return;
     }
 
-    // 2. Security Check: Verify this is a Client
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("role")
@@ -38,14 +36,12 @@ export default function ClientLoginPage() {
       .single();
 
     if (profileError || profile?.role !== "client") {
-      // If they aren't a Client, sign them out immediately
       await supabase.auth.signOut();
       setError("Access denied. This portal is for Clients only.");
       setLoading(false);
       return;
     }
 
-    // 3. Success! Redirect to the Client dashboard
     router.push("/client/dashboard");
   };
 
