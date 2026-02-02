@@ -30,6 +30,15 @@ type ClientNotification = {
   created_at: string;
 };
 
+type PortalTabId = "documents" | "agreements" | "tasks" | "requests";
+
+const PORTAL_TABS: { id: PortalTabId; label: string }[] = [
+  { id: "documents", label: "Document Vault" },
+  { id: "agreements", label: "Service Agreements" },
+  { id: "tasks", label: "Task Board" },
+  { id: "requests", label: "Request Centre" },
+];
+
 const TASK_STATUS_FILTERS = [
   { id: "todo", label: "To Do" },
   { id: "up_next", label: "Up Next" },
@@ -49,9 +58,8 @@ export default function ClientDashboard() {
   const [clientNotifications, setClientNotifications] = useState<
     ClientNotification[]
   >([]);
-  const [activeTab, setActiveTab] = useState<
-    "documents" | "agreements" | "tasks" | "requests"
-  >("documents");
+  const [activeTab, setActiveTab] = useState<PortalTabId>("documents");
+  const [allowedTabs, setAllowedTabs] = useState<PortalTabId[]>([]);
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [statusFilterOpen, setStatusFilterOpen] = useState(false);
   const [visibleStatuses, setVisibleStatuses] = useState<string[]>(
@@ -121,7 +129,7 @@ export default function ClientDashboard() {
       // 2. Find the CRM Client record linked to this Login ID
       const { data: client, error: clientError } = await supabase
         .from("clients")
-        .select("id, first_name, surname, va_id")
+        .select("id, first_name, surname, va_id, portal_tabs_enabled")
         .eq("auth_user_id", user.id)
         .single();
 
@@ -134,35 +142,45 @@ export default function ClientDashboard() {
         setClientName(client.first_name);
         setClientId(client.id);
         setVaId(client.va_id || null);
+        const tabsEnabled = (client.portal_tabs_enabled || []) as PortalTabId[];
+        setAllowedTabs(tabsEnabled);
         setDebugInfo(
           `SUCCESS: Linked to Client ID: ${client.id} (${client.first_name})`
         );
 
-        // 3. Fetch Agreements
-        const { data: ags } = await supabase
-          .from("client_agreements")
-          .select("id, title, status, last_updated_at")
-          .eq("client_id", client.id)
-          .neq("status", "draft")
-          .order("last_updated_at", { ascending: false });
+        // 3. Fetch Agreements (if enabled)
+        if (tabsEnabled.includes("agreements")) {
+          const { data: ags } = await supabase
+            .from("client_agreements")
+            .select("id, title, status, last_updated_at")
+            .eq("client_id", client.id)
+            .neq("status", "draft")
+            .order("last_updated_at", { ascending: false });
+          if (ags) setAgreements(ags as Agreement[]);
+        } else {
+          setAgreements([]);
+        }
 
-        if (ags) setAgreements(ags as Agreement[]);
-
-        // 4. Fetch Documents
-        const { data: docs } = await supabase
-          .from("client_documents")
-          .select("*")
-          .eq("client_id", client.id)
-          .neq("status", "draft")
-          .order("created_at", { ascending: false });
-
-        if (docs) setDocuments(docs as ClientDocument[]);
+        // 4. Fetch Documents (if enabled)
+        if (tabsEnabled.includes("documents")) {
+          const { data: docs } = await supabase
+            .from("client_documents")
+            .select("*")
+            .eq("client_id", client.id)
+            .neq("status", "draft")
+            .order("created_at", { ascending: false });
+          if (docs) setDocuments(docs as ClientDocument[]);
+        } else {
+          setDocuments([]);
+        }
 
         // 5. Fetch Tasks + Notifications
-        await Promise.all([
-          fetchTasks(client.id),
-          fetchNotifications(client.id),
-        ]);
+        if (tabsEnabled.includes("tasks")) {
+          await fetchTasks(client.id);
+        } else {
+          setTasks([]);
+        }
+        await fetchNotifications(client.id);
       } else {
         setDebugInfo(`WARNING: No client record found for Auth ID ${user.id}`);
       }
@@ -173,22 +191,6 @@ export default function ClientDashboard() {
 
   useEffect(() => {
     if (!clientId) return;
-    const taskChannel = supabase
-      .channel(`client-tasks-${clientId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "tasks",
-          filter: `client_id=eq.${clientId}`,
-        },
-        () => {
-          void fetchTasks(clientId);
-        },
-      )
-      .subscribe();
-
     const notifChannel = supabase
       .channel(`client-notifications-${clientId}`)
       .on(
@@ -206,10 +208,32 @@ export default function ClientDashboard() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(taskChannel);
       supabase.removeChannel(notifChannel);
     };
-  }, [clientId, fetchTasks, fetchNotifications]);
+  }, [clientId, fetchNotifications]);
+
+  useEffect(() => {
+    if (!clientId || !allowedTabs.includes("tasks")) return;
+    const taskChannel = supabase
+      .channel(`client-tasks-${clientId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "tasks",
+          filter: `client_id=eq.${clientId}`,
+        },
+        () => {
+          void fetchTasks(clientId);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(taskChannel);
+    };
+  }, [allowedTabs, clientId, fetchTasks]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -435,6 +459,12 @@ export default function ClientDashboard() {
   );
   const unreadAlertCount = alertNotifications.filter((note) => !note.is_read)
     .length;
+  const visibleTabs = PORTAL_TABS.filter((tab) =>
+    allowedTabs.includes(tab.id),
+  );
+  const safeActiveTab = allowedTabs.includes(activeTab)
+    ? activeTab
+    : allowedTabs[0];
 
   useEffect(() => {
     if (!alertsOpen) return;
@@ -478,6 +508,35 @@ export default function ClientDashboard() {
     return (
       <div className="p-10 text-gray-500 italic">Loading your portal...</div>
     );
+
+  if (allowedTabs.length === 0) {
+    return (
+      <main className="min-h-screen bg-gray-50 p-6 md:p-10 text-black font-sans">
+        <div className="max-w-3xl mx-auto space-y-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-black text-gray-900 tracking-tight">
+              Welcome, {clientName || "Client"}
+            </h1>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 text-sm font-bold text-gray-600 hover:text-[#9d4edd] border border-gray-300 rounded-lg bg-white transition-all shadow-sm"
+            >
+              Sign Out
+            </button>
+          </div>
+          <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
+            <h2 className="text-lg font-black text-gray-800">
+              Portal access not enabled
+            </h2>
+            <p className="mt-2 text-sm text-gray-500">
+              Your VA has not enabled any portal areas yet. Please contact your
+              VA if you believe this is a mistake.
+            </p>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-gray-50 p-6 md:p-10 text-black font-sans">
@@ -589,55 +648,29 @@ export default function ClientDashboard() {
 
         <div className="rounded-3xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
           <div className="flex flex-wrap gap-2 text-sm font-semibold text-gray-500">
-            <button
-              onClick={() => setActiveTab("documents")}
-              className={`rounded-full px-4 py-2 transition-colors ${
-                activeTab === "documents"
-                  ? "bg-[#9d4edd] text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              Document Vault
-            </button>
-            <button
-              onClick={() => setActiveTab("agreements")}
-              className={`rounded-full px-4 py-2 transition-colors ${
-                activeTab === "agreements"
-                  ? "bg-[#9d4edd] text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              Service Agreements
-            </button>
-            <button
-              onClick={() => setActiveTab("tasks")}
-              className={`rounded-full px-4 py-2 transition-colors ${
-                activeTab === "tasks"
-                  ? "bg-[#9d4edd] text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              Task Board
-            </button>
-            <button
-              onClick={() => setActiveTab("requests")}
-              className={`rounded-full px-4 py-2 transition-colors ${
-                activeTab === "requests"
-                  ? "bg-[#9d4edd] text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              Request Centre
-            </button>
+            {visibleTabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`rounded-full px-4 py-2 transition-colors ${
+                  safeActiveTab === tab.id
+                    ? "bg-[#9d4edd] text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
         </div>
 
         {/* SECTION 3: DOCUMENT VAULT */}
-        <section
-          className={`bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden ${
-            activeTab === "documents" ? "block" : "hidden"
-          }`}
-        >
+        {allowedTabs.includes("documents") && (
+          <section
+            className={`bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden ${
+              safeActiveTab === "documents" ? "block" : "hidden"
+            }`}
+          >
           <div className="p-8 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
             <div>
               <h2 className="text-lg font-black text-[#9d4edd]">
@@ -710,13 +743,15 @@ export default function ClientDashboard() {
             </table>
           </div>
         </section>
+        )}
 
         {/* SECTION 2: SERVICE AGREEMENTS */}
-        <section
-          className={`bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden ${
-            activeTab === "agreements" ? "block" : "hidden"
-          }`}
-        >
+        {allowedTabs.includes("agreements") && (
+          <section
+            className={`bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden ${
+              safeActiveTab === "agreements" ? "block" : "hidden"
+            }`}
+          >
           <div className="p-8 border-b border-gray-100 bg-gray-50/50">
             <h2 className="text-lg font-black text-gray-800">
               Service Agreements
@@ -772,13 +807,15 @@ export default function ClientDashboard() {
             </div>
           )}
         </section>
+        )}
 
         {/* SECTION 3: TASK BOARD */}
-        <section
-          className={`bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden ${
-            activeTab === "tasks" ? "block" : "hidden"
-          }`}
-        >
+        {allowedTabs.includes("tasks") && (
+          <section
+            className={`bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden ${
+              safeActiveTab === "tasks" ? "block" : "hidden"
+            }`}
+          >
           <div className="p-8 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
             <div>
               <h2 className="text-lg font-black text-[#9d4edd]">Task Board</h2>
@@ -861,13 +898,15 @@ export default function ClientDashboard() {
             )}
           </div>
         </section>
+        )}
 
         {/* SECTION 4: REQUEST CENTRE (Updated with Real Logic) */}
-        <section
-          className={`bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden ${
-            activeTab === "requests" ? "block" : "hidden"
-          }`}
-        >
+        {allowedTabs.includes("requests") && (
+          <section
+            className={`bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden ${
+              safeActiveTab === "requests" ? "block" : "hidden"
+            }`}
+          >
           <div className="p-8 border-b border-gray-100 bg-blue-50/30">
             <h2 className="text-lg font-black text-gray-800">
               Request Centre
@@ -939,6 +978,7 @@ export default function ClientDashboard() {
             </form>
           </div>
         </section>
+        )}
 
         <ClientTaskModal
           key={`${activeTask?.id || "new"}-${taskModalOpen ? "open" : "closed"}`}

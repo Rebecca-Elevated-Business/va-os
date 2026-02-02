@@ -46,6 +46,7 @@ type Client = {
   portal_invite_link?: string | null;
   portal_access_enabled?: boolean | null;
   portal_access_revoked_at?: string | null;
+  portal_tabs_enabled?: string[] | null;
   auth_user_id?: string | null;
   source?: string | null;
   website_links?: string[] | null;
@@ -102,6 +103,15 @@ const CRM_TABS = [
 ] as const;
 
 type CrmTabId = (typeof CRM_TABS)[number]["id"];
+
+const PORTAL_TABS = [
+  { id: "documents", label: "Document Vault" },
+  { id: "agreements", label: "Service Agreements" },
+  { id: "tasks", label: "Task Board" },
+  { id: "requests", label: "Request Centre" },
+] as const;
+
+type PortalTabId = (typeof PORTAL_TABS)[number]["id"];
 
 const formatHms = (totalSeconds: number) => {
   const safeSeconds = Math.max(0, Math.floor(totalSeconds));
@@ -206,6 +216,9 @@ export default function ClientProfilePage({
   const [revokeInput, setRevokeInput] = useState("");
   const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
   const [portalCopied, setPortalCopied] = useState(false);
+  const [portalSetupOpen, setPortalSetupOpen] = useState(false);
+  const [portalTabsDraft, setPortalTabsDraft] = useState<PortalTabId[]>([]);
+  const [portalTabsSaving, setPortalTabsSaving] = useState(false);
   const [deleteClientBusy, setDeleteClientBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [newNote, setNewNote] = useState("");
@@ -230,8 +243,8 @@ export default function ClientProfilePage({
   const [expandedParents, setExpandedParents] = useState<Record<string, boolean>>(
     {},
   );
-  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
-  const [draggingParentId, setDraggingParentId] = useState<string | null>(null);
+  const [, setDraggingTaskId] = useState<string | null>(null);
+  const [, setDraggingParentId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const draggingTaskIdRef = useRef<string | null>(null);
   const draggingParentIdRef = useRef<string | null>(null);
@@ -346,6 +359,22 @@ export default function ClientProfilePage({
     };
     void loadVaProfile();
   }, []);
+
+  const syncPortalTabsDraft = () => {
+    if (!client) return;
+    const tabs = (client.portal_tabs_enabled || []) as PortalTabId[];
+    setPortalTabsDraft(tabs);
+  };
+
+  const openPortalSetup = () => {
+    syncPortalTabsDraft();
+    setPortalSetupOpen((prev) => !prev);
+  };
+
+  const openPortalManage = () => {
+    syncPortalTabsDraft();
+    setPortalManageOpen((prev) => !prev);
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -1091,6 +1120,14 @@ export default function ClientProfilePage({
   };
   const issuePortalAccess = async () => {
     if (!client) return;
+    if (portalTabsDraft.length === 0) {
+      await alert({
+        title: "Select portal areas",
+        message: "Choose at least one area before issuing portal access.",
+        tone: "danger",
+      });
+      return;
+    }
     const baseUrl = window.location.origin;
     const link = `${baseUrl}/client/setup?email=${encodeURIComponent(
       client.email || "",
@@ -1101,10 +1138,16 @@ export default function ClientProfilePage({
         portal_invite_link: link,
         portal_access_enabled: false,
         portal_access_revoked_at: null,
+        portal_tabs_enabled: portalTabsDraft,
       })
       .eq("id", id);
     if (!error) {
-      setClient({ ...client, portal_invite_link: link });
+      setClient({
+        ...client,
+        portal_invite_link: link,
+        portal_tabs_enabled: portalTabsDraft,
+      });
+      setPortalSetupOpen(false);
     }
   };
 
@@ -1127,6 +1170,36 @@ export default function ClientProfilePage({
       .eq("id", id);
     if (!error) {
       setClient({ ...client, portal_invite_link: link });
+    }
+  };
+
+  const togglePortalTab = (tabId: PortalTabId) => {
+    setPortalTabsDraft((prev) => {
+      if (prev.includes(tabId)) {
+        return prev.filter((tab) => tab !== tabId);
+      }
+      return [...prev, tabId];
+    });
+  };
+
+  const savePortalTabs = async () => {
+    if (!client) return;
+    if (portalTabsDraft.length === 0) {
+      await alert({
+        title: "Select portal areas",
+        message: "Choose at least one area to keep the portal available.",
+        tone: "danger",
+      });
+      return;
+    }
+    setPortalTabsSaving(true);
+    const { error } = await supabase
+      .from("clients")
+      .update({ portal_tabs_enabled: portalTabsDraft })
+      .eq("id", id);
+    setPortalTabsSaving(false);
+    if (!error) {
+      setClient({ ...client, portal_tabs_enabled: portalTabsDraft });
     }
   };
 
@@ -1431,23 +1504,31 @@ export default function ClientProfilePage({
         <div className="flex gap-3">
           {!portalAccessEnabled && !portalInviteLink && (
             <button
-              onClick={issuePortalAccess}
+              onClick={openPortalSetup}
               className="bg-[#9d4edd] text-white px-4 py-2 rounded-lg font-bold shadow-sm hover:bg-[#7b2cbf]"
             >
               Issue Portal Access
             </button>
           )}
           {!portalAccessEnabled && portalInviteLink && (
-            <button
-              onClick={copyInviteLink}
-              className="bg-[#9d4edd] text-white px-4 py-2 rounded-lg font-bold shadow-sm hover:bg-[#7b2cbf]"
-            >
-              {portalCopied ? "Copied" : "Copy Invite Link"}
-            </button>
+            <>
+              <button
+                onClick={copyInviteLink}
+                className="bg-[#9d4edd] text-white px-4 py-2 rounded-lg font-bold shadow-sm hover:bg-[#7b2cbf]"
+              >
+                {portalCopied ? "Copied" : "Copy Invite Link"}
+              </button>
+              <button
+                onClick={openPortalSetup}
+                className="border border-[#9d4edd] text-[#9d4edd] px-4 py-2 rounded-lg font-bold shadow-sm hover:bg-purple-50"
+              >
+                Edit Portal Areas
+              </button>
+            </>
           )}
           {portalAccessEnabled && (
             <button
-              onClick={() => setPortalManageOpen((prev) => !prev)}
+              onClick={openPortalManage}
               className="bg-[#9d4edd] text-white px-4 py-2 rounded-lg font-bold shadow-sm hover:bg-[#7b2cbf]"
             >
               Manage Portal Access
@@ -1455,6 +1536,67 @@ export default function ClientProfilePage({
           )}
         </div>
       </div>
+
+      {!portalAccessEnabled && portalSetupOpen && (
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold">Portal Access Setup</h2>
+            <button
+              onClick={() => setPortalSetupOpen(false)}
+              className="text-sm text-gray-500 hover:text-black"
+            >
+              Close
+            </button>
+          </div>
+          <p className="mt-2 text-sm text-gray-600">
+            Select which areas the client can access. Unselected areas remain
+            hidden.
+          </p>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {PORTAL_TABS.map((tab) => {
+              const checked = portalTabsDraft.includes(tab.id);
+              return (
+                <label
+                  key={tab.id}
+                  className="flex items-center gap-3 rounded-lg border border-gray-100 p-3 text-sm font-semibold text-gray-700"
+                >
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-gray-300 text-[#9d4edd] focus:ring-[#9d4edd]"
+                    checked={checked}
+                    onChange={() => togglePortalTab(tab.id)}
+                  />
+                  <span>{tab.label}</span>
+                </label>
+              );
+            })}
+          </div>
+          <div className="mt-5 flex flex-wrap gap-3">
+            {portalInviteLink ? (
+              <button
+                onClick={savePortalTabs}
+                disabled={portalTabsSaving}
+                className="bg-gray-900 text-white px-4 py-2 rounded-lg font-bold hover:bg-black disabled:opacity-60"
+              >
+                {portalTabsSaving ? "Saving..." : "Save Portal Areas"}
+              </button>
+            ) : (
+              <button
+                onClick={issuePortalAccess}
+                className="bg-[#9d4edd] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#7b2cbf]"
+              >
+                Generate Invite Link
+              </button>
+            )}
+            <button
+              onClick={() => setPortalSetupOpen(false)}
+              className="text-sm font-semibold text-gray-500 hover:text-gray-800"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       <nav className="bg-white rounded-xl shadow-sm border border-gray-100 px-4">
         <div className="flex flex-wrap gap-6 border-b border-gray-100">
@@ -1504,6 +1646,42 @@ export default function ClientProfilePage({
             >
               Re-issue Portal Access
             </button>
+          </div>
+          <div className="mt-6 border-t border-gray-100 pt-4">
+            <p className="text-xs font-bold text-gray-400 mb-2">
+              Portal Areas
+            </p>
+            <p className="text-sm text-gray-600 mb-3">
+              Toggle which areas appear in the client portal.
+            </p>
+            <div className="grid gap-3 md:grid-cols-2">
+              {PORTAL_TABS.map((tab) => {
+                const checked = portalTabsDraft.includes(tab.id);
+                return (
+                  <label
+                    key={tab.id}
+                    className="flex items-center gap-3 rounded-lg border border-gray-100 p-3 text-sm font-semibold text-gray-700"
+                  >
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-gray-300 text-[#9d4edd] focus:ring-[#9d4edd]"
+                      checked={checked}
+                      onChange={() => togglePortalTab(tab.id)}
+                    />
+                    <span>{tab.label}</span>
+                  </label>
+                );
+              })}
+            </div>
+            <div className="mt-4">
+              <button
+                onClick={savePortalTabs}
+                disabled={portalTabsSaving}
+                className="bg-gray-900 text-white px-4 py-2 rounded-lg font-bold hover:bg-black disabled:opacity-60"
+              >
+                {portalTabsSaving ? "Saving..." : "Save Portal Areas"}
+              </button>
+            </div>
           </div>
           <div className="mt-6 border-t border-gray-100 pt-4">
             <p className="text-xs font-bold text-gray-400 mb-2">Danger Zone</p>
