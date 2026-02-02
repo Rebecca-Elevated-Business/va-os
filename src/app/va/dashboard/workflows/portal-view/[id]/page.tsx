@@ -13,6 +13,8 @@ type AgreementItem = {
   type: "text" | "textarea" | "date" | "checkbox" | "checkbox_group";
   options?: string[];
   value?: AgreementValue;
+  hidden?: boolean;
+  hidden_options?: string[];
 };
 
 type AgreementSection = {
@@ -268,7 +270,9 @@ export default function AgreementPortalView({
               </h2>
 
               <div className="space-y-6">
-                {section.items.map((item) => (
+                {section.items
+                  .filter((item) => !item.hidden)
+                  .map((item) => (
                   <div key={item.id} className="flex flex-col gap-2">
                     <label className="text-sm font-normal text-[#333333]">
                       {item.label}
@@ -289,7 +293,11 @@ export default function AgreementPortalView({
                       />
                     ) : item.type === "checkbox_group" ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {item.options?.map((opt, idx) => (
+                        {item.options
+                          ?.filter(
+                            (opt) => !item.hidden_options?.includes(opt)
+                          )
+                          .map((opt, idx) => (
                           <div
                             key={idx}
                             className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100"

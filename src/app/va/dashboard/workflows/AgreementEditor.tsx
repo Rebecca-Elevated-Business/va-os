@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { useState } from "react";
 import { usePrompt } from "@/components/ui/PromptProvider";
 
 export type AgreementItem = {
@@ -9,6 +9,8 @@ export type AgreementItem = {
   type: "text" | "textarea" | "date" | "checkbox" | "checkbox_group";
   options?: string[];
   placeholder?: string;
+  hidden?: boolean;
+  hidden_options?: string[];
 };
 
 export type AgreementSection = {
@@ -50,10 +52,25 @@ export default function AgreementEditor({
   showFooterNote = true,
 }: AgreementEditorProps) {
   const { prompt } = usePrompt();
+  const [customiseOpen, setCustomiseOpen] = useState<Record<string, boolean>>(
+    {}
+  );
 
-  const removeItem = (sectionIndex: number, itemIndex: number) => {
+  const toggleItemHidden = (sectionIndex: number, itemIndex: number) => {
     const newStructure = cloneStructure(agreement.custom_structure);
-    newStructure.sections[sectionIndex].items.splice(itemIndex, 1);
+    const item = newStructure.sections[sectionIndex].items[itemIndex];
+    item.hidden = !item.hidden;
+    onChange({ ...agreement, custom_structure: newStructure });
+  };
+
+  const reinstateSection = (sectionIndex: number) => {
+    const newStructure = cloneStructure(agreement.custom_structure);
+    newStructure.sections[sectionIndex].items.forEach((item) => {
+      item.hidden = false;
+      if (item.hidden_options) {
+        item.hidden_options = [];
+      }
+    });
     onChange({ ...agreement, custom_structure: newStructure });
   };
 
@@ -76,17 +93,23 @@ export default function AgreementEditor({
     onChange({ ...agreement, custom_structure: newStructure });
   };
 
-  const removeOption = (
+  const toggleOptionHidden = (
     sectionIndex: number,
     itemIndex: number,
     optionIndex: number
   ) => {
     const newStructure = cloneStructure(agreement.custom_structure);
     const item = newStructure.sections[sectionIndex].items[itemIndex];
-    if (item.options) {
-      item.options.splice(optionIndex, 1);
-      onChange({ ...agreement, custom_structure: newStructure });
+    if (!item.options) return;
+    const option = item.options[optionIndex];
+    const hiddenOptions = new Set(item.hidden_options ?? []);
+    if (hiddenOptions.has(option)) {
+      hiddenOptions.delete(option);
+    } else {
+      hiddenOptions.add(option);
     }
+    item.hidden_options = Array.from(hiddenOptions);
+    onChange({ ...agreement, custom_structure: newStructure });
   };
 
   return (
@@ -96,21 +119,81 @@ export default function AgreementEditor({
           key={section.id}
           className="bg-white p-8 rounded-xl shadow-sm border border-gray-100"
         >
-          <h2 className="text-base font-normal text-[#333333] mb-6 border-b pb-2">
-            {section.title.replace(/^\s*\d+\.\s*/, "")}
-          </h2>
+          <div className="flex items-center justify-between mb-6 border-b pb-2">
+            <h2 className="text-base font-normal text-[#333333]">
+              {section.title.replace(/^\s*\d+\.\s*/, "")}
+            </h2>
+            <button
+              type="button"
+              onClick={() =>
+                setCustomiseOpen((prev) => ({
+                  ...prev,
+                  [section.id]: !prev[section.id],
+                }))
+              }
+              className="text-xs font-bold text-gray-400 uppercase tracking-widest hover:text-[#9d4edd]"
+            >
+              Customise section
+            </button>
+          </div>
+
+          {customiseOpen[section.id] && (
+            <div className="rounded-2xl border border-gray-100 bg-white p-4 space-y-3 mb-6">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                  Show or hide fields
+                </p>
+                <button
+                  type="button"
+                  onClick={() => reinstateSection(sIndex)}
+                  className="text-xs font-bold text-gray-400 hover:text-[#9d4edd]"
+                >
+                  Reinstate all
+                </button>
+              </div>
+              <div className="space-y-3 text-xs text-gray-600">
+                {section.items.map((item, iIndex) => (
+                  <div key={item.id} className="space-y-2">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={!item.hidden}
+                        onChange={() => toggleItemHidden(sIndex, iIndex)}
+                      />
+                      {item.label}
+                    </label>
+                    {item.type === "checkbox_group" && item.options && (
+                      <div className="grid gap-2 sm:grid-cols-2 pl-6 text-xs text-gray-500">
+                        {item.options.map((opt, oIndex) => (
+                          <label
+                            key={opt}
+                            className="flex items-center gap-2"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={
+                                !item.hidden_options?.includes(opt)
+                              }
+                              onChange={() =>
+                                toggleOptionHidden(sIndex, iIndex, oIndex)
+                              }
+                            />
+                            {opt}
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="space-y-6">
-            {section.items.map((item, iIndex) => (
-              <div key={item.id} className="group relative py-2">
-                <button
-                  onClick={() => removeItem(sIndex, iIndex)}
-                  className="absolute -right-2 top-0 text-gray-300 hover:text-red-500 text-xs font-bold uppercase opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1"
-                >
-                  Remove
-                  <X className="h-3 w-3" />
-                </button>
-
+            {section.items.map((item, iIndex) => {
+              if (item.hidden) return null;
+              return (
+                <div key={item.id} className="group relative py-2">
                 {item.type !== "checkbox" && (
                   <label className="block text-sm font-normal text-[#333333] mb-2">
                     {item.label}
@@ -120,22 +203,19 @@ export default function AgreementEditor({
                 {item.type === "checkbox_group" && (
                   <div className="space-y-3">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {item.options?.map((opt, oIndex) => (
+                      {item.options
+                        ?.filter(
+                          (opt) => !item.hidden_options?.includes(opt)
+                        )
+                        .map((opt) => (
                         <div
-                          key={oIndex}
+                          key={opt}
                           className="group/option flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100"
                         >
                           <div className="w-5 h-5 rounded border-2 border-gray-300" />
                           <span className="text-sm text-[#333333] font-normal flex-1">
                             {opt}
                           </span>
-                          <button
-                            onClick={() => removeOption(sIndex, iIndex, oIndex)}
-                            className="text-gray-300 hover:text-red-500 opacity-0 group-hover/option:opacity-100 transition-opacity"
-                            aria-label="Remove option"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
                         </div>
                       ))}
                     </div>
@@ -165,7 +245,8 @@ export default function AgreementEditor({
                   </div>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ))}
