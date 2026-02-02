@@ -4,6 +4,8 @@ import { useState, useEffect, use, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import AgreementEditor, {
   Agreement,
   AgreementStructure,
@@ -286,7 +288,40 @@ export default function DeployAgreementPage({
                     </button>
                     {isOpen && (
                       <div className="px-6 pb-6 text-sm text-gray-600 leading-relaxed">
-                        {section.body}
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            h2: ({ children }) => (
+                              <h2 className="mt-4 text-base font-semibold text-gray-900">
+                                {children}
+                              </h2>
+                            ),
+                            p: ({ children }) => (
+                              <p className="mt-3">{children}</p>
+                            ),
+                            ul: ({ children }) => (
+                              <ul className="mt-3 list-disc pl-5 space-y-1">
+                                {children}
+                              </ul>
+                            ),
+                            ol: ({ children }) => (
+                              <ol className="mt-3 list-decimal pl-5 space-y-1">
+                                {children}
+                              </ol>
+                            ),
+                            li: ({ children }) => <li>{children}</li>,
+                            strong: ({ children }) => (
+                              <strong className="font-semibold text-gray-900">
+                                {children}
+                              </strong>
+                            ),
+                            hr: () => (
+                              <hr className="my-6 border-gray-200" />
+                            ),
+                          }}
+                        >
+                          {section.body}
+                        </ReactMarkdown>
                       </div>
                     )}
                   </div>
