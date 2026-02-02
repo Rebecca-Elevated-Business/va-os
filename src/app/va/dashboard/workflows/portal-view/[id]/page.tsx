@@ -263,21 +263,21 @@ export default function AgreementPortalView({
               key={section.id}
               className="border-b border-gray-100 pb-8 last:border-0"
             >
-              <h2 className="text-xl font-bold mb-6 text-[#9d4edd] uppercase tracking-wide">
-                {section.title}
+              <h2 className="text-xl font-normal mb-6 text-[#333333]">
+                {section.title.replace(/^\s*\d+\.\s*/, "")}
               </h2>
 
               <div className="space-y-6">
                 {section.items.map((item) => (
                   <div key={item.id} className="flex flex-col gap-2">
-                    <label className="text-sm font-bold text-gray-700">
+                    <label className="text-sm font-normal text-[#333333]">
                       {item.label}
                     </label>
 
                     {item.type === "textarea" ? (
                       <textarea
                         disabled={isReadOnly}
-                        className={`w-full border p-3 rounded-lg min-h-32 outline-none transition-all text-black ${
+                        className={`w-full border p-3 rounded-lg min-h-32 outline-none transition-all text-[#333333] ${
                           isReadOnly
                             ? "bg-gray-50 border-transparent"
                             : "bg-gray-50 focus:bg-white focus:ring-2 focus:ring-purple-200"
@@ -297,7 +297,7 @@ export default function AgreementPortalView({
                             <input
                               disabled={isReadOnly}
                               type="checkbox"
-                              className="w-5 h-5 rounded border-gray-300 text-[#9d4edd]"
+                              className="w-5 h-5 rounded border-gray-300 text-[#333333]"
                               checked={
                                 Array.isArray(item.value)
                                   ? item.value.includes(opt)
@@ -317,7 +317,9 @@ export default function AgreementPortalView({
                                 );
                               }}
                             />
-                            <span className="text-sm text-gray-600">{opt}</span>
+                            <span className="text-sm font-normal text-[#333333]">
+                              {opt}
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -325,7 +327,7 @@ export default function AgreementPortalView({
                       <input
                         disabled={isReadOnly}
                         type={item.type}
-                        className={`w-full border p-3 rounded-lg outline-none transition-all text-black ${
+                        className={`w-full border p-3 rounded-lg outline-none transition-all text-[#333333] ${
                           isReadOnly
                             ? "bg-gray-50 border-transparent"
                             : "bg-gray-50 focus:bg-white focus:ring-2 focus:ring-purple-200"

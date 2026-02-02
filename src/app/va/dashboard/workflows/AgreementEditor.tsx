@@ -96,16 +96,13 @@ export default function AgreementEditor({
           key={section.id}
           className="bg-white p-8 rounded-xl shadow-sm border border-gray-100"
         >
-          <h2 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-6 border-b pb-2">
-            {section.title}
+          <h2 className="text-base font-normal text-[#333333] mb-6 border-b pb-2">
+            {section.title.replace(/^\s*\d+\.\s*/, "")}
           </h2>
 
           <div className="space-y-6">
             {section.items.map((item, iIndex) => (
-              <div
-                key={item.id}
-                className="group relative border-l-2 border-gray-100 pl-4 py-2 hover:border-[#9d4edd] transition-all"
-              >
+              <div key={item.id} className="group relative py-2">
                 <button
                   onClick={() => removeItem(sIndex, iIndex)}
                   className="absolute -right-2 top-0 text-gray-300 hover:text-red-500 text-xs font-bold uppercase opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1"
@@ -115,7 +112,7 @@ export default function AgreementEditor({
                 </button>
 
                 {item.type !== "checkbox" && (
-                  <label className="block text-sm font-bold mb-2">
+                  <label className="block text-sm font-normal text-[#333333] mb-2">
                     {item.label}
                   </label>
                 )}
@@ -129,7 +126,7 @@ export default function AgreementEditor({
                           className="group/option flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100"
                         >
                           <div className="w-5 h-5 rounded border-2 border-gray-300" />
-                          <span className="text-sm text-gray-600 flex-1">
+                          <span className="text-sm text-[#333333] font-normal flex-1">
                             {opt}
                           </span>
                           <button
@@ -154,7 +151,7 @@ export default function AgreementEditor({
                 {(item.type === "text" ||
                   item.type === "date" ||
                   item.type === "textarea") && (
-                  <div className="bg-gray-50 rounded border border-gray-200 border-dashed w-full flex items-center px-4 py-3 text-gray-400 text-xs italic">
+                  <div className="bg-gray-50 rounded border border-gray-200 border-dashed w-full flex items-center px-4 py-3 text-[#333333] text-xs font-normal italic">
                     Input field for Client (Editable by VA in Client Portal view)
                   </div>
                 )}
@@ -162,7 +159,7 @@ export default function AgreementEditor({
                 {item.type === "checkbox" && (
                   <div className="flex items-center gap-3">
                     <div className="w-5 h-5 border-2 border-gray-200 rounded" />
-                    <span className="text-sm font-bold text-gray-700">
+                    <span className="text-sm font-normal text-[#333333]">
                       {item.label}
                     </span>
                   </div>
