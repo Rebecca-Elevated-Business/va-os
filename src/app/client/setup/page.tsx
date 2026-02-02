@@ -26,7 +26,6 @@ function SetupForm() {
     setLoading(true);
     setError(null);
 
-    // 1. Create the Auth User
     const { data, error: authError } = await supabase.auth.signUp({
       email,
       password,
@@ -39,7 +38,6 @@ function SetupForm() {
     }
 
     if (data.user) {
-      // 2. Create Profile
       const { data: clientProfile } = await supabase
         .from("clients")
         .select("first_name, surname")
@@ -62,7 +60,6 @@ function SetupForm() {
         },
       ]);
 
-      // 3. Link CRM Record (THE CRITICAL STEP)
       const { error: updateError } = await supabase
         .from("clients")
         .update({
@@ -71,7 +68,6 @@ function SetupForm() {
         })
         .eq("id", clientId);
 
-      // 4. CHECK FOR ERRORS
       if (updateError) {
         console.error("Bridge Failed:", updateError);
         setError(
@@ -82,7 +78,6 @@ function SetupForm() {
         return; // Stop! Don't redirect.
       }
 
-      // Only redirect if everything worked
       router.push("/client/dashboard");
     }
   };

@@ -7,7 +7,10 @@ import BookingFormDocument from "@/components/documents/BookingFormDocument";
 import InvoiceDocument, {
   type InvoiceTimeReport,
 } from "@/components/documents/InvoiceDocument";
-import { mergeProposalContent, type ProposalContent } from "@/lib/proposalContent";
+import {
+  mergeProposalContent,
+  type ProposalContent,
+} from "@/lib/proposalContent";
 import {
   mergeBookingContent,
   type BookingFormContent,
@@ -49,12 +52,16 @@ export default function DocumentPrintPage({
 
   useEffect(() => {
     if (!doc || doc.type !== "invoice") return;
-    const merged = mergeInvoiceContent(doc.content as InvoiceContent);
-    if (!merged.time_report_id || !merged.show_time_report_to_client) {
-      setInvoiceReport(null);
-      return;
-    }
+    let cancelled = false;
+    const currentDoc = doc;
     async function loadReport() {
+      await Promise.resolve();
+      if (cancelled) return;
+      const merged = mergeInvoiceContent(currentDoc.content as InvoiceContent);
+      if (!merged.time_report_id || !merged.show_time_report_to_client) {
+        setInvoiceReport(null);
+        return;
+      }
       const { data: reportData } = await supabase
         .from("time_reports")
         .select("id, name, date_from, date_to, total_seconds, entry_count")
@@ -76,7 +83,10 @@ export default function DocumentPrintPage({
         ...(reportData as InvoiceTimeReport),
         entries:
           (entryData as (InvoiceTimeReport["entries"][number] & {
-            time_entries?: { session_id: string | null; task_id: string | null } | null;
+            time_entries?: {
+              session_id: string | null;
+              task_id: string | null;
+            } | null;
           })[] | null)?.map((entry) => ({
             entry_date: entry.entry_date,
             task_title: entry.task_title,
@@ -88,6 +98,9 @@ export default function DocumentPrintPage({
       });
     }
     loadReport();
+    return () => {
+      cancelled = true;
+    };
   }, [doc]);
 
   useEffect(() => {
@@ -101,7 +114,9 @@ export default function DocumentPrintPage({
   if (loading)
     return <div className="p-10 text-gray-500 italic">Loading document...</div>;
   if (!doc)
-    return <div className="p-10 text-red-500 font-bold">Document not found.</div>;
+    return (
+      <div className="p-10 text-red-500 font-bold">Document not found.</div>
+    );
 
   if (doc.type === "upload") {
     return (
