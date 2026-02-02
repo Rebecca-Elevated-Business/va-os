@@ -19,6 +19,14 @@ export default function OnboardVAPage() {
     text: string;
   } | null>(null);
 
+  const setErrorMessage = (text: string) => {
+    setMessage({ type: "error", text });
+  };
+
+  const setSuccessMessage = (text: string) => {
+    setMessage({ type: "success", text });
+  };
+
   useEffect(() => {
     const checkAccess = async () => {
       const {
@@ -53,23 +61,23 @@ export default function OnboardVAPage() {
     setLoading(true);
     setMessage(null);
 
-    // 1. Create the Auth User
-    // We explicitly name the keys 'email' and 'password' to avoid 'Anonymous' errors
-    const { data, error: authError } = await supabase.auth.signUp({
-      email: email,
-      password: password,
-    });
+    try {
+      const { data, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+      });
 
-    if (authError) {
-      setMessage({ type: "error", text: authError.message });
-      setLoading(false);
-      return;
-    }
+      if (authError) {
+        setErrorMessage(authError.message);
+        return;
+      }
 
-    if (data.user) {
+      if (!data.user) {
+        setErrorMessage("Account creation failed. Please try again.");
+        return;
+      }
+
       const fullName = `${firstName} ${lastName}`.trim();
-      // 2. Create the Profile Entry
-      // We use the ID from the freshly created auth user
       const { error: profileError } = await supabase.from("profiles").insert([
         {
           id: data.user.id,
@@ -82,24 +90,23 @@ export default function OnboardVAPage() {
       ]);
 
       if (profileError) {
-        setMessage({
-          type: "error",
-          text:
-            "Auth account created, but database profile failed: " +
+        setErrorMessage(
+          "Auth account created, but database profile failed: " +
             profileError.message,
-        });
-      } else {
-        setMessage({
-          type: "success",
-          text: `Success! ${fullName || "The VA"} is now registered.`,
-        });
-        setEmail("");
-        setPassword("");
-        setFirstName("");
-        setLastName("");
+        );
+        return;
       }
+
+      setSuccessMessage(
+        `Success! ${fullName || "The VA"} is now registered.`,
+      );
+      setEmail("");
+      setPassword("");
+      setFirstName("");
+      setLastName("");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   if (!authorized) {
