@@ -31,7 +31,6 @@ export default function AddClientPage() {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) return;
 
-    // 1. Insert Client Record
     const { data: client, error: clientError } = await supabase
       .from("clients")
       .insert([
@@ -63,7 +62,6 @@ export default function AddClientPage() {
       return;
     }
 
-    // 2. If there are initial notes, save them to the notes table
     if (formData.initial_notes && client) {
       await supabase.from("client_notes").insert([
         {
@@ -74,7 +72,6 @@ export default function AddClientPage() {
       ]);
     }
 
-    // 3. Redirect to the profile page
     router.push(`/va/dashboard/crm/profile/${client.id}`);
   };
 
