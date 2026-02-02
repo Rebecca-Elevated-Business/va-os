@@ -8,7 +8,6 @@ import ClientTaskBoard from "./ClientTaskBoard";
 import ClientTaskModal, { type ClientTask } from "./ClientTaskModal";
 import { format } from "date-fns";
 
-// Define strict types for the dashboard
 type Agreement = {
   id: string;
   title: string;
@@ -71,15 +70,12 @@ export default function ClientDashboard() {
   const [clientId, setClientId] = useState<string | null>(null);
   const [vaId, setVaId] = useState<string | null>(null);
 
-  // DEBUG STATE
   const [debugInfo, setDebugInfo] = useState<string>("Initializing...");
 
-  // Request Form State
   const [requestType, setRequestType] = useState<"work" | "meeting">("work");
   const [requestMessage, setRequestMessage] = useState("");
   const [sending, setSending] = useState(false);
 
-  // Task Modal State
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [activeTask, setActiveTask] = useState<ClientTask | null>(null);
   const alertMenuRef = useRef<HTMLDivElement | null>(null);
@@ -115,7 +111,6 @@ export default function ClientDashboard() {
 
   useEffect(() => {
     async function loadClientData() {
-      // 1. Get the current logged-in user
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -126,7 +121,6 @@ export default function ClientDashboard() {
 
       setDebugInfo(`Logged in as Auth User: ${user.id}`);
 
-      // 2. Find the CRM Client record linked to this Login ID
       const { data: client, error: clientError } = await supabase
         .from("clients")
         .select("id, first_name, surname, va_id, portal_tabs_enabled")
@@ -148,7 +142,6 @@ export default function ClientDashboard() {
           `SUCCESS: Linked to Client ID: ${client.id} (${client.first_name})`
         );
 
-        // 3. Fetch Agreements (if enabled)
         if (tabsEnabled.includes("agreements")) {
           const { data: ags } = await supabase
             .from("client_agreements")
@@ -161,7 +154,6 @@ export default function ClientDashboard() {
           setAgreements([]);
         }
 
-        // 4. Fetch Documents (if enabled)
         if (tabsEnabled.includes("documents")) {
           const { data: docs } = await supabase
             .from("client_documents")
@@ -174,7 +166,6 @@ export default function ClientDashboard() {
           setDocuments([]);
         }
 
-        // 5. Fetch Tasks + Notifications
         if (tabsEnabled.includes("tasks")) {
           await fetchTasks(client.id);
         } else {
@@ -243,7 +234,6 @@ export default function ClientDashboard() {
   const handleSendRequest = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // DEBUG: Alert if ID is missing
     if (!clientId) {
       await alert({
         title: "Unable to send request",
@@ -257,7 +247,6 @@ export default function ClientDashboard() {
 
     setSending(true);
 
-    // FIX: Removed 'data' variable since we don't use it
     const { error } = await supabase.from("client_requests").insert([
       {
         client_id: clientId,
@@ -541,9 +530,6 @@ export default function ClientDashboard() {
   return (
     <main className="min-h-screen bg-gray-50 p-6 md:p-10 text-black font-sans">
       <div className="max-w-5xl mx-auto space-y-8">
-        {/* Diagnostic bar removed */}
-
-        {/* Header Section */}
         <div className="flex flex-wrap items-center justify-between gap-4 mb-2">
           <div>
             <h1 className="text-3xl font-black text-gray-900 tracking-tight">
@@ -664,7 +650,6 @@ export default function ClientDashboard() {
           </div>
         </div>
 
-        {/* SECTION 3: DOCUMENT VAULT */}
         {allowedTabs.includes("documents") && (
           <section
             className={`bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden ${
@@ -742,10 +727,9 @@ export default function ClientDashboard() {
               </tbody>
             </table>
           </div>
-        </section>
+          </section>
         )}
 
-        {/* SECTION 2: SERVICE AGREEMENTS */}
         {allowedTabs.includes("agreements") && (
           <section
             className={`bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden ${
@@ -806,10 +790,9 @@ export default function ClientDashboard() {
               ))}
             </div>
           )}
-        </section>
+          </section>
         )}
 
-        {/* SECTION 3: TASK BOARD */}
         {allowedTabs.includes("tasks") && (
           <section
             className={`bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden ${
@@ -897,10 +880,9 @@ export default function ClientDashboard() {
               />
             )}
           </div>
-        </section>
+          </section>
         )}
 
-        {/* SECTION 4: REQUEST CENTRE (Updated with Real Logic) */}
         {allowedTabs.includes("requests") && (
           <section
             className={`bg-white rounded-4xl shadow-sm border border-gray-100 overflow-hidden ${
