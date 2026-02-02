@@ -17,6 +17,7 @@ export type AgreementItem = {
   is_custom?: boolean;
   layout?: "inline";
   repeatable?: boolean;
+  custom_options?: string[];
 };
 
 type ExtraQuestionType = AgreementItem["type"];
@@ -49,7 +50,6 @@ export type Agreement = {
 type AgreementEditorProps = {
   agreement: Agreement;
   onChange: (nextAgreement: Agreement) => void;
-  showFooterNote?: boolean;
 };
 
 const cloneStructure = (structure: AgreementStructure): AgreementStructure => ({
@@ -65,11 +65,10 @@ const cloneStructure = (structure: AgreementStructure): AgreementStructure => ({
 export default function AgreementEditor({
   agreement,
   onChange,
-  showFooterNote = true,
 }: AgreementEditorProps) {
   const { prompt } = usePrompt();
   const [customiseOpen, setCustomiseOpen] = useState<Record<string, boolean>>(
-    {}
+    {},
   );
   const [extraQuestion, setExtraQuestion] = useState<ExtraQuestionState>({
     open: false,
@@ -83,11 +82,11 @@ export default function AgreementEditor({
     () =>
       agreement.custom_structure.sections.map((section) => {
         const index = section.items.findIndex((item) =>
-          item.label?.toLowerCase().includes("notes")
+          item.label?.toLowerCase().includes("notes"),
         );
         return index;
       }),
-    [agreement.custom_structure.sections]
+    [agreement.custom_structure.sections],
   );
 
   const toggleItemHidden = (sectionIndex: number, itemIndex: number) => {
@@ -124,6 +123,7 @@ export default function AgreementEditor({
     } else {
       item.options = [option.trim()];
     }
+    item.custom_options = [...(item.custom_options ?? []), option.trim()];
     onChange({ ...agreement, custom_structure: newStructure });
   };
 
@@ -149,7 +149,7 @@ export default function AgreementEditor({
     const newStructure = cloneStructure(agreement.custom_structure);
     const section = newStructure.sections[extraQuestion.sectionIndex];
     const notesIndex = section.items.findIndex((item) =>
-      item.label?.toLowerCase().includes("notes")
+      item.label?.toLowerCase().includes("notes"),
     );
     const insertIndex = notesIndex === -1 ? section.items.length : notesIndex;
 
@@ -196,7 +196,7 @@ export default function AgreementEditor({
   const toggleOptionHidden = (
     sectionIndex: number,
     itemIndex: number,
-    optionIndex: number
+    optionIndex: number,
   ) => {
     const newStructure = cloneStructure(agreement.custom_structure);
     const item = newStructure.sections[sectionIndex].items[itemIndex];
@@ -212,10 +212,29 @@ export default function AgreementEditor({
     onChange({ ...agreement, custom_structure: newStructure });
   };
 
+  const removeCustomOption = (
+    sectionIndex: number,
+    itemIndex: number,
+    optionIndex: number,
+  ) => {
+    const newStructure = cloneStructure(agreement.custom_structure);
+    const item = newStructure.sections[sectionIndex].items[itemIndex];
+    if (!item.options) return;
+    const option = item.options[optionIndex];
+    item.options = item.options.filter((opt) => opt !== option);
+    if (item.hidden_options) {
+      item.hidden_options = item.hidden_options.filter((opt) => opt !== option);
+    }
+    if (item.custom_options) {
+      item.custom_options = item.custom_options.filter((opt) => opt !== option);
+    }
+    onChange({ ...agreement, custom_structure: newStructure });
+  };
+
   const updateItemValue = (
     sectionIndex: number,
     itemIndex: number,
-    value: AgreementValue
+    value: AgreementValue,
   ) => {
     const newStructure = cloneStructure(agreement.custom_structure);
     const item = newStructure.sections[sectionIndex].items[itemIndex];
@@ -288,19 +307,35 @@ export default function AgreementEditor({
                     {item.type === "checkbox_group" && item.options && (
                       <div className="grid gap-2 sm:grid-cols-2 pl-6 text-xs text-gray-500">
                         {item.options.map((opt, oIndex) => (
-                          <label key={opt} className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={
-                                !item.hidden_options?.includes(opt)
-                              }
-                              onChange={() =>
-                                toggleOptionHidden(sIndex, iIndex, oIndex)
-                              }
-                              className="accent-[#333333]"
-                            />
-                            {opt}
-                          </label>
+                          <div
+                            key={opt}
+                            className="group/opt flex items-center gap-2"
+                          >
+                            <label className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={!item.hidden_options?.includes(opt)}
+                                onChange={() =>
+                                  toggleOptionHidden(sIndex, iIndex, oIndex)
+                                }
+                                className="accent-[#333333]"
+                              />
+                              {opt}
+                            </label>
+                            {item.custom_options?.includes(opt) && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  removeCustomOption(sIndex, iIndex, oIndex)
+                                }
+                                className="text-xs font-bold text-red-400 opacity-0 transition-opacity hover:text-red-500 group-hover/opt:opacity-100"
+                                aria-label="Remove custom option"
+                                title="Remove"
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
                         ))}
                       </div>
                     )}
@@ -333,17 +368,17 @@ export default function AgreementEditor({
                           item.layout === "inline" &&
                           (item.type === "text" || item.type === "date")
                         ) && (
-                        <label className="block text-sm font-normal text-[#333333] mb-2">
-                          {item.label}
-                        </label>
-                      )}
+                          <label className="block text-sm font-normal text-[#333333] mb-2">
+                            {item.label}
+                          </label>
+                        )}
 
                       {item.type === "checkbox_group" && (
                         <div className="space-y-2">
                           <div className="mt-1 grid grid-cols-1 md:grid-cols-2 gap-2">
                             {item.options
                               ?.filter(
-                                (opt) => !item.hidden_options?.includes(opt)
+                                (opt) => !item.hidden_options?.includes(opt),
                               )
                               .map((opt) => (
                                 <label
@@ -352,7 +387,7 @@ export default function AgreementEditor({
                                 >
                                   <input
                                     type="checkbox"
-                                    className="w-5 h-5 rounded border-[#333333] text-[#333333] accent-[#333333] ml-[3px]"
+                                    className="w-5 h-5 rounded border-[#333333] text-[#333333] accent-[#333333] ml-0.75"
                                     checked={
                                       Array.isArray(item.value)
                                         ? item.value.includes(opt)
@@ -360,17 +395,19 @@ export default function AgreementEditor({
                                     }
                                     onChange={(event) => {
                                       const currentValues = Array.isArray(
-                                        item.value
+                                        item.value,
                                       )
                                         ? item.value
                                         : [];
                                       const nextValues = event.target.checked
                                         ? [...currentValues, opt]
-                                        : currentValues.filter((v) => v !== opt);
+                                        : currentValues.filter(
+                                            (v) => v !== opt,
+                                          );
                                       updateItemValue(
                                         sIndex,
                                         iIndex,
-                                        nextValues
+                                        nextValues,
                                       );
                                     }}
                                   />
@@ -411,7 +448,7 @@ export default function AgreementEditor({
                                 updateItemValue(
                                   sIndex,
                                   iIndex,
-                                  event.target.value
+                                  event.target.value,
                                 )
                               }
                             />
@@ -444,13 +481,13 @@ export default function AgreementEditor({
                         <label className="flex items-center gap-3 cursor-pointer">
                           <input
                             type="checkbox"
-                            className="w-5 h-5 rounded border-[#333333] text-[#333333] accent-[#333333] ml-[3px]"
+                            className="w-5 h-5 rounded border-[#333333] text-[#333333] accent-[#333333] ml-0.75"
                             checked={Boolean(item.value)}
                             onChange={(event) =>
                               updateItemValue(
                                 sIndex,
                                 iIndex,
-                                event.target.checked
+                                event.target.checked,
                               )
                             }
                           />
@@ -461,7 +498,7 @@ export default function AgreementEditor({
                       )}
                     </>
                   )}
-              </div>
+                </div>
               );
             })}
             {notesIndexBySection[sIndex] === -1 && (
