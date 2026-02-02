@@ -15,6 +15,7 @@ type AgreementItem = {
   value?: AgreementValue;
   hidden?: boolean;
   hidden_options?: string[];
+  layout?: "inline";
 };
 
 type AgreementSection = {
@@ -274,7 +275,11 @@ export default function AgreementPortalView({
                   .filter((item) => !item.hidden)
                   .map((item) => (
                   <div key={item.id} className="flex flex-col gap-2">
-                    {item.type !== "checkbox" && (
+                    {item.type !== "checkbox" &&
+                      !(
+                        item.layout === "inline" &&
+                        (item.type === "text" || item.type === "date")
+                      ) && (
                       <label className="text-sm font-normal text-[#333333]">
                         {item.label}
                       </label>
@@ -352,6 +357,33 @@ export default function AgreementPortalView({
                           {item.label}
                         </span>
                       </label>
+                    ) : item.type === "text" || item.type === "date" ? (
+                      <div
+                        className={
+                          item.layout === "inline"
+                            ? "grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start"
+                            : ""
+                        }
+                      >
+                        {item.layout === "inline" && (
+                          <div className="text-sm font-normal text-[#333333]">
+                            {item.label}
+                          </div>
+                        )}
+                        <input
+                          disabled={isReadOnly}
+                          type={item.type}
+                          className={`w-full border p-3 rounded-lg outline-none transition-all text-[#333333] ${
+                            isReadOnly
+                              ? "bg-gray-50 border-transparent"
+                              : "bg-gray-50 focus:bg-white focus:ring-2 focus:ring-purple-200"
+                          }`}
+                          value={(item.value as string) || ""}
+                          onChange={(e) =>
+                            handleUpdateValue(section.id, item.id, e.target.value)
+                          }
+                        />
+                      </div>
                     ) : (
                       <input
                         disabled={isReadOnly}

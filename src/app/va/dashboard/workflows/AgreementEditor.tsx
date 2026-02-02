@@ -14,6 +14,9 @@ export type AgreementItem = {
   value?: AgreementValue;
   hidden?: boolean;
   hidden_options?: string[];
+  is_custom?: boolean;
+  layout?: "inline";
+  repeatable?: boolean;
 };
 
 type ExtraQuestionType = AgreementItem["type"];
@@ -154,6 +157,7 @@ export default function AgreementEditor({
       id: crypto.randomUUID(),
       label,
       type: extraQuestion.type,
+      is_custom: true,
     };
 
     if (extraQuestion.type === "checkbox_group") {
@@ -167,6 +171,26 @@ export default function AgreementEditor({
     section.items.splice(insertIndex, 0, newItem);
     onChange({ ...agreement, custom_structure: newStructure });
     closeExtraQuestionModal();
+  };
+
+  const removeCustomItem = (sectionIndex: number, itemIndex: number) => {
+    const newStructure = cloneStructure(agreement.custom_structure);
+    newStructure.sections[sectionIndex].items.splice(itemIndex, 1);
+    onChange({ ...agreement, custom_structure: newStructure });
+  };
+
+  const addRepeatableItem = (sectionIndex: number, itemIndex: number) => {
+    const newStructure = cloneStructure(agreement.custom_structure);
+    const item = newStructure.sections[sectionIndex].items[itemIndex];
+    const clone: AgreementItem = {
+      ...item,
+      id: crypto.randomUUID(),
+      value: "",
+      repeatable: false,
+      is_custom: true,
+    };
+    newStructure.sections[sectionIndex].items.splice(itemIndex + 1, 0, clone);
+    onChange({ ...agreement, custom_structure: newStructure });
   };
 
   const toggleOptionHidden = (
@@ -240,7 +264,7 @@ export default function AgreementEditor({
               </div>
               <div className="space-y-3 text-xs text-gray-600">
                 {section.items.map((item, iIndex) => (
-                  <div key={item.id} className="space-y-2">
+                  <div key={item.id} className="group/item space-y-2">
                     <label className="flex items-center gap-2">
                       <input
                         type="checkbox"
@@ -250,6 +274,17 @@ export default function AgreementEditor({
                       />
                       {item.label}
                     </label>
+                    {item.is_custom && (
+                      <button
+                        type="button"
+                        onClick={() => removeCustomItem(sIndex, iIndex)}
+                        className="ml-3 text-xs font-bold text-red-400 opacity-0 transition-opacity hover:text-red-500 group-hover/item:opacity-100"
+                        aria-label="Remove custom question"
+                        title="Remove"
+                      >
+                        ×
+                      </button>
+                    )}
                     {item.type === "checkbox_group" && item.options && (
                       <div className="grid gap-2 sm:grid-cols-2 pl-6 text-xs text-gray-500">
                         {item.options.map((opt, oIndex) => (
@@ -293,7 +328,11 @@ export default function AgreementEditor({
                   )}
                   {!item.hidden && (
                     <>
-                      {item.type !== "checkbox" && (
+                      {item.type !== "checkbox" &&
+                        !(
+                          item.layout === "inline" &&
+                          (item.type === "text" || item.type === "date")
+                        ) && (
                         <label className="block text-sm font-normal text-[#333333] mb-2">
                           {item.label}
                         </label>
@@ -351,14 +390,44 @@ export default function AgreementEditor({
                       )}
 
                       {(item.type === "text" || item.type === "date") && (
-                        <input
-                          type={item.type}
-                          className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-[#333333] outline-none focus:border-[#9d4edd] focus:ring-2 focus:ring-[#9d4edd]/20"
-                          value={(item.value as string) || ""}
-                          onChange={(event) =>
-                            updateItemValue(sIndex, iIndex, event.target.value)
+                        <div
+                          className={
+                            item.layout === "inline"
+                              ? "grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start"
+                              : ""
                           }
-                        />
+                        >
+                          {item.layout === "inline" && (
+                            <div className="text-sm font-normal text-[#333333]">
+                              {item.label}
+                            </div>
+                          )}
+                          <div>
+                            <input
+                              type={item.type}
+                              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-[#333333] outline-none focus:border-[#9d4edd] focus:ring-2 focus:ring-[#9d4edd]/20"
+                              value={(item.value as string) || ""}
+                              onChange={(event) =>
+                                updateItemValue(
+                                  sIndex,
+                                  iIndex,
+                                  event.target.value
+                                )
+                              }
+                            />
+                            {item.repeatable && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  addRepeatableItem(sIndex, iIndex)
+                                }
+                                className="mt-2 text-xs font-semibold text-[#9d4edd] hover:text-[#7b2cbf]"
+                              >
+                                Add another
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       )}
 
                       {item.type === "textarea" && (
@@ -407,13 +476,6 @@ export default function AgreementEditor({
           </div>
         </div>
       ))}
-
-      {showFooterNote && (
-        <div className="mt-8 text-center text-gray-400 text-xs italic">
-          Changes saved here update the workflow structure. To fill in client
-          details yourself, you can access the document via the Client List.
-        </div>
-      )}
 
       {extraQuestion.open && (
         <div className="fixed inset-0 z-200 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
