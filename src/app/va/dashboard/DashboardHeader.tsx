@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
-import { Search, User, CheckSquare, FileText, Timer } from "lucide-react"; // Icons for categories
+import { Search, User, CheckSquare, FileText, Timer } from "lucide-react";
 import { useClientSession } from "./ClientSessionContext";
 
 type UserProfile = {
@@ -39,6 +39,17 @@ const formatHms = (totalSeconds: number) => {
   )}:${String(seconds).padStart(2, "0")}`;
 };
 
+const formatClientName = (client: ClientOption) =>
+  `${client.first_name || ""} ${client.surname || ""}`.trim();
+
+const formatClientLabel = (client: ClientOption) => {
+  const name = formatClientName(client);
+  if (client.business_name) {
+    return name ? `${name} (${client.business_name})` : client.business_name;
+  }
+  return name || "Unnamed Client";
+};
+
 export default function DashboardHeader() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -66,18 +77,6 @@ export default function DashboardHeader() {
     stopSession,
   } = useClientSession();
 
-  const formatClientName = (client: ClientOption) =>
-    `${client.first_name || ""} ${client.surname || ""}`.trim();
-
-  const formatClientLabel = (client: ClientOption) => {
-    const name = formatClientName(client);
-    if (client.business_name) {
-      return name ? `${name} (${client.business_name})` : client.business_name;
-    }
-    return name || "Unnamed Client";
-  };
-
-  // --- SEARCH LOGIC ---
   useEffect(() => {
     const performSearch = async () => {
       if (searchQuery.length < 2) {
@@ -88,7 +87,6 @@ export default function DashboardHeader() {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return;
 
-      // 1. Search Clients
       const { data: clients } = await supabase
         .from("clients")
         .select("id, first_name, surname, business_name")
@@ -97,7 +95,6 @@ export default function DashboardHeader() {
         )
         .limit(3);
 
-      // 2. Search Tasks
       const { data: tasks } = await supabase
         .from("tasks")
         .select("id, task_name")
@@ -105,14 +102,12 @@ export default function DashboardHeader() {
         .is("deleted_at", null)
         .limit(3);
 
-      // 3. Search Documents
       const { data: docs } = await supabase
         .from("client_documents")
         .select("id, title, type")
         .ilike("title", `%${searchQuery}%`)
         .limit(3);
 
-      // Combine Results
       const combined: SearchResult[] = [
         ...(clients?.map((c) => ({
           id: c.id,
@@ -172,7 +167,7 @@ export default function DashboardHeader() {
     setSearchQuery("");
     if (result.type === "client")
       router.push(`/va/dashboard/crm/profile/${result.id}`);
-    if (result.type === "task") router.push(`/va/dashboard/tasks`); // Deep link if needed later
+    if (result.type === "task") router.push(`/va/dashboard/tasks`);
     if (result.type === "document") {
       const docType = result.subtitle?.replace(" ", "_");
       const routeSuffix =
