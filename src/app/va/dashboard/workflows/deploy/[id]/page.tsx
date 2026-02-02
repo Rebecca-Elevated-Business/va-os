@@ -40,17 +40,20 @@ export default function DeployAgreementPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const { alert } = usePrompt();
+  const { alert, confirm } = usePrompt();
 
   // Data State
   const [template, setTemplate] = useState<Template | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
-  const [agreement, setAgreement] = useState<Agreement | null>(null);
+  const [agreement, setAgreement] = useState<
+    (Agreement & { client_id: string }) | null
+  >(null);
 
   // Search/Selection State
   const [search, setSearch] = useState("");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [deploying, setDeploying] = useState(false);
+  const [isIssuing, setIsIssuing] = useState(false);
   const [activeTab, setActiveTab] = useState<"internal" | "client">("internal");
   const [openSectionIds, setOpenSectionIds] = useState<string[]>([]);
 
@@ -186,6 +189,48 @@ export default function DeployAgreementPage({
 
   const handleSave = async () => {
     await persistAgreement(true);
+  };
+
+  const handleIssueToClient = async () => {
+    if (!agreement) return;
+    const ok = await confirm({
+      title: "Issue to client?",
+      message:
+        "Are you sure you want to issue this workflow to the client portal?",
+      confirmLabel: "Issue to Client",
+    });
+    if (!ok) return;
+
+    setIsIssuing(true);
+    const { error } = await supabase
+      .from("client_agreements")
+      .update({
+        status: "pending_client",
+        custom_structure: agreement.custom_structure,
+      })
+      .eq("id", agreement.id);
+
+    if (!error) {
+      await supabase.from("client_notifications").insert([
+        {
+          client_id: agreement.client_id,
+          type: "agreement_issued",
+          message: `New service agreement available: ${agreement.title}`,
+        },
+      ]);
+      await supabase.from("agreement_logs").insert([
+        {
+          agreement_id: agreement.id,
+          change_summary: "VA pre-populated and issued agreement",
+        },
+      ]);
+      await alert({
+        title: "Agreement issued",
+        message: "Agreement Issued!",
+      });
+      router.push(`/va/dashboard/crm/profile/${agreement.client_id}`);
+    }
+    setIsIssuing(false);
   };
 
   const handlePreview = async () => {
@@ -445,14 +490,45 @@ export default function DeployAgreementPage({
                   </button>
                   <button
                     onClick={handleSave}
-                    className="bg-[#9d4edd] text-white px-6 py-2 rounded-lg font-bold shadow-md hover:bg-[#7b2cbf] transition-all"
+                    className="border border-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:border-gray-300 hover:text-gray-900 transition-all"
                   >
                     Save as Draft
+                  </button>
+                  <button
+                    onClick={handleIssueToClient}
+                    disabled={isIssuing}
+                    className="bg-[#9d4edd] text-white px-6 py-2 rounded-lg font-bold shadow-md hover:bg-[#7b2cbf] transition-all disabled:opacity-60"
+                  >
+                    {isIssuing ? "Issuing..." : "Issue to Client"}
                   </button>
                 </div>
               </div>
 
               <AgreementEditor agreement={agreement} onChange={setAgreement} />
+
+              <div className="pt-6">
+                <div className="flex flex-wrap items-center justify-center gap-4">
+                  <button
+                    onClick={handlePreview}
+                    className="border border-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:border-gray-300 hover:text-gray-900 transition-all"
+                  >
+                    Preview
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    className="border border-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:border-gray-300 hover:text-gray-900 transition-all"
+                  >
+                    Save as Draft
+                  </button>
+                  <button
+                    onClick={handleIssueToClient}
+                    disabled={isIssuing}
+                    className="bg-[#9d4edd] text-white px-6 py-2 rounded-lg font-bold shadow-md hover:bg-[#7b2cbf] transition-all disabled:opacity-60"
+                  >
+                    {isIssuing ? "Issuing..." : "Issue to Client"}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
