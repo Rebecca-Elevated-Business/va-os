@@ -252,8 +252,8 @@ export default function AgreementPortalView({
 
       <div className="max-w-4xl mx-auto mt-10 bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-200">
         <div className="bg-gray-900 p-12 text-white text-center">
-          <h1 className="text-4xl font-black mb-2 tracking-tight uppercase">
-            Service Authorisation
+          <h1 className="text-4xl font-black mb-2 tracking-tight uppercase text-white">
+            Service Agreement
           </h1>
           <p className="text-gray-400 uppercase tracking-[0.2em] text-sm">
             {agreement.title}
