@@ -54,9 +54,8 @@ export default function EditUploadPage({
     const fileName = `${doc.client_id}/${Date.now()}.${fileExt}`;
     const filePath = `client-uploads/${fileName}`;
 
-    // 1. Upload to Supabase Storage Bucket
     const { error: uploadError } = await supabase.storage
-      .from("documents") // Ensure you have a bucket named 'documents'
+      .from("documents")
       .upload(filePath, file);
 
     if (uploadError) {
@@ -69,12 +68,10 @@ export default function EditUploadPage({
       return;
     }
 
-    // 2. Get Public URL
     const {
       data: { publicUrl },
     } = supabase.storage.from("documents").getPublicUrl(filePath);
 
-    // 3. Update Local State
     setDoc({
       ...doc,
       content: { ...doc.content, file_url: publicUrl, file_name: file.name },
@@ -147,7 +144,6 @@ export default function EditUploadPage({
       </div>
 
       <div className="space-y-8">
-        {/* UPLOAD BOX */}
         <div
           className={`relative border-4 border-dashed rounded-[2.5rem] p-12 text-center transition-all ${
             doc.content.file_url
@@ -195,7 +191,6 @@ export default function EditUploadPage({
           )}
         </div>
 
-        {/* OPTIONAL NOTE */}
         <div className="space-y-2">
           <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block ml-2">
             Personal Note for Client (Optional)
@@ -213,7 +208,6 @@ export default function EditUploadPage({
           />
         </div>
 
-        {/* FINAL ACTIONS */}
         <div className="grid grid-cols-2 gap-4 pt-4">
           <button
             onClick={() => handleSave(false)}

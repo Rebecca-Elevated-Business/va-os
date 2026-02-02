@@ -4,8 +4,6 @@ import { useState, useEffect, use } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { usePrompt } from "@/components/ui/PromptProvider";
-
-// Define the structure to eliminate 'any'
 type ClientDoc = {
   id: string;
   client_id: string;
@@ -92,7 +90,6 @@ export default function EditDocumentPage({
     }
   };
 
-  // Fixed 'any' by using keyof and specific value types
   const updateContent = (field: keyof ClientDoc["content"], value: string) => {
     if (!doc) return;
     setDoc({
@@ -107,7 +104,6 @@ export default function EditDocumentPage({
 
   return (
     <div className="p-6 max-w-5xl mx-auto text-black pb-20">
-      {/* HEADER ACTIONS */}
       <div className="flex justify-between items-end mb-8 border-b pb-6">
         <div>
           <h1 className="text-3xl font-black tracking-tighter uppercase">
@@ -141,7 +137,6 @@ export default function EditDocumentPage({
       </div>
 
       <div className="grid grid-cols-1 gap-8">
-        {/* SECTION: BASICS */}
         <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
@@ -162,7 +157,6 @@ export default function EditDocumentPage({
           </div>
         </div>
 
-        {/* SECTION: INTRO */}
         <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-4">
           <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
             2. Welcome Message
@@ -175,7 +169,6 @@ export default function EditDocumentPage({
           />
         </div>
 
-        {/* SECTION: SCOPE & PRICING */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-4">
             <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
@@ -201,7 +194,6 @@ export default function EditDocumentPage({
           </div>
         </div>
 
-        {/* SECTION: LEGAL & CLOSING */}
         <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-6">
           <h2 className="text-xs font-black text-gray-400 uppercase tracking-widest">
             5. Final Details
@@ -242,7 +234,6 @@ export default function EditDocumentPage({
         </div>
       </div>
 
-      {/* PREVIEW MODAL */}
       {showPreview && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:p-10">
           <div className="bg-white w-full max-w-5xl h-full rounded-4xl overflow-hidden flex flex-col relative">

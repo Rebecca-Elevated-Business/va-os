@@ -60,7 +60,6 @@ export default function CRMPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Filter Logic: Handles both Search and Multi-select Status
   const filteredClients = clients.filter((c) => {
     const matchesSearch =
       `${c.first_name} ${c.surname} ${c.business_name || ""}`
@@ -92,10 +91,8 @@ export default function CRMPage() {
         </Link>
       </div>
 
-      {/* Filter Toolbar */}
       <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 space-y-4">
         <div className="flex flex-wrap items-center gap-4">
-          {/* Search Box with Clear */}
           <div className="relative flex items-center">
             <input
               type="text"
@@ -114,10 +111,8 @@ export default function CRMPage() {
             )}
           </div>
 
-          {/* Vertical Divider */}
           <div className="hidden md:block w-px h-8 bg-gray-200 mx-2"></div>
 
-          {/* Status Filter Dropdown */}
           <div className="relative" ref={statusFilterRef}>
             <button
               onClick={() => setIsStatusFilterOpen((prev) => !prev)}

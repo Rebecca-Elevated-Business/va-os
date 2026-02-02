@@ -15,6 +15,21 @@ const DOCUMENT_TYPES = [
 
 type DocumentType = (typeof DOCUMENT_TYPES)[number]["id"];
 
+const formatClientName = (client: { first_name: string; surname: string }) =>
+  `${client.first_name} ${client.surname}`.trim();
+
+const formatClientLabel = (client: {
+  first_name: string;
+  surname: string;
+  business_name: string;
+}) => {
+  const name = formatClientName(client);
+  if (client.business_name) {
+    return name ? `${name} (${client.business_name})` : client.business_name;
+  }
+  return name || "Unnamed Client";
+};
+
 function CreateDocumentForm() {
   const router = useRouter();
   const { alert } = usePrompt();
@@ -39,21 +54,6 @@ function CreateDocumentForm() {
     business_name: string;
   } | null>(null);
   const isClientLocked = Boolean(clientIdParam);
-  const formatClientName = (client: {
-    first_name: string;
-    surname: string;
-  }) => `${client.first_name} ${client.surname}`.trim();
-  const formatClientLabel = (client: {
-    first_name: string;
-    surname: string;
-    business_name: string;
-  }) => {
-    const name = formatClientName(client);
-    if (client.business_name) {
-      return name ? `${name} (${client.business_name})` : client.business_name;
-    }
-    return name || "Unnamed Client";
-  };
 
   useEffect(() => {
     async function loadClients() {
