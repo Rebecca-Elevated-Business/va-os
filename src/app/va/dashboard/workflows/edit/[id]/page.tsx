@@ -87,8 +87,10 @@ export default function EditAgreementPage({
       {/* Header Info Bar */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8 flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold">Customize Service Agreement</h1>
-          <p className="text-gray-500 text-sm">Managing: {agreement.title}</p>
+          <h1 className="text-2xl font-bold">Customise Service Agreement</h1>
+          <p className="text-gray-500 text-sm">
+            Managing: <span className="font-semibold">{agreement.title}</span>
+          </p>
         </div>
         <div className="flex gap-3">
           <button

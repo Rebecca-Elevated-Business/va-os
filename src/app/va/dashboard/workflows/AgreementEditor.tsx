@@ -159,16 +159,14 @@ export default function AgreementEditor({
                         type="checkbox"
                         checked={!item.hidden}
                         onChange={() => toggleItemHidden(sIndex, iIndex)}
+                        className="accent-[#333333]"
                       />
                       {item.label}
                     </label>
                     {item.type === "checkbox_group" && item.options && (
                       <div className="grid gap-2 sm:grid-cols-2 pl-6 text-xs text-gray-500">
                         {item.options.map((opt, oIndex) => (
-                          <label
-                            key={opt}
-                            className="flex items-center gap-2"
-                          >
+                          <label key={opt} className="flex items-center gap-2">
                             <input
                               type="checkbox"
                               checked={
@@ -177,6 +175,7 @@ export default function AgreementEditor({
                               onChange={() =>
                                 toggleOptionHidden(sIndex, iIndex, oIndex)
                               }
+                              className="accent-[#333333]"
                             />
                             {opt}
                           </label>
@@ -189,7 +188,7 @@ export default function AgreementEditor({
             </div>
           )}
 
-          <div className="space-y-6">
+          <div className="space-y-3">
             {section.items.map((item, iIndex) => {
               if (item.hidden) return null;
               return (
@@ -201,8 +200,8 @@ export default function AgreementEditor({
                 )}
 
                 {item.type === "checkbox_group" && (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <div className="mt-1 grid grid-cols-1 md:grid-cols-2 gap-2">
                       {item.options
                         ?.filter(
                           (opt) => !item.hidden_options?.includes(opt)
@@ -212,7 +211,7 @@ export default function AgreementEditor({
                           key={opt}
                           className="group/option flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100"
                         >
-                          <div className="w-5 h-5 rounded border-2 border-gray-300" />
+                          <div className="w-5 h-5 rounded border-2 border-[#333333]" />
                           <span className="text-sm text-[#333333] font-normal flex-1">
                             {opt}
                           </span>
@@ -231,14 +230,12 @@ export default function AgreementEditor({
                 {(item.type === "text" ||
                   item.type === "date" ||
                   item.type === "textarea") && (
-                  <div className="bg-gray-50 rounded border border-gray-200 border-dashed w-full flex items-center px-4 py-3 text-[#333333] text-xs font-normal italic">
-                    Input field for Client (Editable by VA in Client Portal view)
-                  </div>
+                  <div className="bg-gray-50 rounded border border-gray-200 border-dashed w-full h-10" />
                 )}
 
                 {item.type === "checkbox" && (
                   <div className="flex items-center gap-3">
-                    <div className="w-5 h-5 border-2 border-gray-200 rounded" />
+                    <div className="w-5 h-5 border-2 border-[#333333] rounded" />
                     <span className="text-sm font-normal text-[#333333]">
                       {item.label}
                     </span>

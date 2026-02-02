@@ -292,7 +292,7 @@ export default function AgreementPortalView({
                         }
                       />
                     ) : item.type === "checkbox_group" ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="mt-1 grid grid-cols-1 md:grid-cols-2 gap-2">
                         {item.options
                           ?.filter(
                             (opt) => !item.hidden_options?.includes(opt)
@@ -305,7 +305,7 @@ export default function AgreementPortalView({
                             <input
                               disabled={isReadOnly}
                               type="checkbox"
-                              className="w-5 h-5 rounded border-gray-300 text-[#333333]"
+                              className="w-5 h-5 rounded border-[#333333] text-[#333333] accent-[#333333]"
                               checked={
                                 Array.isArray(item.value)
                                   ? item.value.includes(opt)
