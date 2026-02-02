@@ -106,29 +106,34 @@ export default function AgreementEditor({
                   <X className="h-3 w-3" />
                 </button>
 
-                <label className="block text-sm font-bold mb-2">
-                  {item.label}
-                </label>
+                {item.type !== "checkbox" && (
+                  <label className="block text-sm font-bold mb-2">
+                    {item.label}
+                  </label>
+                )}
 
                 {item.type === "checkbox_group" && (
-                  <div className="flex flex-wrap gap-2">
-                    {item.options?.map((opt, oIndex) => (
-                      <span
-                        key={oIndex}
-                        className="bg-gray-50 border border-gray-200 px-3 py-1 rounded-full text-xs text-gray-600 flex items-center gap-2"
-                      >
-                        {opt}
-                        <button
-                          onClick={() =>
-                            removeOption(sIndex, iIndex, oIndex)
-                          }
-                          className="text-gray-400 hover:text-red-500 font-bold"
-                          aria-label="Remove option"
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {item.options?.map((opt, oIndex) => (
+                        <div
+                          key={oIndex}
+                          className="group/option flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100"
                         >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </span>
-                    ))}
+                          <div className="w-5 h-5 rounded border-2 border-gray-300" />
+                          <span className="text-sm text-gray-600 flex-1">
+                            {opt}
+                          </span>
+                          <button
+                            onClick={() => removeOption(sIndex, iIndex, oIndex)}
+                            className="text-gray-300 hover:text-red-500 opacity-0 group-hover/option:opacity-100 transition-opacity"
+                            aria-label="Remove option"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                     <button
                       onClick={() => addOption(sIndex, iIndex)}
                       className="bg-purple-50 text-[#9d4edd] border border-purple-100 px-3 py-1 rounded-full text-xs font-bold hover:bg-purple-100"
@@ -147,7 +152,12 @@ export default function AgreementEditor({
                 )}
 
                 {item.type === "checkbox" && (
-                  <div className="w-5 h-5 border-2 border-gray-200 rounded" />
+                  <div className="flex items-center gap-3">
+                    <div className="w-5 h-5 border-2 border-gray-200 rounded" />
+                    <span className="text-sm font-bold text-gray-700">
+                      {item.label}
+                    </span>
+                  </div>
                 )}
               </div>
             ))}
