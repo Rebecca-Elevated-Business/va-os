@@ -38,6 +38,8 @@ export type AgreementSection = {
 
 export type AgreementStructure = {
   sections: AgreementSection[];
+  authorisation_disclaimer?: string;
+  authorisation_confirmation?: string;
 };
 
 export type Agreement = {
@@ -77,6 +79,10 @@ export default function AgreementEditor({
     type: "text",
     optionsText: "",
   });
+  const defaultAuthorisationDisclaimer =
+    "I understand this workflow agreement describes how work will be delivered and does not amend or replace the booking agreement.";
+  const defaultAuthorisationConfirmation =
+    'By clicking "Authorise Workflow", I confirm that the details provided above are accurate and I grant permission for the VA to proceed with these specific instruction parameters.';
 
   const notesIndexBySection = useMemo(
     () =>
@@ -240,6 +246,19 @@ export default function AgreementEditor({
     const item = newStructure.sections[sectionIndex].items[itemIndex];
     item.value = value;
     onChange({ ...agreement, custom_structure: newStructure });
+  };
+
+  const updateAuthorisationText = (
+    field: "authorisation_disclaimer" | "authorisation_confirmation",
+    value: string,
+  ) => {
+    onChange({
+      ...agreement,
+      custom_structure: {
+        ...agreement.custom_structure,
+        [field]: value,
+      },
+    });
   };
 
   return (
@@ -513,6 +532,52 @@ export default function AgreementEditor({
           </div>
         </div>
       ))}
+
+      <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100">
+        <div className="flex items-center justify-between mb-6 border-b pb-2">
+          <h2 className="text-base font-normal text-[#333333]">
+            Authorisation Text
+          </h2>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-normal text-[#333333] mb-2">
+              Disclaimer line
+            </label>
+            <textarea
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-[#333333] outline-none focus:border-[#9d4edd] focus:ring-2 focus:ring-[#9d4edd]/20 min-h-24"
+              value={
+                agreement.custom_structure.authorisation_disclaimer ??
+                defaultAuthorisationDisclaimer
+              }
+              onChange={(event) =>
+                updateAuthorisationText(
+                  "authorisation_disclaimer",
+                  event.target.value,
+                )
+              }
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-normal text-[#333333] mb-2">
+              Confirmation line
+            </label>
+            <textarea
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-[#333333] outline-none focus:border-[#9d4edd] focus:ring-2 focus:ring-[#9d4edd]/20 min-h-24"
+              value={
+                agreement.custom_structure.authorisation_confirmation ??
+                defaultAuthorisationConfirmation
+              }
+              onChange={(event) =>
+                updateAuthorisationText(
+                  "authorisation_confirmation",
+                  event.target.value,
+                )
+              }
+            />
+          </div>
+        </div>
+      </div>
 
       {extraQuestion.open && (
         <div className="fixed inset-0 z-200 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">

@@ -26,6 +26,8 @@ type AgreementSection = {
 
 type AgreementStructure = {
   sections: AgreementSection[];
+  authorisation_disclaimer?: string;
+  authorisation_confirmation?: string;
 };
 
 type Agreement = {
@@ -197,6 +199,10 @@ export default function AgreementPortalView({
     return <div className="p-10 text-black">Agreement not found.</div>;
 
   const isReadOnly = agreement.status === "active";
+  const defaultAuthorisationDisclaimer =
+    "I understand this workflow agreement describes how work will be delivered and does not amend or replace the booking agreement.";
+  const defaultAuthorisationConfirmation =
+    'By clicking "Authorise Workflow", I confirm that the details provided above are accurate and I grant permission for the VA to proceed with these specific instruction parameters.';
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 text-black">
@@ -410,18 +416,23 @@ export default function AgreementPortalView({
             <h3 className="font-bold text-gray-900 mb-4">
               Final Authorisation
             </h3>
-            <p className="text-sm text-gray-600 mb-6 leading-relaxed">
-              By clicking &quot;Authorise Workflow&quot;, I confirm that the
-              details provided above are accurate and I grant permission for the
-              VA to proceed with these specific instruction parameters.
-            </p>
+            <div className="space-y-3 mb-6 text-sm text-gray-600 leading-relaxed">
+              <p>
+                {agreement.custom_structure.authorisation_disclaimer ??
+                  defaultAuthorisationDisclaimer}
+              </p>
+              <p>
+                {agreement.custom_structure.authorisation_confirmation ??
+                  defaultAuthorisationConfirmation}
+              </p>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
                   Authorised By (Print Name)
                 </label>
                 <input
-                  disabled={isReadOnly}
+                  disabled={isReadOnly || isVA}
                   type="text"
                   placeholder="Type your full name..."
                   className="w-full border-b-2 border-gray-200 bg-transparent p-2 outline-none focus:border-[#9d4edd] text-black font-medium"
