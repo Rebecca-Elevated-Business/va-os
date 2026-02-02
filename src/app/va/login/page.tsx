@@ -18,7 +18,6 @@ export default function VALoginPage() {
     setError(null);
     setResetMessage(null);
 
-    // 1. Sign in
     const { data, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -31,9 +30,6 @@ export default function VALoginPage() {
     }
 
     if (data.user) {
-      // 2. DETACH FROM EVENT LOOP (The Fix)
-      // We use setTimeout to break out of the immediate React event cycle.
-      // This prevents "AbortError" caused by Strict Mode or race conditions.
       setTimeout(async () => {
         try {
           const { data: profile, error: profileError } = await supabase
@@ -53,26 +49,21 @@ export default function VALoginPage() {
             );
           }
 
-          // 3. SUCCESS
           router.push("/va/dashboard");
         } catch (err: unknown) {
-          // FIXED: Changed 'any' to 'unknown' for Type Safety
           console.error("Login verification failed:", err);
 
           let errorMessage = "Failed to verify profile.";
 
-          // Check if err is a standard Error object to safely read .message
           if (err instanceof Error) {
             errorMessage = err.message;
           } else if (typeof err === "string") {
             errorMessage = err;
           }
 
-          // Only show error if it's NOT a random abort (which shouldn't happen in timeout)
           if (!errorMessage.toLowerCase().includes("aborted")) {
             setError(errorMessage);
           } else {
-            // If it aborted but we are here, try pushing anyway as a fallback
             router.push("/va/dashboard");
           }
           setLoading(false);
