@@ -57,9 +57,7 @@ type PromptContextValue = {
 const PromptContext = createContext<PromptContextValue | undefined>(undefined);
 
 export function PromptProvider({ children }: { children: React.ReactNode }) {
-  const resolverRef = useRef<
-    ((value: boolean | string | null) => void) | null
-  >(null);
+  const resolverRef = useRef<((value: unknown) => void) | null>(null);
   const [state, setState] = useState<PromptState | null>(null);
   const [promptValue, setPromptValue] = useState("");
 
@@ -72,7 +70,7 @@ export function PromptProvider({ children }: { children: React.ReactNode }) {
 
   const confirm = useCallback((options: ConfirmOptions) => {
     return new Promise<boolean>((resolve) => {
-      resolverRef.current = resolve;
+      resolverRef.current = (value) => resolve(Boolean(value));
       setState({
         open: true,
         type: "confirm",
@@ -101,7 +99,8 @@ export function PromptProvider({ children }: { children: React.ReactNode }) {
 
   const prompt = useCallback((options: PromptOptions) => {
     return new Promise<string | null>((resolve) => {
-      resolverRef.current = resolve;
+      resolverRef.current = (value) =>
+        resolve(typeof value === "string" ? value : null);
       setPromptValue(options.defaultValue || "");
       setState({
         open: true,
@@ -126,7 +125,7 @@ export function PromptProvider({ children }: { children: React.ReactNode }) {
     <PromptContext.Provider value={value}>
       {children}
       {state?.open && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+        <div className="fixed inset-0 z-200 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
           <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-300">
             <div className="p-5 border-b border-gray-100">
               <h2 className="text-lg font-bold text-gray-900">
