@@ -96,6 +96,31 @@ export default function SOPLibraryPage() {
   const [loading, setLoading] = useState(true);
   const [selectedTemplate, setSelectedTemplate] =
     useState<SOPTemplate | null>(null);
+  const preferredOrder = [
+    "Inbox Management",
+    "Diary & Calendar Management",
+    "Invoice & Payment Administration",
+    "Social Media Scheduling & Management",
+    "Social Media Scheduling",
+  ];
+  const orderMap = new Map(
+    preferredOrder.map((title, index) => [title.toLowerCase(), index])
+  );
+  const sortedTemplates = [...templates].sort((a, b) => {
+    const aIndex = orderMap.get(a.title.toLowerCase());
+    const bIndex = orderMap.get(b.title.toLowerCase());
+
+    if (aIndex === undefined && bIndex === undefined) {
+      return 0;
+    }
+    if (aIndex === undefined) {
+      return 1;
+    }
+    if (bIndex === undefined) {
+      return -1;
+    }
+    return aIndex - bIndex;
+  });
 
   useEffect(() => {
     async function loadTemplates() {
@@ -129,7 +154,7 @@ export default function SOPLibraryPage() {
         <p>Loading blueprints...</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {templates.map((template) => (
+          {sortedTemplates.map((template) => (
             <button
               key={template.id}
               onClick={() => setSelectedTemplate(template)}
