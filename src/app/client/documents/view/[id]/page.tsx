@@ -408,7 +408,6 @@ export default function ClientDocumentView({
   return (
     <div className="min-h-screen bg-gray-50 pb-20 text-black p-4 md:p-8 font-sans print:bg-white">
       <div className="max-w-4xl mx-auto bg-white shadow-2xl rounded-4xl overflow-hidden border border-gray-100 print:shadow-none print:border-none">
-        {/* HEADER IMAGE */}
         {doc.content.header_image &&
           doc.type !== "upload" &&
           doc.type !== "proposal" &&
@@ -444,7 +443,6 @@ export default function ClientDocumentView({
             </header>
           )}
 
-          {/* DYNAMIC CONTENT SWITCHER */}
           {(() => {
             switch (doc.type) {
               case "proposal": {
@@ -606,7 +604,6 @@ export default function ClientDocumentView({
             }
           })()}
 
-          {/* SIGNATURE / FEEDBACK OVERLAY */}
           {responseMode && (
             <div className="mt-8 p-8 bg-white border-4 border-[#9d4edd] rounded-4xl shadow-2xl animate-in fade-in slide-in-from-top-4 print:hidden">
               <h3 className="text-xl font-black mb-4 tracking-tight">
