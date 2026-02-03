@@ -147,8 +147,8 @@ export default function VADashboardLayout({
           <img
             src="/vahqlogo.svg"
             alt="VAHQ"
-            className={`transition-all ${
-              isCollapsed ? "h-7 w-7" : "h-8 w-auto"
+            className={`object-contain transition-all ${
+              isCollapsed ? "h-8 w-8" : "h-10 w-auto max-w-[140px]"
             }`}
           />
         </div>
