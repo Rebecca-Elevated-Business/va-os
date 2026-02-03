@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
@@ -75,9 +76,6 @@ export default function ClientLoginPage() {
           <h1 className="text-2xl font-bold text-gray-900">
             Welcome to your Client Portal
           </h1>
-          <p className="text-[#9d4edd] font-semibold text-sm">
-            Managed by your Virtual Assistant
-          </p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4">
@@ -132,6 +130,16 @@ export default function ClientLoginPage() {
             <p className="text-xs text-gray-500">{resetMessage}</p>
           )}
         </form>
+      </div>
+      <div className="mt-3 flex items-center justify-center gap-2 text-xs text-gray-500">
+        <span>Software powered by</span>
+        <Image
+          src="/vahqlogo.svg"
+          alt="VAHQ"
+          width={72}
+          height={18}
+          className="object-contain"
+        />
       </div>
       <p className="mt-4 text-xs text-[#333333] text-center">
         Do you need a Virtual Assistant?{" "}
