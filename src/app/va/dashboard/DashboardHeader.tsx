@@ -136,7 +136,6 @@ export default function DashboardHeader() {
     return () => clearTimeout(debounce);
   }, [searchQuery]);
 
-  // --- UI HANDLERS ---
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -188,7 +187,6 @@ export default function DashboardHeader() {
     }
   };
 
-  // (Keep your existing getUser and handleSignOut logic here...)
   useEffect(() => {
     const getUser = async () => {
       const {
@@ -289,7 +287,7 @@ export default function DashboardHeader() {
 
   return (
     <header className="h-20 bg-white border-b border-gray-100 flex items-center justify-between px-8 sticky top-0 z-20 print:hidden">
-      {/* 1. SEARCH BAR WITH DROPDOWN */}
+      
       <div className="relative w-full max-w-md group" ref={searchRef}>
         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
           <Search
@@ -306,7 +304,7 @@ export default function DashboardHeader() {
           onFocus={() => searchQuery.length >= 2 && setShowResults(true)}
         />
 
-        {/* SEARCH RESULTS DROPDOWN */}
+        
         {showResults && results.length > 0 && (
           <div className="absolute w-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 py-3 z-50 animate-in fade-in slide-in-from-top-2">
             {results.map((result) => (
@@ -350,7 +348,7 @@ export default function DashboardHeader() {
         )}
       </div>
 
-      {/* 2. ICONS CONTAINER (Right side) */}
+      
       <div className="flex items-center gap-4">
         <div
           className="hidden lg:flex items-center gap-3 border border-gray-100 rounded-2xl px-3 py-2 bg-white shadow-sm"

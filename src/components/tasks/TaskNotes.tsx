@@ -37,7 +37,6 @@ export default function TaskNotes({
   viewerId,
   viewerName,
   clientId,
-  clientName,
   vaName,
   sharedWithClient = false,
 }: TaskNotesProps) {

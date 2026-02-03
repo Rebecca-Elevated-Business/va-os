@@ -66,7 +66,7 @@ export default function ProposalDocument({
 
   return (
     <div className="bg-white shadow-2xl rounded-4xl overflow-hidden border border-gray-100 print:shadow-none print:border-none">
-      {/* HERO */}
+      
       <div className="relative h-40 md:h-56 w-full">
         {heroUrl ? (
           <Image

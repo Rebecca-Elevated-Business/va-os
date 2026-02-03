@@ -28,21 +28,25 @@ export default function ImpersonationBanner() {
     const storedContext = localStorage.getItem("vaos_impersonation_context");
     const storedAdminSession = localStorage.getItem("vaos_admin_session");
 
-    if (storedContext) {
-      try {
-        setContext(JSON.parse(storedContext));
-      } catch {
-        localStorage.removeItem("vaos_impersonation_context");
+    const timer = setTimeout(() => {
+      if (storedContext) {
+        try {
+          setContext(JSON.parse(storedContext));
+        } catch {
+          localStorage.removeItem("vaos_impersonation_context");
+        }
       }
-    }
 
-    if (storedAdminSession) {
-      try {
-        setAdminSession(JSON.parse(storedAdminSession));
-      } catch {
-        localStorage.removeItem("vaos_admin_session");
+      if (storedAdminSession) {
+        try {
+          setAdminSession(JSON.parse(storedAdminSession));
+        } catch {
+          localStorage.removeItem("vaos_admin_session");
+        }
       }
-    }
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const handleExit = async () => {

@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google"; // Import Inter from Google Fonts
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { PromptProvider } from "@/components/ui/PromptProvider";
 
-// Configure Inter with the weights you specified (400, 500, 600)
 const inter = Inter({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-inter", // Optional: allows use via CSS variable
+  variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
@@ -22,7 +21,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      {/* Apply inter.className to the body to make it the global default */}
       <body className={`${inter.className} antialiased`}>
         <PromptProvider>{children}</PromptProvider>
       </body>

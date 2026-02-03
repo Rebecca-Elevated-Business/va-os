@@ -2241,7 +2241,7 @@ export default function ClientProfilePage({
 
               {taskView === "list" && (
               <>
-              {/* Tasks Table */}
+              
               <div className="space-y-4">
                 <div className="rounded-lg border border-gray-200 bg-white">
                   <table className="w-full table-fixed text-left">
@@ -2409,7 +2409,7 @@ export default function ClientProfilePage({
                                       }`}
                                       onClick={() => openTaskModal(task)}
                                     >
-                                      {/* 1. TASK NAME */}
+                                      
                                       <td className="px-4 py-3">
                                         <div className="flex items-start gap-2">
                                           <button
@@ -2522,17 +2522,17 @@ export default function ClientProfilePage({
                                         </div>
                                       </td>
 
-                                      {/* 2. START DATE */}
+                                      
                                       <td className="px-4 py-3 text-xs font-medium text-gray-600 align-top pt-4 text-right">
                                         {formatDateCell(dueDate)}
                                       </td>
 
-                                      {/* 3. END DATE */}
+                                      
                                       <td className="px-4 py-3 text-xs font-medium text-gray-600 align-top pt-4 text-right">
                                         {formatDateCell(endDate)}
                                       </td>
 
-                                      {/* 4. TIMER BUTTON */}
+                                      
                                       <td className="px-4 py-3 text-center align-top pt-4">
                                         {statusValue !== "completed" && (
                                           <button
@@ -2560,12 +2560,12 @@ export default function ClientProfilePage({
                                         )}
                                       </td>
 
-                                      {/* 5. TIME DISPLAY */}
+                                      
                                       <td className="px-4 py-3 text-right font-mono text-xs text-[#333333] align-top pt-4">
                                         {formatTime(task)}
                                       </td>
 
-                                      {/* 6. ACTIONS */}
+                                      
                                       <td className="px-4 py-3 pr-6 text-right align-top pt-4">
                                         <div className="relative action-menu-trigger inline-flex justify-end z-50">
                                           <button
@@ -3168,7 +3168,7 @@ export default function ClientProfilePage({
         onFallbackRefresh={refreshData}
       />
 
-      {/* DOCUMENTS & WORKFLOWS SECTION */}
+      
       {activeTab === "docs" && (
         <section className="rounded-xl pb-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
@@ -3526,7 +3526,7 @@ export default function ClientProfilePage({
         </section>
       )}
 
-      {/* 4. NOTES (Sticky Bottom) */}
+      
       {activeTab === "notes" && (
         <section className="bg-white rounded-xl shadow-lg flex flex-col overflow-hidden">
           <div className="p-6 flex flex-col">

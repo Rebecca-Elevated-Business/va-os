@@ -47,9 +47,6 @@ type ProposalDefaultsSeed = {
   signatureText?: string;
 };
 
-const DEFAULT_IMAGE =
-  "https://unsplash.com/photos/chairs-beside-table-zCQsBI7ZltQ";
-
 const formatDate = (date: Date) =>
   date.toLocaleDateString("en-GB", {
     day: "2-digit",
