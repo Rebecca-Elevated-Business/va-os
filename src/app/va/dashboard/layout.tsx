@@ -147,14 +147,14 @@ export default function VADashboardLayout({
         >
           <div
             className={`relative flex items-center justify-center transition-all ${
-              isCollapsed ? "h-10 w-10" : "h-10 w-40"
+              isCollapsed ? "h-10 w-10" : "h-14 w-56"
             }`}
           >
             <Image
               src="/vahqlogo.svg"
               alt="VAHQ"
               fill
-              sizes={isCollapsed ? "40px" : "160px"}
+              sizes={isCollapsed ? "40px" : "224px"}
               className="object-contain"
               priority
             />
