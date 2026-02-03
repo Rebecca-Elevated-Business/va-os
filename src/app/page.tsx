@@ -1,5 +1,3 @@
-import { redirect } from "next/navigation";
-
 export default function Home() {
-  redirect("https://vahq.co.uk");
+  return null;
 }
