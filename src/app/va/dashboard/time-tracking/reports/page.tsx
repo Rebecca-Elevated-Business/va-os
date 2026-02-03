@@ -143,6 +143,23 @@ const formatDate = (value: string) =>
 const buildReportName = (clientName: string, from: string, to: string) =>
   `${clientName} – ${formatDate(from)}–${formatDate(to)}`;
 
+const formatClientName = (client: {
+  first_name: string | null;
+  surname: string | null;
+}) => `${client.first_name || ""} ${client.surname || ""}`.trim();
+
+const formatClientLabel = (client: {
+  first_name: string | null;
+  surname: string | null;
+  business_name: string | null;
+}) => {
+  const name = formatClientName(client);
+  if (client.business_name) {
+    return name ? `${name} (${client.business_name})` : client.business_name;
+  }
+  return name || "Client";
+};
+
 export default function TimeReportsPage() {
   const router = useRouter();
   const { confirm } = usePrompt();
@@ -174,23 +191,6 @@ export default function TimeReportsPage() {
     useState<ClientSearchResult | null>(null);
   const [archiveDateFrom, setArchiveDateFrom] = useState("");
   const [archiveDateTo, setArchiveDateTo] = useState("");
-
-  const formatClientName = (client: {
-    first_name: string | null;
-    surname: string | null;
-  }) => `${client.first_name || ""} ${client.surname || ""}`.trim();
-
-  const formatClientLabel = (client: {
-    first_name: string | null;
-    surname: string | null;
-    business_name: string | null;
-  }) => {
-    const name = formatClientName(client);
-    if (client.business_name) {
-      return name ? `${name} (${client.business_name})` : client.business_name;
-    }
-    return name || "Client";
-  };
 
   const normalizeReports = (data: SavedReportRowRaw[] | null) =>
     (data || []).map((row) => ({
@@ -488,8 +488,6 @@ export default function TimeReportsPage() {
       <header className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Time Reports</h1>
-          <p className="text-sm text-gray-400">
-          </p>
         </div>
         <div className="flex items-center gap-3 text-sm font-semibold">
           <Link

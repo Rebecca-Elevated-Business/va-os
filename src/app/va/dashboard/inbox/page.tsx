@@ -86,7 +86,6 @@ export default function VAInboxPage() {
   }, [fetchMessages]);
 
   const toggleStatus = async (id: string, field: string, value: boolean) => {
-    // Optimistic update for UI speed
     setMessages((prev) =>
       prev.map((m) => (m.id === id ? { ...m, [field]: value } : m)),
     );
@@ -96,7 +95,7 @@ export default function VAInboxPage() {
       .update({ [field]: value })
       .eq("id", id);
 
-    if (error) fetchMessages(); // Revert on error
+    if (error) fetchMessages();
   };
 
   const convertToTask = async (msg: InboxMessage) => {
@@ -138,7 +137,6 @@ export default function VAInboxPage() {
         title: "Task created",
         message: "Converted to client task! Message remains in Inbox.",
       });
-      // UPDATED: Removed the auto-complete line here so it stays in Inbox
       setSelectedMsg(null);
     }
   };
@@ -230,7 +228,6 @@ export default function VAInboxPage() {
       </header>
 
       <div className="flex h-[calc(100vh-160px)] bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-        {/* SIDEBAR TABS */}
         <aside className="w-64 border-r border-gray-50 bg-gray-50/50 p-6 space-y-2">
           <button
             onClick={() => setActiveTab("inbox")}
@@ -278,7 +275,6 @@ export default function VAInboxPage() {
           </button>
         </aside>
 
-        {/* FEED LIST */}
         <main className="flex-1 overflow-y-auto">
           <div className="border-b border-gray-100 px-8 py-6">
             <div className="flex items-center justify-between gap-4">
@@ -413,7 +409,6 @@ export default function VAInboxPage() {
           )}
         </main>
 
-        {/* POPUP OVERLAY */}
         {selectedMsg && (
           <div
             className="fixed inset-0 bg-black/40 backdrop-blur-sm z-100 flex items-center justify-center p-6 text-black"

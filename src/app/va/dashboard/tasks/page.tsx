@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import CalendarView from "./CalendarView";
 import KanbanView from "./KanbanView";
-import { STATUS_CONFIG, Task } from "./types"; // Ensure this type has 'category' if possible, or we cast below
+import { STATUS_CONFIG, Task } from "./types";
 import TaskModal from "./TaskModal";
 
 type CategoryOption = {
@@ -65,7 +65,6 @@ const DEFAULT_STATUS_ORDER = ["completed", "in_progress", "up_next", "todo"];
 
 const STATUS_PILL_CLASS =
   "text-[10px] font-semibold text-gray-600 border border-gray-200 bg-white";
-// 2. CATEGORY CONFIG
 const CATEGORY_CONFIG: Record<string, CategoryOption> = {
   client: {
     id: "client",
@@ -103,7 +102,6 @@ export default function TaskCentrePage() {
     dismissActiveTaskEntry,
     getActiveEntryDurationSeconds,
   } = useClientSession();
-  // --- STATE ---
   const [tasks, setTasks] = useState<Task[]>([]);
   const [clients, setClients] = useState<
     {
@@ -119,7 +117,6 @@ export default function TaskCentrePage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [vaDisplayName, setVaDisplayName] = useState<string>("");
 
-  // Filters (Default: Completed is HIDDEN)
   const [filterStatus, setFilterStatus] = useState<string[]>([
     "todo",
     "up_next",
@@ -148,12 +145,10 @@ export default function TaskCentrePage() {
     useState<ColumnVisibility>(DEFAULT_COLUMNS);
   const [draggingStatus, setDraggingStatus] = useState<string | null>(null);
   const [dragOverStatus, setDragOverStatus] = useState<string | null>(null);
-  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
   const draggingTaskIdRef = useRef<string | null>(null);
   const prefsLoadedRef = useRef<string | null>(null);
 
-  // Actions & Modals
   const [isAdding, setIsAdding] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [actionMenuId, setActionMenuId] = useState<string | null>(null); // For inline 3-dots menu
@@ -168,7 +163,6 @@ export default function TaskCentrePage() {
   const searchParams = useSearchParams();
   const deepLinkHandled = useRef(false);
 
-  // --- DATA FETCHING ---
   const fetchData = useCallback(async () => {
     const {
       data: { user },
@@ -208,7 +202,6 @@ export default function TaskCentrePage() {
       prefsLoadedRef.current = user.id;
     }
 
-    // Fetch Tasks
     const { data: taskData } = await supabase
       .from("tasks")
       .select("*, clients!tasks_client_id_fkey(business_name, surname)")
@@ -217,27 +210,8 @@ export default function TaskCentrePage() {
 
     if (taskData) {
       setTasks(taskData as Task[]);
-      const taskId = searchParams.get("taskId");
-      if (
-        taskId &&
-        !deepLinkHandled.current &&
-        Array.isArray(taskData) &&
-        taskData.length > 0
-      ) {
-        const target = taskData.find((task) => task.id === taskId);
-        if (target) {
-          setView("list");
-          setIsColumnsOpen(false);
-          setSelectedTask(target as Task);
-          setIsAdding(true);
-          setModalPrefill(null);
-          setActionMenuId(null);
-          deepLinkHandled.current = true;
-        }
-      }
     }
 
-    // Fetch Clients
     const { data: clientData } = await supabase
       .from("clients")
       .select("id, first_name, surname, business_name")
@@ -261,10 +235,9 @@ export default function TaskCentrePage() {
       setVaDisplayName(profile.display_name || profile.full_name || "");
     }
     setLoading(false);
-  }, [searchParams]);
+  }, []);
 
   useEffect(() => {
-    // 1. Wrap fetchData to prevent cascading render error
     const timer = setTimeout(() => {
       fetchData();
     }, 0);
@@ -310,7 +283,23 @@ export default function TaskCentrePage() {
     };
   }, [fetchData]);
 
-  // Click Outside Listener to close menus
+  useEffect(() => {
+    const taskId = searchParams.get("taskId");
+    if (!taskId || deepLinkHandled.current || tasks.length === 0) return;
+    const target = tasks.find((task) => task.id === taskId);
+    if (!target) return;
+    const timer = setTimeout(() => {
+      setView("list");
+      setIsColumnsOpen(false);
+      setSelectedTask(target);
+      setIsAdding(true);
+      setModalPrefill(null);
+      setActionMenuId(null);
+      deepLinkHandled.current = true;
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [searchParams, tasks]);
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -351,7 +340,6 @@ export default function TaskCentrePage() {
     localStorage.setItem(key, JSON.stringify(payload));
   }, [userId, statusOrder, collapsedStatus, columnVisibility]);
 
-  // --- ACTIONS ---
   const upsertTask = (task: Task) => {
     setTasks((prev) => {
       const index = prev.findIndex((t) => t.id === task.id);
@@ -535,7 +523,6 @@ export default function TaskCentrePage() {
     return task.client_id === selectedClientId;
   };
 
-  // --- GROUPING LOGIC ---
   const draftTaskId = "draft-task";
   const isCreatingNew = isAdding && !selectedTask;
   const draftStatus = modalPrefill?.status || "todo";
@@ -776,14 +763,12 @@ export default function TaskCentrePage() {
           )),
     ]);
     await notifyTaskStatusChange(task, targetStatus);
-    setDraggingTaskId(null);
     setDragOverTaskId(null);
     draggingTaskIdRef.current = null;
   };
 
   const handleTaskDragStart =
     (task: Task) => (event: DragEvent<HTMLButtonElement>) => {
-      setDraggingTaskId(task.id);
       draggingTaskIdRef.current = task.id;
       event.dataTransfer.effectAllowed = "move";
       event.dataTransfer.setData("application/x-task-id", task.id);
@@ -816,7 +801,6 @@ export default function TaskCentrePage() {
     };
 
   const handleTaskDragEnd = () => {
-    setDraggingTaskId(null);
     setDragOverTaskId(null);
     draggingTaskIdRef.current = null;
   };
@@ -900,10 +884,8 @@ export default function TaskCentrePage() {
         <h1>Task Centre</h1>
       </header>
 
-      {/* CONTROL BAR */}
       <div className="flex items-center justify-between gap-4 mb-6 border-b border-gray-100 pb-6">
         <div className="flex items-center gap-4">
-          {/* 1. View Switcher */}
           <div className="flex bg-gray-100 p-1 rounded-xl">
             {[
               { id: "list", label: "List", icon: List },
@@ -930,7 +912,6 @@ export default function TaskCentrePage() {
             })}
           </div>
 
-          {/* 2. Status Filter */}
           <div className="relative" ref={filterRef}>
             <button
               onClick={() => setIsFilterOpen(!isFilterOpen)}
@@ -977,7 +958,6 @@ export default function TaskCentrePage() {
             )}
           </div>
 
-          {/* 3. Type Filter */}
           <div className="relative" ref={typeFilterRef}>
             <button
               onClick={() => setIsTypeFilterOpen(!isTypeFilterOpen)}
@@ -1024,7 +1004,6 @@ export default function TaskCentrePage() {
             )}
           </div>
 
-          {/* Shared Filter */}
           <label className="flex items-center gap-2 px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-[#333333] shadow-sm">
             <input
               type="checkbox"
@@ -1035,7 +1014,6 @@ export default function TaskCentrePage() {
             Shared only
           </label>
 
-          {/* 4. Columns */}
           {view === "list" && (
             <div className="relative" ref={columnsRef}>
               <button
@@ -1079,7 +1057,6 @@ export default function TaskCentrePage() {
             </div>
           )}
 
-          {/* 5. New Task Button */}
           <button
             onClick={() => {
               setSelectedTask(null);
@@ -1101,7 +1078,6 @@ export default function TaskCentrePage() {
         </div>
       </div>
 
-      {/* --- LIST VIEW --- */}
       {view === "list" && (
         <div className="space-y-6">
           {groupedTasks.length === 0 ? (

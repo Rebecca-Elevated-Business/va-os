@@ -2,11 +2,7 @@
 
 import { useRef, useState } from "react";
 import { format } from "date-fns";
-import {
-  MoreHorizontal,
-  Plus,
-  Clock,
-} from "lucide-react";
+import { MoreHorizontal, Plus, Clock } from "lucide-react";
 import { Task } from "./types";
 
 interface KanbanViewProps {
@@ -24,7 +20,6 @@ interface KanbanViewProps {
   onDeleteTask: (taskId: string) => void;
 }
 
-// 1. Unified Config to match List & Calendar
 const COLUMNS = [
   { id: "todo", title: "To Do", color: "border-[#b5b3b3]" },
   {
@@ -79,7 +74,6 @@ export default function KanbanView({
     onOpenTask(task);
   };
 
-  // 2. Filter columns: Only show columns that are active in the filter
   const visibleColumns = COLUMNS.filter((col) => filterStatus.includes(col.id));
 
   return (
@@ -105,7 +99,6 @@ export default function KanbanView({
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => handleDrop(e, col.id)}
             >
-              {/* COLUMN HEADER */}
               <div className="p-4 flex items-center justify-between sticky top-0 z-10">
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm font-bold text-[#333333] tracking-tight">
@@ -123,7 +116,6 @@ export default function KanbanView({
                 </button>
               </div>
 
-              {/* TASKS LIST */}
               <div className="p-3 space-y-3 overflow-y-auto flex-1 custom-scrollbar">
                 {colTasks.map((task) => (
                   <div
@@ -176,7 +168,6 @@ export default function KanbanView({
                         : ""
                     }`}
                   >
-                    {/* Card Header: Category & Context */}
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex items-center gap-2">
                         <span className="text-[9px] font-black tracking-widest text-[#333333] opacity-70">
@@ -236,7 +227,6 @@ export default function KanbanView({
                       </div>
                     </div>
 
-                    {/* Task Title */}
                     <h4
                       className={`font-bold text-sm text-[#333333] mb-1 leading-snug ${
                         task.status === "completed"
@@ -247,14 +237,12 @@ export default function KanbanView({
                       {task.task_name}
                     </h4>
 
-                    {/* Client Name (If exists) */}
                     {task.clients && (
                       <p className="text-[10px] font-bold text-[#333333] tracking-tight mb-4">
                         {task.clients.surname}
                       </p>
                     )}
 
-                    {/* Footer: Date & Timer */}
                     <div className="flex items-center justify-between border-t border-gray-50 pt-3 mt-2">
                       <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#333333]">
                         <Clock size={12} className="text-gray-300" />
@@ -281,7 +269,6 @@ export default function KanbanView({
                   </div>
                 ))}
 
-                {/* Empty State Drop Zone */}
                 {colTasks.length === 0 && (
                   <div className="h-20 border-2 border-dashed border-gray-100 rounded-xl flex items-center justify-center text-[10px] font-bold text-[#333333] tracking-widest">
                     Drop here

@@ -188,23 +188,23 @@ export default function TimeTrackingPage() {
       const startIso = new Date(`${rangeStart}T00:00:00`).toISOString();
       const endIso = new Date(`${rangeEnd}T23:59:59.999`).toISOString();
 
-    const { data } = await supabase
-      .from("time_entries")
-      .select(
-        "id, task_id, session_id, client_id, started_at, ended_at, duration_minutes, created_at",
-      )
+      const { data } = await supabase
+        .from("time_entries")
+        .select(
+          "id, task_id, session_id, client_id, started_at, ended_at, duration_minutes, created_at",
+        )
         .eq("va_id", userId)
         .gte("started_at", startIso)
         .lte("started_at", endIso)
         .order("started_at", { ascending: false });
 
-    const { data: sessionData } = await supabase
-      .from("client_sessions")
-      .select("id, client_id, started_at, ended_at")
-      .eq("va_id", userId)
-      .gte("started_at", startIso)
-      .lte("started_at", endIso)
-      .order("started_at", { ascending: false });
+      const { data: sessionData } = await supabase
+        .from("client_sessions")
+        .select("id, client_id, started_at, ended_at")
+        .eq("va_id", userId)
+        .gte("started_at", startIso)
+        .lte("started_at", endIso)
+        .order("started_at", { ascending: false });
 
       setTimeEntries((data as TimeEntry[]) || []);
       setClientSessions((sessionData as ClientSessionRow[]) || []);
@@ -532,7 +532,6 @@ export default function TimeTrackingPage() {
         if (bucket) {
           bucket.entries.push(entry);
         } else {
-          // Fallback if session is missing from the date range
           sessionMap.set(entry.session_id, {
             session: {
               id: entry.session_id,
@@ -622,8 +621,6 @@ export default function TimeTrackingPage() {
       <header className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Time Tracking</h1>
-          <p className="text-sm text-gray-400">
-          </p>
         </div>
         <div className="flex items-center gap-3 text-sm font-semibold">
           <span className="text-[#9d4edd]">Tracker</span>
@@ -775,101 +772,101 @@ export default function TimeTrackingPage() {
 
         <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
-          <div className="w-full lg:w-3/5" ref={dropdownRef}>
-            <label className="text-[11px] font-bold text-gray-400 tracking-widest uppercase block mb-2">
-              Task
-            </label>
-            <div className="relative">
-              <Search
-                size={16}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-              />
-              <input
-                type="text"
-                placeholder="Select a task to track"
-                className="w-full pl-11 pr-12 py-3.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold focus:ring-2 focus:ring-[#9d4edd] outline-none"
-                value={searchValue}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  setSearchValue(value);
-                  setIsDropdownOpen(value.trim().length > 0);
-                  if (!value) setSelectedTaskId(null);
-                }}
-                onFocus={() =>
-                  setIsDropdownOpen(searchValue.trim().length > 0)
-                }
-              />
-              {selectedTaskId && (
-                <button
-                  type="button"
-                  aria-label="Clear task search"
-                  onClick={() => {
-                    setSelectedTaskId(null);
-                    setSearchValue("");
-                    setIsDropdownOpen(false);
+            <div className="w-full lg:w-3/5" ref={dropdownRef}>
+              <label className="text-[11px] font-bold text-gray-400 tracking-widest uppercase block mb-2">
+                Task
+              </label>
+              <div className="relative">
+                <Search
+                  size={16}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                />
+                <input
+                  type="text"
+                  placeholder="Select a task to track"
+                  className="w-full pl-11 pr-12 py-3.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold focus:ring-2 focus:ring-[#9d4edd] outline-none"
+                  value={searchValue}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setSearchValue(value);
+                    setIsDropdownOpen(value.trim().length > 0);
+                    if (!value) setSelectedTaskId(null);
                   }}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-500 transition-colors"
-                >
-                  <X size={16} />
-                </button>
-              )}
-
-              {isDropdownOpen &&
-                searchValue.trim().length > 0 &&
-                filteredTasks.length > 0 && (
-                  <div className="absolute z-30 mt-2 w-full rounded-xl border border-gray-100 bg-white shadow-xl max-h-72 overflow-auto">
-                    {filteredTasks.map((task) => (
-                      <button
-                        key={task.id}
-                        onClick={() => handleSelectTask(task)}
-                        className="w-full text-left px-4 py-3 text-sm font-semibold text-[#333333] hover:bg-gray-50 transition-colors"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="truncate">{task.task_name}</span>
-                          {task.clients?.surname && (
-                            <span className="text-[11px] font-bold text-gray-400 shrink-0">
-                              {task.clients.surname}
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-4 mt-3 text-sm">
-              <button
-                onClick={() => {
-                  setEditingTask(null);
-                  setIsAdding(true);
-                }}
-                className="text-[#9d4edd] font-bold hover:text-[#7b2cbf] underline underline-offset-4"
-              >
-                Create new task
-              </button>
-              {selectedTask && (
-                <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                  <Link
-                    href="/va/dashboard/tasks"
-                    className="font-semibold text-[#333333] hover:text-[#9d4edd]"
+                  onFocus={() =>
+                    setIsDropdownOpen(searchValue.trim().length > 0)
+                  }
+                />
+                {selectedTaskId && (
+                  <button
+                    type="button"
+                    aria-label="Clear task search"
+                    onClick={() => {
+                      setSelectedTaskId(null);
+                      setSearchValue("");
+                      setIsDropdownOpen(false);
+                    }}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-500 transition-colors"
                   >
-                    View in Task Centre
-                  </Link>
-                  {selectedTask.client_id ? (
+                    <X size={16} />
+                  </button>
+                )}
+
+                {isDropdownOpen &&
+                  searchValue.trim().length > 0 &&
+                  filteredTasks.length > 0 && (
+                    <div className="absolute z-30 mt-2 w-full rounded-xl border border-gray-100 bg-white shadow-xl max-h-72 overflow-auto">
+                      {filteredTasks.map((task) => (
+                        <button
+                          key={task.id}
+                          onClick={() => handleSelectTask(task)}
+                          className="w-full text-left px-4 py-3 text-sm font-semibold text-[#333333] hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="truncate">{task.task_name}</span>
+                            {task.clients?.surname && (
+                              <span className="text-[11px] font-bold text-gray-400 shrink-0">
+                                {task.clients.surname}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-4 mt-3 text-sm">
+                <button
+                  onClick={() => {
+                    setEditingTask(null);
+                    setIsAdding(true);
+                  }}
+                  className="text-[#9d4edd] font-bold hover:text-[#7b2cbf] underline underline-offset-4"
+                >
+                  Create new task
+                </button>
+                {selectedTask && (
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
                     <Link
-                      href={`/va/dashboard/crm/profile/${selectedTask.client_id}`}
+                      href="/va/dashboard/tasks"
                       className="font-semibold text-[#333333] hover:text-[#9d4edd]"
                     >
-                      Open in CRM
+                      View in Task Centre
                     </Link>
-                  ) : (
-                    <span className="text-gray-400">No CRM link</span>
-                  )}
-                </div>
-              )}
+                    {selectedTask.client_id ? (
+                      <Link
+                        href={`/va/dashboard/crm/profile/${selectedTask.client_id}`}
+                        className="font-semibold text-[#333333] hover:text-[#9d4edd]"
+                      >
+                        Open in CRM
+                      </Link>
+                    ) : (
+                      <span className="text-gray-400">No CRM link</span>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
 
           <div className="flex-1 flex items-center justify-between gap-6">
             <div className="text-3xl font-black tracking-widest text-[#333333] font-mono">

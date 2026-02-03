@@ -41,10 +41,8 @@ export default function CalendarView({
       ? "min-h-[calc(100vh-180px)]"
       : "h-[calc(100vh-180px)]";
 
-  // Helper: Red Line Position (64px height per hour to save vertical space)
   const HOUR_HEIGHT = 64;
 
-  // Keep current time indicator updated
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60000);
     return () => clearInterval(timer);
@@ -62,7 +60,6 @@ export default function CalendarView({
     });
   }, [viewMode, now, HOUR_HEIGHT]);
 
-  // --- DATE LOGIC ---
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 }); // Monday start
   const daysToShow = viewMode === "week" ? 7 : 1;
   const startDate = viewMode === "week" ? weekStart : currentDate;
@@ -178,9 +175,7 @@ export default function CalendarView({
         viewMode === "month" ? "overflow-visible" : "overflow-hidden"
       } ${containerHeightClass}`}
     >
-      {/* 1. CALENDAR HEADER & CONTROLS */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white z-20">
-        {/* Left: View Toggle */}
         <div className="flex items-center gap-3">
           <div className="flex bg-gray-100 p-1 rounded-lg">
             <button
@@ -221,7 +216,6 @@ export default function CalendarView({
           )}
         </div>
 
-        {/* Right: Navigation */}
         <div className="flex items-center gap-2">
           <button
             onClick={() =>
@@ -335,13 +329,11 @@ export default function CalendarView({
 
       {viewMode !== "month" && (
         <>
-          {/* 2. THE GRID HEADER (Sticky) */}
           <div className="flex flex-col border-b border-gray-100 shadow-[0_4px_10px_-5px_rgba(0,0,0,0.05)] z-10 relative">
             <div
               className="grid"
               style={{ gridTemplateColumns: `60px repeat(${daysToShow}, 1fr)` }}
             >
-              {/* Top Left: Month Label (Integrated) */}
               <div className="p-3 border-r border-gray-50 flex items-end justify-center pb-2">
                 <span className="text-xs font-black text-[#333333] leading-tight tracking-tight text-center">
                   {format(startDate, "MMM")}
@@ -352,7 +344,6 @@ export default function CalendarView({
                 </span>
               </div>
 
-              {/* Days Header */}
               {days.map((day) => (
                 <div
                   key={day.toString()}
@@ -376,7 +367,6 @@ export default function CalendarView({
               ))}
             </div>
 
-            {/* All Day Section */}
             <div
               className="grid border-t border-gray-50"
               style={{ gridTemplateColumns: `60px repeat(${daysToShow}, 1fr)` }}
@@ -432,7 +422,6 @@ export default function CalendarView({
             </div>
           </div>
 
-          {/* 3. SCROLLABLE TIME GRID */}
           <div
             className="flex-1 overflow-y-auto relative bg-white custom-scrollbar"
             ref={scrollRef}
@@ -441,7 +430,6 @@ export default function CalendarView({
               className="grid min-h-full"
               style={{ gridTemplateColumns: `60px repeat(${daysToShow}, 1fr)` }}
             >
-              {/* Time Labels Column */}
               <div className="border-r border-gray-50 bg-[#fcfcfc]">
                 {hours.map((hour) => (
                   <div
@@ -456,13 +444,11 @@ export default function CalendarView({
                 ))}
               </div>
 
-              {/* Day Columns */}
               {days.map((day) => (
                 <div
                   key={`col-${day}`}
                   className="relative border-r border-gray-50 last:border-0 group"
                 >
-                  {/* Hour Cells */}
                   {hours.map((hour) => (
                     <div
                       key={`cell-${day}-${hour}`}
@@ -483,7 +469,6 @@ export default function CalendarView({
                     />
                   ))}
 
-                  {/* Red Current Time Line */}
                   {isSameDay(day, now) && (
                     <div
                       className="absolute left-0 right-0 z-20 flex items-center pointer-events-none"
@@ -494,7 +479,6 @@ export default function CalendarView({
                     </div>
                   )}
 
-                  {/* Timed Task Cards */}
                   {tasks
                     .filter((t) => t.scheduled_start)
                     .map((task) => {
@@ -546,7 +530,6 @@ export default function CalendarView({
                             onOpenTask(task);
                           }}
                         >
-                          {/* Status Line */}
                           <div
                             className={`w-1 shrink-0 rounded-full h-full opacity-80 ${getStatusLineColor(
                               task.status,
