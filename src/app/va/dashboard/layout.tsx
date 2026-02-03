@@ -144,13 +144,13 @@ export default function VADashboardLayout({
             isCollapsed ? "justify-center" : "justify-start"
           }`}
         >
-          <h2
-            className={`font-black text-[#9d4edd] tracking-tighter uppercase transition-all ${
-              isCollapsed ? "text-sm" : "text-xl"
+          <img
+            src="/vahqlogo.svg"
+            alt="VAHQ"
+            className={`transition-all ${
+              isCollapsed ? "h-7 w-7" : "h-8 w-auto"
             }`}
-          >
-            {isCollapsed ? "HQ" : "VAHQ"}
-          </h2>
+          />
         </div>
 
         <nav className="flex-1 px-4 space-y-1 overflow-hidden">
