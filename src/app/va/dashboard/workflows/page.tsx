@@ -81,11 +81,11 @@ const WORKFLOW_OVERVIEWS: Record<
   },
   "Request a Workflow": {
     summary:
-      "Create a custom workflow to document a specific process unique to your client or service offering. Designed to capture your way of working and make it easy for others to follow.",
+      "We are committed to growing an ever-expanding workflow library and welcome your requests and suggestions for new additions.",
     bullets: [
-      "Allows flexibility for bespoke client needs",
-      "Helps document undocumented processes",
-      "Supports continuity and consistency",
+      "Workflow requests are actioned asap",
+      "Shared across all users to enhance the library",
+      "Fully editable / bespoke to fit your needs",
     ],
   },
 };
@@ -170,16 +170,27 @@ export default function SOPLibraryPage() {
               </h3>
             </button>
           ))}
-          <div className="text-left bg-white border border-dashed border-gray-200 rounded-2xl p-6 shadow-sm">
+          <button
+            type="button"
+            onClick={() =>
+              setSelectedTemplate({
+                id: "request-workflow",
+                title: "Request a Workflow",
+                description: "",
+                category: "custom",
+              })
+            }
+            className="group text-left bg-white border border-dashed border-gray-200 rounded-2xl p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg hover:border-[#9d4edd]"
+          >
             <div className="flex items-center justify-between mb-4">
               <div className="h-12 w-12 rounded-2xl bg-purple-50 flex items-center justify-center text-[#9d4edd]">
                 <FileText className="h-6 w-6" />
               </div>
             </div>
-            <h3 className="font-bold text-sm text-gray-900 uppercase tracking-tight">
+            <h3 className="font-bold text-sm text-gray-900 group-hover:text-[#9d4edd] transition-colors uppercase tracking-tight">
               Request a Workflow
             </h3>
-          </div>
+          </button>
         </div>
       )}
 
@@ -209,7 +220,7 @@ export default function SOPLibraryPage() {
 
             <div className="p-6">
               <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-                <h2 className="text-lg font-bold mb-4 uppercase text-[#333333] tracking-tight">
+                <h2 className="text-lg font-bold mb-4 text-[#333333] tracking-tight">
                   Workflow Overview
                 </h2>
                 <p className="text-gray-700 leading-relaxed mb-6">
@@ -228,16 +239,27 @@ export default function SOPLibraryPage() {
                   ))}
                 </ul>
                 <div className="mt-6 flex justify-center">
-                  <button
-                    onClick={() =>
-                      router.push(
-                        `/va/dashboard/workflows/deploy/${selectedTemplate.id}`
-                      )
-                    }
-                    className="bg-[#9d4edd] text-white px-10 py-3 rounded-xl font-bold shadow-md hover:bg-[#7b2cbf] transition-all"
-                  >
-                    Deploy / Set Up for Client
-                  </button>
+                  {selectedTemplate.title === "Request a Workflow" ? (
+                    <a
+                      href="https://vahq.co.uk/request-workflow"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="bg-[#9d4edd] text-white px-10 py-3 rounded-xl font-bold shadow-md hover:bg-[#7b2cbf] transition-all"
+                    >
+                      Request a Workflow
+                    </a>
+                  ) : (
+                    <button
+                      onClick={() =>
+                        router.push(
+                          `/va/dashboard/workflows/deploy/${selectedTemplate.id}`
+                        )
+                      }
+                      className="bg-[#9d4edd] text-white px-10 py-3 rounded-xl font-bold shadow-md hover:bg-[#7b2cbf] transition-all"
+                    >
+                      Deploy / Set Up for Client
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

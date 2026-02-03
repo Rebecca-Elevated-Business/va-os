@@ -430,7 +430,7 @@ export default function DashboardHeader() {
           </div>
         </div>
         <a
-          href="https://elevatedbusiness.co.uk/va-os/ticket"
+          href="https://vahq.co.uk/support-request"
           target="_blank"
           rel="noreferrer"
           className="w-10 h-10 rounded-full bg-[#7b2cbf] flex items-center justify-center text-white font-bold hover:opacity-90 transition-opacity shadow-sm"
