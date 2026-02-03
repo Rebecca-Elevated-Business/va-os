@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useEffect, useState, useCallback } from "react";
@@ -144,13 +145,20 @@ export default function VADashboardLayout({
             isCollapsed ? "justify-center" : "justify-start"
           }`}
         >
-          <img
-            src="/vahqlogo.svg"
-            alt="VAHQ"
-            className={`object-contain transition-all ${
-              isCollapsed ? "h-8 w-8" : "h-10 w-auto max-w-[140px]"
+          <div
+            className={`relative flex items-center justify-center transition-all ${
+              isCollapsed ? "h-10 w-10" : "h-10 w-40"
             }`}
-          />
+          >
+            <Image
+              src="/vahqlogo.svg"
+              alt="VAHQ"
+              fill
+              sizes={isCollapsed ? "40px" : "160px"}
+              className="object-contain"
+              priority
+            />
+          </div>
         </div>
 
         <nav className="flex-1 px-4 space-y-1 overflow-hidden">
