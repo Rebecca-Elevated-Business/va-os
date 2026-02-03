@@ -100,20 +100,19 @@ export default function VALoginPage() {
     <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-gray-50">
       <div className="w-full max-w-sm p-8 bg-white rounded-xl shadow-lg border border-gray-100">
         <div className="text-center mb-8">
-          <div className="mx-auto mb-4 h-12 w-48 relative">
+          <p className="text-[#9d4edd] font-semibold text-base">
+            Welcome to VAHQ
+          </p>
+          <div className="mx-auto mt-3 h-14 w-56 relative">
             <Image
               src="/vahqlogo.svg"
               alt="VAHQ"
               fill
-              sizes="192px"
+              sizes="224px"
               className="object-contain"
               priority
             />
           </div>
-          <p className="text-[#9d4edd] font-semibold text-sm">
-            <span className="block">Welcome to</span>
-            <span className="block">VAHQ</span>
-          </p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4">
