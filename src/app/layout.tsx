@@ -10,7 +10,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "VAHQ",
+  title: "VAHQ - professional operating system for virtual assistants",
   description: "VAHQ operating system for Virtual Assistants",
   icons: {
     icon: "/favicon.svg",
