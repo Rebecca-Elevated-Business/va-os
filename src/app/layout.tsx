@@ -10,8 +10,11 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "VA Operating System",
-  description: "Professional management portal for Virtual Assistants",
+  title: "VAHQ",
+  description: "VAHQ operating system for Virtual Assistants",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
