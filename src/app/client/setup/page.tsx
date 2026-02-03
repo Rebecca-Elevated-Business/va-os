@@ -60,13 +60,10 @@ function SetupForm() {
         },
       ]);
 
-      const { error: updateError } = await supabase
-        .from("clients")
-        .update({
-          has_access: true,
-          auth_user_id: data.user.id,
-        })
-        .eq("id", clientId);
+      const { error: updateError } = await supabase.rpc(
+        "link_client_account",
+        { client_id: clientId },
+      );
 
       if (updateError) {
         console.error("Bridge Failed:", updateError);
