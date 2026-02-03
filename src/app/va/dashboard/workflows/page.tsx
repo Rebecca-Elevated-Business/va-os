@@ -81,9 +81,9 @@ const WORKFLOW_OVERVIEWS: Record<
   },
   "Request a Workflow": {
     summary:
-      "We are committed to growing an ever-expanding workflow library and welcome your requests and suggestions for new additions.",
+      "We're growing an ever-expanding workflow library and welcome your requests and suggestions for new additions.",
     bullets: [
-      "Workflow requests are actioned asap",
+      "Workflow requests are regularly monitored",
       "Shared across all users to enhance the library",
       "Fully editable / bespoke to fit your needs",
     ],
@@ -180,7 +180,7 @@ export default function SOPLibraryPage() {
                 category: "custom",
               })
             }
-            className="group text-left bg-white border border-dashed border-gray-200 rounded-2xl p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg hover:border-[#9d4edd]"
+            className="group text-left bg-white border border-gray-100 rounded-2xl p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg hover:border-[#9d4edd]"
           >
             <div className="flex items-center justify-between mb-4">
               <div className="h-12 w-12 rounded-2xl bg-purple-50 flex items-center justify-center text-[#9d4edd]">
