@@ -50,7 +50,6 @@ export default function ClientDashboard() {
   const { alert } = usePrompt();
   const [loading, setLoading] = useState(true);
 
-  // Data State
   const [agreements, setAgreements] = useState<Agreement[]>([]);
   const [documents, setDocuments] = useState<ClientDocument[]>([]);
   const [tasks, setTasks] = useState<ClientTask[]>([]);
@@ -65,7 +64,6 @@ export default function ClientDashboard() {
     TASK_STATUS_FILTERS.map((status) => status.id),
   );
 
-  // Dashboard Logic State
   const [clientName, setClientName] = useState("");
   const [clientId, setClientId] = useState<string | null>(null);
   const [vaId, setVaId] = useState<string | null>(null);

@@ -57,7 +57,6 @@ type ClientDoc = {
     show_thank_you?: boolean;
     thank_you_text?: string;
     signature_text?: string;
-    // Invoice specific
     invoice_number?: string;
     issue_date?: string;
     due_date?: string;
@@ -79,7 +78,6 @@ type ClientDoc = {
     va_business_name?: string;
     time_report_id?: string;
     show_time_report_to_client?: boolean;
-    // Upload specific
     file_url?: string;
     file_name?: string;
     va_note?: string;
@@ -203,11 +201,9 @@ export default function ClientDocumentView({
   const handleSubmitResponse = async () => {
     if (!doc) return;
 
-    // Logic for Proposals or Invoices
     const statusUpdate =
       responseMode === "accept" ? "accepted" : "feedback_received";
 
-    // Logic for Booking Forms (Contract Signing)
     const finalStatus = doc.type === "booking_form" ? "signed" : statusUpdate;
 
     await supabase

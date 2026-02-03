@@ -30,7 +30,6 @@ import { STATUS_CONFIG, Task } from "../../../tasks/types";
 import KanbanView from "../../../tasks/KanbanView";
 import { useClientSession } from "../../../ClientSessionContext";
 
-// --- TYPES ---
 type Client = {
   id: string;
   first_name: string;
@@ -148,7 +147,6 @@ const formatDocStatus = (status: string) => {
   return "Issued";
 };
 
-// --- COMPONENT ---
 export default function ClientProfilePage({
   params,
 }: {
@@ -170,14 +168,12 @@ export default function ClientProfilePage({
     getActiveEntryDurationSeconds,
   } = useClientSession();
 
-  // --- STATE ---
   const [client, setClient] = useState<Client | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [clientAgreements, setClientAgreements] = useState<Agreement[]>([]);
   const [clientDocuments, setClientDocuments] = useState<ClientDocument[]>([]);
 
-  // Task Manager State
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string[]>([
     "todo",
@@ -197,7 +193,6 @@ export default function ClientProfilePage({
   const [vaUserId, setVaUserId] = useState<string | null>(null);
   const [showSharedOnly, setShowSharedOnly] = useState(false);
 
-  // Time Tracking State
   const [timeEntries, setTimeEntries] = useState<ClientTimeEntry[]>([]);
   const [clientSessions, setClientSessions] = useState<ClientSessionRow[]>([]);
   const [loadingEntries, setLoadingEntries] = useState(true);
@@ -211,7 +206,6 @@ export default function ClientProfilePage({
     end: getTodayDateString(),
   });
   const [isFilterActive, setIsFilterActive] = useState(false);
-  // UI States
   const [isEditing, setIsEditing] = useState(false);
   const [portalManageOpen, setPortalManageOpen] = useState(false);
   const [revokeInput, setRevokeInput] = useState("");
@@ -2241,7 +2235,7 @@ export default function ClientProfilePage({
 
               {taskView === "list" && (
               <>
-              
+
               <div className="space-y-4">
                 <div className="rounded-lg border border-gray-200 bg-white">
                   <table className="w-full table-fixed text-left">
@@ -2409,7 +2403,7 @@ export default function ClientProfilePage({
                                       }`}
                                       onClick={() => openTaskModal(task)}
                                     >
-                                      
+
                                       <td className="px-4 py-3">
                                         <div className="flex items-start gap-2">
                                           <button
@@ -2522,17 +2516,17 @@ export default function ClientProfilePage({
                                         </div>
                                       </td>
 
-                                      
+
                                       <td className="px-4 py-3 text-xs font-medium text-gray-600 align-top pt-4 text-right">
                                         {formatDateCell(dueDate)}
                                       </td>
 
-                                      
+
                                       <td className="px-4 py-3 text-xs font-medium text-gray-600 align-top pt-4 text-right">
                                         {formatDateCell(endDate)}
                                       </td>
 
-                                      
+
                                       <td className="px-4 py-3 text-center align-top pt-4">
                                         {statusValue !== "completed" && (
                                           <button
@@ -2560,12 +2554,12 @@ export default function ClientProfilePage({
                                         )}
                                       </td>
 
-                                      
+
                                       <td className="px-4 py-3 text-right font-mono text-xs text-[#333333] align-top pt-4">
                                         {formatTime(task)}
                                       </td>
 
-                                      
+
                                       <td className="px-4 py-3 pr-6 text-right align-top pt-4">
                                         <div className="relative action-menu-trigger inline-flex justify-end z-50">
                                           <button
@@ -3168,7 +3162,7 @@ export default function ClientProfilePage({
         onFallbackRefresh={refreshData}
       />
 
-      
+
       {activeTab === "docs" && (
         <section className="rounded-xl pb-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
@@ -3526,7 +3520,7 @@ export default function ClientProfilePage({
         </section>
       )}
 
-      
+
       {activeTab === "notes" && (
         <section className="bg-white rounded-xl shadow-lg flex flex-col overflow-hidden">
           <div className="p-6 flex flex-col">

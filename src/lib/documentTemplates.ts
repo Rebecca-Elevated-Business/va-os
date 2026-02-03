@@ -32,7 +32,6 @@ export const DOCUMENT_TEMPLATES: Record<
     sections: {
       intro: (clientName: string) =>
         `This Booking Form constitutes a formal agreement for ${clientName}.`,
-      // PASTE YOUR 50+ LINES OF LEGAL TEXT HERE
       legal_text:
         `1. APPOINTMENT & TERM\nThis agreement begins on the Start Date...\n\n2. SERVICES & DELIVERY\nThe VA shall provide services as outlined in the Scope of Work...\n\n3. PAYMENT TERMS\nFees are payable as per the Pricing Summary section...\n\n` +
         Array(40)

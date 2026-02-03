@@ -320,7 +320,6 @@ export default function TaskCentrePage() {
       ) {
         setIsColumnsOpen(false);
       }
-      // Close action menus if clicking elsewhere
       if (!(event.target as Element).closest(".action-menu-trigger")) {
         setActionMenuId(null);
       }

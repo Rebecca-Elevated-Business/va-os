@@ -287,7 +287,7 @@ export default function DashboardHeader() {
 
   return (
     <header className="h-20 bg-white border-b border-gray-100 flex items-center justify-between px-8 sticky top-0 z-20 print:hidden">
-      
+
       <div className="relative w-full max-w-md group" ref={searchRef}>
         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
           <Search
@@ -304,7 +304,7 @@ export default function DashboardHeader() {
           onFocus={() => searchQuery.length >= 2 && setShowResults(true)}
         />
 
-        
+
         {showResults && results.length > 0 && (
           <div className="absolute w-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 py-3 z-50 animate-in fade-in slide-in-from-top-2">
             {results.map((result) => (
@@ -348,7 +348,7 @@ export default function DashboardHeader() {
         )}
       </div>
 
-      
+
       <div className="flex items-center gap-4">
         <div
           className="hidden lg:flex items-center gap-3 border border-gray-100 rounded-2xl px-3 py-2 bg-white shadow-sm"
