@@ -41,7 +41,6 @@ export default function PlaybookViewPage({
 
   return (
     <div className="max-w-4xl mx-auto pb-20 text-black">
-      {/* Top Navigation / Action Bar */}
       <div className="flex justify-between items-center mb-8 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         <div>
           <span className="text-xs font-bold text-[#9d4edd] uppercase tracking-widest">
@@ -59,14 +58,12 @@ export default function PlaybookViewPage({
         </button>
       </div>
 
-      {/* The Educational Content (Playbook) */}
       <div className="bg-white p-10 rounded-xl shadow-sm border border-gray-100 prose prose-purple max-w-none">
         <div className="whitespace-pre-wrap leading-relaxed text-gray-700">
           {template.va_playbook_content}
         </div>
       </div>
 
-      {/* Footer Encouragement */}
       <div className="mt-8 p-6 bg-purple-50 rounded-xl border border-purple-100 text-center">
         <p className="text-purple-900 font-medium">
           Ready to start this service for a client?

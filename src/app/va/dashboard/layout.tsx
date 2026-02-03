@@ -29,12 +29,10 @@ export default function VADashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
 
-  // States
   const [authorized, setAuthorized] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // Security Check and Real-time Inbox logic
   const checkAccessAndUnread = useCallback(async () => {
     try {
       const {
@@ -57,10 +55,8 @@ export default function VADashboardLayout({
         return;
       }
 
-      // Success: User is a VA
       setAuthorized(true);
 
-      // Fetch Inbox Badge Count (scoped to this VA's clients)
       const { data: clientRows } = await supabase
         .from("clients")
         .select("id")
@@ -87,7 +83,6 @@ export default function VADashboardLayout({
   }, [router]);
 
   useEffect(() => {
-    // FIX: Use a timeout to avoid synchronous state updates during render
     const timer = setTimeout(() => {
       checkAccessAndUnread();
     }, 0);
@@ -97,7 +92,7 @@ export default function VADashboardLayout({
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "client_requests" },
-        checkAccessAndUnread
+        checkAccessAndUnread,
       )
       .subscribe();
 
@@ -198,9 +193,7 @@ export default function VADashboardLayout({
           })}
         </nav>
 
-        {/* Settings at bottom */}
         <div className="p-4 border-t border-gray-100 relative">
-          {/* Moved Toggle Button */}
           <div className="absolute -right-3 -top-3 z-50">
             <button
               onClick={() => setIsCollapsed(!isCollapsed)}

@@ -44,14 +44,12 @@ export default function DeployAgreementPage({
   const router = useRouter();
   const { alert, confirm } = usePrompt();
 
-  // Data State
   const [template, setTemplate] = useState<Template | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [agreement, setAgreement] = useState<AgreementWithClientId | null>(
     null
   );
 
-  // Search/Selection State
   const [search, setSearch] = useState("");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [deploying, setDeploying] = useState(false);
@@ -61,7 +59,6 @@ export default function DeployAgreementPage({
 
   useEffect(() => {
     async function loadData() {
-      // 1. Load Template
       const { data: t } = await supabase
         .from("sop_templates")
         .select("*")
@@ -69,7 +66,6 @@ export default function DeployAgreementPage({
         .single();
       if (t) setTemplate(t);
 
-      // 2. Load all clients for the picker
       const { data: c } = await supabase
         .from("clients")
         .select("id, first_name, surname, business_name")
@@ -96,8 +92,6 @@ export default function DeployAgreementPage({
 
     const { data: userData } = await supabase.auth.getUser();
 
-    // 1. Create the Client Agreement record
-    // This CLONES the master structure into a client-specific instance
     const { data: agreement, error } = await supabase
       .from("client_agreements")
       .insert([
@@ -106,7 +100,7 @@ export default function DeployAgreementPage({
           va_id: userData.user?.id,
           template_id: template.id,
           title: template.title,
-          custom_structure: template.default_structure, // This is the clone
+          custom_structure: template.default_structure,
           status: "draft",
         },
       ])
@@ -250,7 +244,7 @@ export default function DeployAgreementPage({
     window.open(
       `/va/dashboard/workflows/portal-view/${agreement.id}`,
       "_blank",
-      "noopener,noreferrer"
+      "noopener,noreferrer",
     );
   };
 

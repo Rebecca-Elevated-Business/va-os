@@ -56,7 +56,6 @@ export default function AgreementPortalView({
 
   useEffect(() => {
     async function loadInitialData() {
-      // 1. Check if viewer is VA or Client
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -69,7 +68,6 @@ export default function AgreementPortalView({
         if (profile?.role === "va") setIsVA(true);
       }
 
-      // 2. Load Agreement
       const { data } = await supabase
         .from("client_agreements")
         .select("*")
@@ -86,7 +84,7 @@ export default function AgreementPortalView({
     itemId: string,
     newValue: AgreementValue
   ) => {
-    if (!agreement || agreement.status === "active") return; // Prevent edits if active
+    if (!agreement || agreement.status === "active") return;
     const newStructure = { ...agreement.custom_structure };
     const section = newStructure.sections.find((s) => s.id === sectionId);
     const item = section?.items.find((i) => i.id === itemId);
@@ -113,7 +111,6 @@ export default function AgreementPortalView({
     setIsSaving(false);
   };
 
-  // 1. VA ISSUE LOGIC (Restored)
   const handlePublish = async () => {
     if (!agreement) return;
     const ok = await confirm({
@@ -155,7 +152,6 @@ export default function AgreementPortalView({
     setIsPublishing(false);
   };
 
-  // 3. CLIENT AUTHORISATION LOGIC
   const handleAuthorise = async () => {
     if (!agreement) return;
     const ok = await confirm({
@@ -206,7 +202,6 @@ export default function AgreementPortalView({
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 text-black">
-      {/* ACTION BAR */}
       <div className="bg-[#9d4edd] p-4 sticky top-0 z-50 shadow-lg flex justify-between items-center px-8">
         <div className="text-white">
           <p className="font-bold text-sm uppercase tracking-widest">
@@ -243,7 +238,6 @@ export default function AgreementPortalView({
             </button>
           )}
 
-          {/* CLIENT ACTIONS: Authorise (only if pending) */}
           {!isVA && agreement.status === "pending_client" && (
             <button
               disabled={isAuthorising}
@@ -411,7 +405,6 @@ export default function AgreementPortalView({
             </div>
           ))}
 
-          {/* SIGNATURE SECTION */}
           <div className="bg-purple-50 p-8 rounded-xl border border-purple-100 mt-10">
             <h3 className="font-bold text-gray-900 mb-4">
               Final Authorisation

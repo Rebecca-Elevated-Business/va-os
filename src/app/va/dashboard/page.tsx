@@ -73,7 +73,7 @@ const formatUkDate = (value: string) =>
 
 export default function VADashboard() {
   const { confirm } = usePrompt();
-  const { activeSession, isRunning, sessionElapsedSeconds } = useClientSession();
+  const { activeSession, isRunning } = useClientSession();
   const [userId, setUserId] = useState<string | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
   const [agendaDate, setAgendaDate] = useState(getTodayDateString());
@@ -280,7 +280,7 @@ export default function VADashboard() {
       sessionStart > startOfToday ? sessionStart : startOfToday;
     const seconds = Math.floor((now.getTime() - effectiveStart.getTime()) / 1000);
     return Math.max(0, seconds);
-  }, [activeSession, isRunning, sessionElapsedSeconds]);
+  }, [activeSession, isRunning]);
 
   const totalSecondsToday = useMemo(() => {
     return Math.max(0, Math.round(totalMinutesToday * 60) + sessionTodaySeconds);
