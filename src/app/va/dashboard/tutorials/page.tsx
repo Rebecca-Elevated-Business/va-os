@@ -36,7 +36,7 @@ export default function TutorialsPage() {
           Tutorials
         </h1>
         <p className="text-sm text-gray-500 mt-2">
-          VA-OS.
+          VAHQ.
         </p>
       </header>
 

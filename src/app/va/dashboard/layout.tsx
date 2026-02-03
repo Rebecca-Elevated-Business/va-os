@@ -122,7 +122,7 @@ export default function VADashboardLayout({
       <div className="flex min-h-screen items-center justify-center bg-[#fcfcfc] font-sans">
         <div className="text-center animate-pulse">
           <p className="text-xl font-black text-[#9d4edd] uppercase tracking-tighter">
-            VA-OS
+            VAHQ
           </p>
           <p className="text-xs font-bold text-gray-400 mt-2 uppercase tracking-widest">
             Verifying access...
@@ -149,7 +149,7 @@ export default function VADashboardLayout({
               isCollapsed ? "text-sm" : "text-xl"
             }`}
           >
-            {isCollapsed ? "OS" : "VA-OS"}
+            {isCollapsed ? "HQ" : "VAHQ"}
           </h2>
         </div>
 
