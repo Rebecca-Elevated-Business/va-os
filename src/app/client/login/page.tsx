@@ -72,7 +72,22 @@ export default function ClientLoginPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-[#fcfcfc]">
       <div className="w-full max-w-sm p-8 bg-white rounded-xl shadow-lg border border-purple-100">
-        <div className="text-center mb-8">
+        <a
+          href="https://vahq.co.uk"
+          target="_blank"
+          rel="noreferrer"
+          className="mb-4 flex items-center justify-center gap-2 text-[11px] text-gray-500 hover:text-gray-700"
+        >
+          <span>Software powered by</span>
+          <Image
+            src="/vahqlogo.svg"
+            alt="VAHQ"
+            width={72}
+            height={18}
+            className="object-contain"
+          />
+        </a>
+        <div className="text-center mb-6">
           <h1 className="text-2xl font-bold text-gray-900">
             Welcome to your Client Portal
           </h1>
@@ -130,16 +145,6 @@ export default function ClientLoginPage() {
             <p className="text-xs text-gray-500">{resetMessage}</p>
           )}
         </form>
-      </div>
-      <div className="mt-3 flex items-center justify-center gap-2 text-xs text-gray-500">
-        <span>Software powered by</span>
-        <Image
-          src="/vahqlogo.svg"
-          alt="VAHQ"
-          width={72}
-          height={18}
-          className="object-contain"
-        />
       </div>
       <p className="mt-4 text-xs text-[#333333] text-center">
         Do you need a Virtual Assistant?{" "}
