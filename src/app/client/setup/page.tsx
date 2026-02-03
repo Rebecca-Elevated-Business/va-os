@@ -38,11 +38,19 @@ function SetupForm() {
     }
 
     if (data.user) {
-      const { data: clientProfile } = await supabase
-        .from("clients")
-        .select("first_name, surname")
-        .eq("id", clientId)
-        .single();
+      const { data: clientProfile, error: clientProfileError } =
+        await supabase.rpc("get_client_setup_profile", {
+          client_id: clientId,
+        });
+
+      if (clientProfileError) {
+        setError(
+          "Account created, but we could not load your client record. Error: " +
+            clientProfileError.message,
+        );
+        setLoading(false);
+        return;
+      }
 
       const firstName = clientProfile?.first_name || null;
       const lastName = clientProfile?.surname || null;
