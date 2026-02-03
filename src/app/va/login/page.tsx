@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
@@ -99,12 +100,19 @@ export default function VALoginPage() {
     <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-gray-50">
       <div className="w-full max-w-sm p-8 bg-white rounded-xl shadow-lg border border-gray-100">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">
-            VA Operating System
-          </h1>
+          <div className="mx-auto mb-4 h-12 w-48 relative">
+            <Image
+              src="/vahqlogo.svg"
+              alt="VAHQ"
+              fill
+              sizes="192px"
+              className="object-contain"
+              priority
+            />
+          </div>
           <p className="text-[#9d4edd] font-semibold text-sm">
-            <span className="block">Welcome to your</span>
-            <span className="block">Virtual Assistant Operating System</span>
+            <span className="block">Welcome to</span>
+            <span className="block">VAHQ</span>
           </p>
         </div>
 
@@ -164,7 +172,7 @@ export default function VALoginPage() {
       <p className="mt-4 text-xs text-[#333333] text-center">
         Are you a VA that would like access to the system?{" "}
         <a
-          href="http://elevatedbusiness.co.uk/va-os"
+          href="https://vahq.co.uk"
           className="hover:underline underline-offset-2"
         >
           Please click here
