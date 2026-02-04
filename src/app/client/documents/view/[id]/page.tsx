@@ -107,7 +107,7 @@ export default function ClientDocumentView({
     useState<InvoiceTimeReport | null>(null);
   const [clientAgreed, setClientAgreed] = useState(false);
   const [signatureError, setSignatureError] = useState("");
-  const [uploadDownloadUrl, setUploadDownloadUrl] = useState<string | null>(null);
+  const [signedUploadUrl, setSignedUploadUrl] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadDoc() {
@@ -124,24 +124,17 @@ export default function ClientDocumentView({
 
   useEffect(() => {
     if (!doc || doc.type !== "upload") return;
-    if (doc.content.file_url && !doc.content.file_path) {
-      setUploadDownloadUrl(doc.content.file_url);
-      return;
-    }
-    if (!doc.content.file_path) {
-      setUploadDownloadUrl(null);
-      return;
-    }
+    const filePath = doc.content.file_path;
+    if (!filePath) return;
     const loadSignedUrl = async () => {
       const { data, error } = await supabase.storage
         .from("documents")
-        .createSignedUrl(doc.content.file_path, 60 * 60);
+        .createSignedUrl(filePath, 60 * 60);
       if (error) {
         console.error("Failed to create signed URL", error);
-        setUploadDownloadUrl(null);
         return;
       }
-      setUploadDownloadUrl(data.signedUrl);
+      setSignedUploadUrl(data.signedUrl);
     };
     loadSignedUrl();
   }, [doc]);
@@ -628,19 +621,26 @@ export default function ClientDocumentView({
                       <p className="text-sm text-gray-400 mb-8 italic">
                         &quot;{doc.content.va_note}&quot;
                       </p>
-                      {uploadDownloadUrl ? (
-                        <a
-                          href={uploadDownloadUrl}
-                          target="_blank"
-                          className="inline-block bg-[#9d4edd] text-white px-12 py-4 rounded-xl font-black uppercase tracking-widest shadow-lg"
-                        >
-                          View / Download PDF
-                        </a>
-                      ) : (
-                        <p className="text-sm text-gray-400 italic">
-                          File unavailable.
-                        </p>
-                      )}
+                      {(() => {
+                        const downloadUrl =
+                          doc.content.file_url || signedUploadUrl;
+                        if (!downloadUrl) {
+                          return (
+                            <p className="text-sm text-gray-400 italic">
+                              File unavailable.
+                            </p>
+                          );
+                        }
+                        return (
+                          <a
+                            href={downloadUrl}
+                            target="_blank"
+                            className="inline-block bg-[#9d4edd] text-white px-12 py-4 rounded-xl font-black uppercase tracking-widest shadow-lg"
+                          >
+                            View / Download PDF
+                          </a>
+                        );
+                      })()}
                     </div>
                   </div>
                 );
