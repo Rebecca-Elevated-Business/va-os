@@ -117,6 +117,26 @@ export default function ClientDashboard() {
     setTasks(normalized);
   }, []);
 
+  const fetchDocuments = useCallback(async (clientIdValue: string) => {
+    const { data: docs } = await supabase
+      .from("client_documents")
+      .select("*")
+      .eq("client_id", clientIdValue)
+      .neq("status", "draft")
+      .order("created_at", { ascending: false });
+    setDocuments((docs as ClientDocument[]) || []);
+  }, []);
+
+  const fetchAgreements = useCallback(async (clientIdValue: string) => {
+    const { data: ags } = await supabase
+      .from("client_agreements")
+      .select("id, title, status, last_updated_at")
+      .eq("client_id", clientIdValue)
+      .neq("status", "draft")
+      .order("last_updated_at", { ascending: false });
+    setAgreements((ags as Agreement[]) || []);
+  }, []);
+
   const fetchNotifications = useCallback(async (clientIdValue: string) => {
     const { data } = await supabase
       .from("client_notifications")
@@ -161,25 +181,13 @@ export default function ClientDashboard() {
         );
 
         if (tabsEnabled.includes("agreements")) {
-          const { data: ags } = await supabase
-            .from("client_agreements")
-            .select("id, title, status, last_updated_at")
-            .eq("client_id", client.id)
-            .neq("status", "draft")
-            .order("last_updated_at", { ascending: false });
-          if (ags) setAgreements(ags as Agreement[]);
+          await fetchAgreements(client.id);
         } else {
           setAgreements([]);
         }
 
         if (tabsEnabled.includes("documents")) {
-          const { data: docs } = await supabase
-            .from("client_documents")
-            .select("*")
-            .eq("client_id", client.id)
-            .neq("status", "draft")
-            .order("created_at", { ascending: false });
-          if (docs) setDocuments(docs as ClientDocument[]);
+          await fetchDocuments(client.id);
         } else {
           setDocuments([]);
         }
@@ -196,7 +204,7 @@ export default function ClientDashboard() {
       setLoading(false);
     }
     loadClientData();
-  }, [router, fetchTasks, fetchNotifications]);
+  }, [router, fetchTasks, fetchNotifications, fetchDocuments, fetchAgreements]);
 
   useEffect(() => {
     if (!clientId) return;
@@ -220,6 +228,52 @@ export default function ClientDashboard() {
       supabase.removeChannel(notifChannel);
     };
   }, [clientId, fetchNotifications]);
+
+  useEffect(() => {
+    if (!clientId || !allowedTabs.includes("documents")) return;
+    const docsChannel = supabase
+      .channel(`client-documents-${clientId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "client_documents",
+          filter: `client_id=eq.${clientId}`,
+        },
+        () => {
+          void fetchDocuments(clientId);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(docsChannel);
+    };
+  }, [clientId, allowedTabs, fetchDocuments]);
+
+  useEffect(() => {
+    if (!clientId || !allowedTabs.includes("agreements")) return;
+    const agreementsChannel = supabase
+      .channel(`client-agreements-${clientId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "client_agreements",
+          filter: `client_id=eq.${clientId}`,
+        },
+        () => {
+          void fetchAgreements(clientId);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(agreementsChannel);
+    };
+  }, [clientId, allowedTabs, fetchAgreements]);
 
   useEffect(() => {
     if (!clientId || !allowedTabs.includes("tasks")) return;
@@ -635,18 +689,17 @@ export default function ClientDashboard() {
           <div className="p-0">
             <table className="w-full text-left">
               <thead>
-                <tr className="text-[10px] text-gray-400 border-b border-gray-50 bg-gray-50/30">
-                  <th className="px-8 py-4 font-black">Document Name</th>
-                  <th className="px-8 py-4 font-black">Type</th>
-                  <th className="px-8 py-4 font-black">Status</th>
-                  <th className="px-8 py-4 font-black text-right">Action</th>
+                <tr className="text-[10px] text-[#333333] border-b border-gray-50 bg-gray-50/30">
+                  <th className="px-8 py-4 font-medium">Document Name</th>
+                  <th className="px-8 py-4 font-medium">Status</th>
+                  <th className="px-8 py-4 font-medium text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {documents.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={4}
+                      colSpan={3}
                       className="p-10 text-center text-gray-400 italic text-sm"
                     >
                       No documents available yet.
@@ -658,27 +711,18 @@ export default function ClientDashboard() {
                       key={doc.id}
                       className="hover:bg-gray-50 transition-colors"
                     >
-                      <td className="px-8 py-5 font-bold text-sm">
+                      <td className="px-8 py-5 text-sm text-[#333333] font-normal">
                         {doc.title}
                       </td>
-                      <td className="px-8 py-5 capitalize text-xs text-gray-500 font-medium">
-                        {doc.type.replace("_", " ")}
-                      </td>
-                      <td className="px-8 py-5">
-                        <span
-                          className={`px-3 py-1 rounded-full text-[10px] font-bold ${
-                            getDocumentStatusTone(doc.status)
-                          }`}
-                        >
-                          {formatDocumentStatus(doc.status, doc.type)}
-                        </span>
+                      <td className="px-8 py-5 text-xs font-medium text-[#333333]">
+                        {formatDocumentStatus(doc.status, doc.type)}
                       </td>
                       <td className="px-8 py-5 text-right">
                         <button
                           onClick={() =>
                             router.push(`/client/documents/view/${doc.id}`)
                           }
-                          className="bg-gray-900 text-white px-5 py-2 rounded-lg font-bold text-xs hover:bg-[#9d4edd] transition-colors"
+                          className="text-xs font-semibold text-[#9d4edd] hover:text-[#4A2E6F] transition-colors"
                         >
                           View
                         </button>
