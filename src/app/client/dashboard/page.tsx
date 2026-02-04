@@ -711,10 +711,10 @@ export default function ClientDashboard() {
                       key={doc.id}
                       className="hover:bg-gray-50 transition-colors"
                     >
-                      <td className="px-8 py-5 text-sm text-[#333333] font-normal">
+                      <td className="px-8 py-5 text-sm text-[#333333] font-medium">
                         {doc.title}
                       </td>
-                      <td className="px-8 py-5 text-xs font-medium text-[#333333]">
+                      <td className="px-8 py-5 text-xs font-normal text-[#333333]">
                         {formatDocumentStatus(doc.status, doc.type)}
                       </td>
                       <td className="px-8 py-5 text-right">
