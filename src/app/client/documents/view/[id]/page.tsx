@@ -96,7 +96,7 @@ export default function ClientDocumentView({
   const [doc, setDoc] = useState<ClientDoc | null>(null);
   const [loading, setLoading] = useState(true);
   const [responseMode, setResponseMode] = useState<
-    "accept" | "edit" | "sign" | "message" | null
+    "accept" | "edit" | "sign" | "message" | "paid" | null
   >(null);
   const [comment, setComment] = useState("");
   const [bookingContent, setBookingContent] =
@@ -225,7 +225,11 @@ export default function ClientDocumentView({
 
     const finalStatus = doc.type === "booking_form" ? "signed" : statusUpdate;
 
-    if (doc.type === "proposal") {
+    if (doc.type === "invoice" && responseMode === "paid") {
+      await supabase.rpc("client_mark_invoice_paid", {
+        doc_id: id,
+      });
+    } else if (doc.type === "proposal") {
       await supabase.rpc("client_accept_proposal", {
         doc_id: id,
         new_status: finalStatus,
@@ -240,13 +244,18 @@ export default function ClientDocumentView({
         .eq("id", id);
     }
 
+    const fallbackMessage =
+      doc.type === "invoice" && responseMode === "paid"
+        ? "Invoice marked as paid."
+        : "Action taken by client.";
+
     await supabase.from("client_requests").insert([
       {
         client_id: doc.client_id,
         type: "work",
         status: "new",
         message: `${doc.type.toUpperCase()} RESPONSE: ${
-          comment || "Action taken by client."
+          comment || fallbackMessage
         }`,
       },
     ]);
@@ -389,25 +398,7 @@ export default function ClientDocumentView({
 
   const handleMarkInvoicePaid = async () => {
     if (!doc || doc.type !== "invoice") return;
-    await supabase
-      .from("client_documents")
-      .update({ status: "paid" })
-      .eq("id", doc.id);
-
-    await supabase.from("client_requests").insert([
-      {
-        client_id: doc.client_id,
-        type: "work",
-        status: "new",
-        message: "INVOICE PAID: Client marked the invoice as paid.",
-      },
-    ]);
-
-    await alert({
-      title: "Marked as paid",
-      message: "Your VA has been notified.",
-    });
-    router.push("/client/dashboard");
+    setResponseMode("paid");
   };
 
   const handlePrint = () => {
@@ -588,8 +579,12 @@ export default function ClientDocumentView({
                     ) : (
                       <div className="space-y-3 print:hidden">
                         <p className="text-xs text-gray-500">
-                          Marking as paid does not process payment. It only
-                          notifies your VA.
+                          <span className="font-bold uppercase">
+                            Please note:
+                          </span>{" "}
+                          Marking this invoice as paid does not process payment,
+                          but notifies your VA that payment has been made.
+                          Please ensure payment is still processed.
                         </p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <button
@@ -652,6 +647,8 @@ export default function ClientDocumentView({
               <h3 className="text-xl font-black mb-4 tracking-tight">
                 {responseMode === "accept"
                   ? "Accept Proposal"
+                  : responseMode === "paid"
+                  ? "Mark as Paid"
                   : responseMode === "message"
                   ? "Send Message"
                   : "Request Changes"}
