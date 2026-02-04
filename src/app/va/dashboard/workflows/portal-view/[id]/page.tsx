@@ -366,19 +366,6 @@ export default function AgreementPortalView({
     return <div className="p-10 text-black">Agreement not found.</div>;
 
   const isReadOnly = Boolean(!isVA && agreement.is_locked);
-  const statusLabel = (() => {
-    if (isVA) {
-      if (agreement.status === "draft") return "Draft";
-      if (agreement.status === "issued") return "Issued";
-      if (agreement.status === "change_submitted") return "Client change made";
-      if (agreement.status === "in_use") return "Agreement in use";
-      return agreement.status.replace("_", " ");
-    }
-    if (agreement.status === "issued") return "Agreement received";
-    if (agreement.status === "change_submitted") return "Change submitted";
-    if (agreement.status === "in_use") return "Agreement in use";
-    return agreement.status.replace("_", " ");
-  })();
   const defaultAuthorisationDisclaimer =
     "I understand this workflow agreement describes how work will be delivered and does not amend or replace the booking agreement.";
   const defaultAuthorisationConfirmation =
@@ -386,8 +373,18 @@ export default function AgreementPortalView({
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 text-black">
-      <div className="max-w-4xl mx-auto mt-6 flex flex-wrap items-center justify-end gap-4 print:hidden">
-        <div className="flex items-center gap-4 mr-auto text-sm font-semibold">
+      <div className="max-w-4xl mx-auto mt-6 flex flex-wrap items-center justify-between gap-4 print:hidden">
+        <div className="text-sm font-semibold">
+          {!isVA && (
+            <button
+              onClick={() => router.push("/client/dashboard")}
+              className="text-[#333333] hover:text-[#4a2e6f] transition-colors"
+            >
+              Back to homepage
+            </button>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-4 text-sm font-semibold">
           <button
             onClick={() => setLogsOpen(true)}
             className="text-[#9d4edd] hover:text-[#4A2E6F] transition-colors"
@@ -403,13 +400,13 @@ export default function AgreementPortalView({
               {isSaving ? "Saving..." : "Save progress"}
             </button>
           )}
+          <button
+            onClick={handlePrint}
+            className="px-6 py-2 border-2 border-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
+          >
+            Download / Print
+          </button>
         </div>
-        <button
-          onClick={handlePrint}
-          className="px-6 py-2 border-2 border-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
-        >
-          Download / Print
-        </button>
       </div>
 
       <div className="max-w-4xl mx-auto mt-4 flex flex-wrap items-center justify-end gap-4 print:hidden">
@@ -519,17 +516,6 @@ export default function AgreementPortalView({
               )}
             </div>
           </div>
-        </div>
-      )}
-
-      {!isVA && (
-        <div className="max-w-4xl mx-auto mt-6 text-sm font-semibold">
-          <button
-            onClick={() => router.push("/client/dashboard")}
-            className="text-[#333333] hover:text-[#4a2e6f] transition-colors"
-          >
-            Back to homepage
-          </button>
         </div>
       )}
 
