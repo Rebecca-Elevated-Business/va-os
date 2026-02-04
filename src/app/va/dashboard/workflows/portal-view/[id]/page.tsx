@@ -262,6 +262,11 @@ export default function AgreementPortalView({
     setIsAuthorising(false);
   };
 
+  const handlePrint = () => {
+    if (!agreement) return;
+    window.print();
+  };
+
   const handleRequestChanges = async () => {
     if (!agreement) return;
     setIsRequestingChanges(true);
@@ -381,25 +386,11 @@ export default function AgreementPortalView({
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 text-black">
-      <div className="bg-[#9d4edd] p-4 sticky top-0 z-50 shadow-lg flex justify-between items-center px-8">
-        <div className="text-white">
-          <p className="font-bold text-sm uppercase tracking-widest">
-            {statusLabel}
-          </p>
-          <p className="text-xs">
-            {agreement.status === "draft"
-              ? "Internal prep mode."
-              : agreement.status === "issued"
-              ? "Review details and save progress as needed."
-              : agreement.status === "change_submitted"
-              ? "Changes have been submitted for review."
-              : "Agreement currently in use."}
-          </p>
-        </div>
-        <div className="flex gap-4">
+      <div className="max-w-4xl mx-auto mt-6 flex flex-wrap items-center justify-end gap-4 print:hidden">
+        <div className="flex items-center gap-4 mr-auto text-sm font-semibold">
           <button
             onClick={() => setLogsOpen(true)}
-            className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded font-bold text-sm"
+            className="text-[#9d4edd] hover:text-[#4A2E6F] transition-colors"
           >
             View change log
           </button>
@@ -407,70 +398,78 @@ export default function AgreementPortalView({
             <button
               disabled={isSaving}
               onClick={handleSaveProgress}
-              className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded font-bold text-sm"
+              className="text-[#9d4edd] hover:text-[#4A2E6F] transition-colors"
             >
-              {isSaving ? "Saving..." : "Save Progress"}
+              {isSaving ? "Saving..." : "Save progress"}
             </button>
           )}
-
-          {isVA && agreement.status === "draft" && (
-            <button
-              disabled={isPublishing}
-              onClick={handlePublish}
-              className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded font-black text-sm shadow-xl transition-all"
-            >
-              {isPublishing ? "Issuing..." : "ISSUE TO CLIENT"}
-            </button>
-          )}
-
-          {isVA && agreement.status === "change_submitted" && (
-            <button
-              disabled={isAcknowledging}
-              onClick={handleAcknowledgeChanges}
-              className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded font-bold text-sm"
-            >
-              {isAcknowledging ? "Acknowledging..." : "ACKNOWLEDGE CHANGES"}
-            </button>
-          )}
-
-          {isVA && (
-            <button
-              disabled={isTogglingLock}
-              onClick={handleToggleLock}
-              className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded font-bold text-sm"
-            >
-              {agreement.is_locked ? "UNLOCK AGREEMENT" : "LOCK AGREEMENT"}
-            </button>
-          )}
-
-          {!isVA &&
-            !agreement.is_locked &&
-            (agreement.status === "issued" ||
-              agreement.status === "change_submitted" ||
-              agreement.status === "in_use") && (
-            <>
-              <button
-                disabled={isRequestingChanges}
-                onClick={handleRequestChanges}
-                className="bg-yellow-400 hover:bg-yellow-500 text-black px-4 py-2 rounded font-black text-sm shadow-xl"
-              >
-                {isRequestingChanges ? "Submitting..." : "SUBMIT CHANGES"}
-              </button>
-            </>
-          )}
-
-          {!isVA &&
-            (agreement.status === "issued" ||
-              agreement.status === "change_submitted") && (
-              <button
-                disabled={isAuthorising}
-                onClick={handleAuthorise}
-                className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded font-black text-sm shadow-xl animate-pulse"
-              >
-                {isAuthorising ? "Authorising..." : "AUTHORISE WORKFLOW"}
-              </button>
-            )}
         </div>
+        <button
+          onClick={handlePrint}
+          className="px-6 py-2 border-2 border-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
+        >
+          Download / Print
+        </button>
+      </div>
+
+      <div className="max-w-4xl mx-auto mt-4 flex flex-wrap items-center justify-end gap-4 print:hidden">
+        {isVA && agreement.status === "draft" && (
+          <button
+            disabled={isPublishing}
+            onClick={handlePublish}
+            className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded font-black text-sm shadow-xl transition-all"
+          >
+            {isPublishing ? "Issuing..." : "ISSUE TO CLIENT"}
+          </button>
+        )}
+
+        {isVA && agreement.status === "change_submitted" && (
+          <button
+            disabled={isAcknowledging}
+            onClick={handleAcknowledgeChanges}
+            className="border border-gray-200 text-gray-700 px-4 py-2 rounded font-bold text-sm hover:border-gray-300 hover:text-gray-900 transition-all"
+          >
+            {isAcknowledging ? "Acknowledging..." : "ACKNOWLEDGE CHANGES"}
+          </button>
+        )}
+
+        {isVA && (
+          <button
+            disabled={isTogglingLock}
+            onClick={handleToggleLock}
+            className="border border-gray-200 text-gray-700 px-4 py-2 rounded font-bold text-sm hover:border-gray-300 hover:text-gray-900 transition-all"
+          >
+            {agreement.is_locked ? "UNLOCK AGREEMENT" : "LOCK AGREEMENT"}
+          </button>
+        )}
+
+        {!isVA &&
+          !agreement.is_locked &&
+          (agreement.status === "issued" ||
+            agreement.status === "change_submitted" ||
+            agreement.status === "in_use") && (
+          <>
+            <button
+              disabled={isRequestingChanges}
+              onClick={handleRequestChanges}
+              className="border border-gray-200 text-gray-700 px-4 py-2 rounded font-bold text-sm hover:border-gray-300 hover:text-gray-900 transition-all"
+            >
+              {isRequestingChanges ? "Submitting..." : "SUBMIT CHANGES"}
+            </button>
+          </>
+        )}
+
+        {!isVA &&
+          (agreement.status === "issued" ||
+            agreement.status === "change_submitted") && (
+            <button
+              disabled={isAuthorising}
+              onClick={handleAuthorise}
+              className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded font-black text-sm shadow-xl animate-pulse"
+            >
+              {isAuthorising ? "Authorising..." : "AUTHORISE WORKFLOW"}
+            </button>
+          )}
       </div>
 
       {logsOpen && (
@@ -524,7 +523,7 @@ export default function AgreementPortalView({
       )}
 
       {!isVA && (
-        <div className="max-w-4xl mx-auto mt-8 text-sm font-semibold">
+        <div className="max-w-4xl mx-auto mt-6 text-sm font-semibold">
           <button
             onClick={() => router.push("/client/dashboard")}
             className="text-[#333333] hover:text-[#4a2e6f] transition-colors"
