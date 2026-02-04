@@ -45,13 +45,14 @@ export default function AgreementPortalView({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const { confirm, alert } = usePrompt();
+  const { confirm, alert, prompt } = usePrompt();
 
   const [agreement, setAgreement] = useState<Agreement | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isAuthorising, setIsAuthorising] = useState(false);
+  const [isRequestingChanges, setIsRequestingChanges] = useState(false);
   const [isVA, setIsVA] = useState(false);
 
   useEffect(() => {
@@ -97,10 +98,15 @@ export default function AgreementPortalView({
   const handleSaveProgress = async () => {
     if (!agreement) return;
     setIsSaving(true);
-    const { error } = await supabase
-      .from("client_agreements")
-      .update({ custom_structure: agreement.custom_structure })
-      .eq("id", id);
+    const { error } = isVA
+      ? await supabase
+          .from("client_agreements")
+          .update({ custom_structure: agreement.custom_structure })
+          .eq("id", id)
+      : await supabase.rpc("client_save_agreement_progress", {
+          agreement_id: id,
+          new_structure: agreement.custom_structure,
+        });
 
     if (!error) {
       await alert({
@@ -164,23 +170,12 @@ export default function AgreementPortalView({
     if (!ok) return;
 
     setIsAuthorising(true);
-    const { error } = await supabase
-      .from("client_agreements")
-      .update({
-        status: "active",
-        custom_structure: agreement.custom_structure,
-      })
-      .eq("id", id);
+    const { error } = await supabase.rpc("client_authorise_agreement", {
+      agreement_id: id,
+      new_structure: agreement.custom_structure,
+    });
 
     if (!error) {
-      await supabase.from("agreement_logs").insert([
-        {
-          agreement_id: id,
-          change_summary: "Client officially AUTHORISED the workflow",
-          snapshot: agreement.custom_structure,
-        },
-      ]);
-
       await alert({
         title: "Workflow authorised",
         message: "Workflow Authorised Successfully.",
@@ -190,11 +185,41 @@ export default function AgreementPortalView({
     setIsAuthorising(false);
   };
 
+  const handleRequestChanges = async () => {
+    if (!agreement) return;
+    const message = await prompt({
+      title: "Request changes",
+      message:
+        "Let your VA know what you want updated. Your notes will be sent and the agreement will return for review.",
+      confirmLabel: "Send request",
+      cancelLabel: "Cancel",
+      placeholder: "Describe the updates you need...",
+    });
+    if (!message || !message.trim()) return;
+
+    setIsRequestingChanges(true);
+    const { error } = await supabase.rpc("client_request_agreement_changes", {
+      agreement_id: id,
+      message: message.trim(),
+      new_structure: agreement.custom_structure,
+    });
+
+    if (!error) {
+      await alert({
+        title: "Request sent",
+        message: "Your VA has been notified and will review your changes.",
+      });
+      router.push("/client/dashboard");
+    }
+    setIsRequestingChanges(false);
+  };
+
   if (loading) return <div className="p-10 text-black">Loading Portal...</div>;
   if (!agreement)
     return <div className="p-10 text-black">Agreement not found.</div>;
 
-  const isReadOnly = agreement.status === "active";
+  const isReadOnly =
+    agreement.status === "active" || agreement.status === "change_requested";
   const defaultAuthorisationDisclaimer =
     "I understand this workflow agreement describes how work will be delivered and does not amend or replace the booking agreement.";
   const defaultAuthorisationConfirmation =
@@ -209,11 +234,15 @@ export default function AgreementPortalView({
               ? "Authorised Workflow"
               : agreement.status === "pending_client"
               ? "Pending Authorisation"
+              : agreement.status === "change_requested"
+              ? "Changes Requested"
               : "Internal Prep Mode"}
           </p>
           <p className="text-xs">
             {agreement.status === "active"
               ? "This document is now locked and active."
+              : agreement.status === "change_requested"
+              ? "Changes have been sent to your VA for review."
               : "Please review details and save progress as needed."}
           </p>
         </div>
@@ -239,13 +268,22 @@ export default function AgreementPortalView({
           )}
 
           {!isVA && agreement.status === "pending_client" && (
-            <button
-              disabled={isAuthorising}
-              onClick={handleAuthorise}
-              className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded font-black text-sm shadow-xl animate-pulse"
-            >
-              {isAuthorising ? "Authorising..." : "AUTHORISE WORKFLOW"}
-            </button>
+            <>
+              <button
+                disabled={isRequestingChanges}
+                onClick={handleRequestChanges}
+                className="bg-yellow-400 hover:bg-yellow-500 text-black px-4 py-2 rounded font-black text-sm shadow-xl"
+              >
+                {isRequestingChanges ? "Sending..." : "REQUEST CHANGES"}
+              </button>
+              <button
+                disabled={isAuthorising}
+                onClick={handleAuthorise}
+                className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded font-black text-sm shadow-xl animate-pulse"
+              >
+                {isAuthorising ? "Authorising..." : "AUTHORISE WORKFLOW"}
+              </button>
+            </>
           )}
         </div>
       </div>
