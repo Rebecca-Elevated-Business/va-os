@@ -374,41 +374,6 @@ export default function ClientDashboard() {
     await fetchTasks(safeClientId);
   };
 
-  const updateTask = async (
-    taskId: string,
-    payload: { task_name: string; details: string | null },
-  ) => {
-    if (!ensureClientReady()) return;
-    const safeClientId = clientId;
-    if (!safeClientId) return;
-    const { error } = await supabase
-      .from("tasks")
-      .update({
-        task_name: payload.task_name,
-        details: payload.details,
-      })
-      .eq("id", taskId);
-    if (error) {
-      await alert({
-        title: "Task not updated",
-        message: error.message,
-        tone: "danger",
-      });
-      return;
-    }
-    await notifyVa({
-      client_id: safeClientId,
-      type: "task_updated",
-      message: `Task updated: ${clientName || "Client"} updated "${payload.task_name}"`,
-      status: "new",
-      is_read: false,
-      is_completed: false,
-      is_starred: false,
-      task_id: taskId,
-    });
-    await fetchTasks(safeClientId);
-  };
-
   const markNotificationRead = async (notificationId: string) => {
     await supabase.rpc("mark_notification_read", {
       notification_id: notificationId,
@@ -970,7 +935,6 @@ export default function ClientDashboard() {
           clientId={clientId || ""}
           clientName={clientName || "Client"}
           onCreate={createTask}
-          onUpdate={updateTask}
         />
       </div>
     </main>

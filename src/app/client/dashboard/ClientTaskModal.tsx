@@ -25,10 +25,6 @@ type ClientTaskModalProps = {
     details: string | null;
     status: string;
   }) => Promise<void>;
-  onUpdate: (taskId: string, payload: {
-    task_name: string;
-    details: string | null;
-  }) => Promise<void>;
 };
 
 export default function ClientTaskModal({
@@ -38,10 +34,9 @@ export default function ClientTaskModal({
   clientId,
   clientName,
   onCreate,
-  onUpdate,
 }: ClientTaskModalProps) {
   const isEditing = Boolean(task);
-  const canEditFields = task?.created_by_client ?? true;
+  const canEditFields = !isEditing;
   const [formName, setFormName] = useState(task?.task_name || "");
   const [formDetails, setFormDetails] = useState(task?.details || "");
   const createStatus = task?.status || "todo";
@@ -55,14 +50,7 @@ export default function ClientTaskModal({
   const handleSave = async () => {
     if (!formName.trim()) return;
     setSaving(true);
-    if (task) {
-      if (canEditFields) {
-        await onUpdate(task.id, {
-          task_name: formName.trim(),
-          details: formDetails.trim() || null,
-        });
-      }
-    } else {
+    if (!task) {
       await onCreate({
         task_name: formName.trim(),
         details: formDetails.trim() || null,
@@ -99,7 +87,7 @@ export default function ClientTaskModal({
               value={formName}
               onChange={(e) => setFormName(e.target.value)}
               placeholder="What do you need done?"
-              disabled={isEditing && !canEditFields}
+              disabled={!canEditFields}
             />
           </div>
 
@@ -113,7 +101,7 @@ export default function ClientTaskModal({
               value={formDetails}
               onChange={(e) => setFormDetails(e.target.value)}
               placeholder="Optional details"
-              disabled={isEditing && !canEditFields}
+              disabled={!canEditFields}
             />
           </div>
 
@@ -136,15 +124,17 @@ export default function ClientTaskModal({
               onClick={onClose}
               className="px-4 py-2 rounded-lg border border-gray-200 text-xs font-bold text-[#333333]"
             >
-              Cancel
+              Close
             </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="px-4 py-2 rounded-lg bg-[#9d4edd] text-white text-xs font-bold"
-            >
-              {task ? "Save changes" : "Create task"}
-            </button>
+            {!task && (
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="px-4 py-2 rounded-lg bg-[#9d4edd] text-white text-xs font-bold"
+              >
+                Create task
+              </button>
+            )}
           </div>
         </div>
       </div>
