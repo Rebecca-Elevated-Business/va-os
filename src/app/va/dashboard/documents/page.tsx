@@ -114,7 +114,6 @@ export default function DocumentLibraryPage() {
     proposal: "Proposal",
     booking_form: "Booking Form",
     invoice: "Invoice",
-    upload: "Upload",
   };
 
   const handleGenerate = async () => {
@@ -125,8 +124,7 @@ export default function DocumentLibraryPage() {
         {
           client_id: selectedClient.id,
           type: selectedType.id,
-          title:
-            typeLabels[selectedType.id] ?? selectedType.id.replace("_", " "),
+          title: typeLabels[selectedType.id] ?? "",
           status: "draft",
           content: { sections: [] },
         },

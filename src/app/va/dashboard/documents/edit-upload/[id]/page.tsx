@@ -17,6 +17,7 @@ type ClientDoc = {
   client_id: string;
   title: string;
   status: string;
+  type: string;
   content: UploadContent;
 };
 
@@ -40,7 +41,14 @@ export default function EditUploadPage({
         .select("*")
         .eq("id", id)
         .single();
-      if (data) setDoc(data as ClientDoc);
+      if (data) {
+        const incoming = data as ClientDoc;
+        const normalizedTitle =
+          incoming.type === "upload" && incoming.title === "Upload"
+            ? ""
+            : incoming.title;
+        setDoc({ ...incoming, title: normalizedTitle });
+      }
       setLoading(false);
     }
     loadDoc();
