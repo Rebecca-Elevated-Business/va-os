@@ -91,7 +91,7 @@ function CreateDocumentForm() {
         {
           client_id: selectedClient.id,
           type: selectedType,
-          title: typeLabels[selectedType] ?? selectedType.replace("_", " "),
+          title: typeLabels[selectedType] ?? "",
           status: "draft",
           content: { sections: [] },
         },
