@@ -400,7 +400,6 @@ export default function ClientDocumentView({
     window.open(`/documents/print/${doc.id}`, "_blank", "noopener,noreferrer");
   };
 
-
   if (loading)
     return (
       <div className="p-10 text-gray-500 italic">
@@ -414,15 +413,16 @@ export default function ClientDocumentView({
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 text-black p-4 md:p-8 font-sans print:bg-white">
-      <div className="mb-4 text-sm font-semibold print:hidden">
-        <button
-          onClick={() => router.push("/client/dashboard")}
-          className="text-[#333333] hover:text-[#4a2e6f] transition-colors"
-        >
-          Back to homepage
-        </button>
-      </div>
-      <div className="max-w-4xl mx-auto bg-white shadow-2xl rounded-4xl overflow-hidden border border-gray-100 print:shadow-none print:border-none">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-4 text-sm font-semibold print:hidden">
+          <button
+            onClick={() => router.push("/client/dashboard")}
+            className="text-[#333333] hover:text-[#4a2e6f] transition-colors"
+          >
+            Back to homepage
+          </button>
+        </div>
+        <div className="bg-white shadow-2xl rounded-4xl overflow-hidden border border-gray-100 print:shadow-none print:border-none">
         {doc.content.header_image &&
           doc.type !== "upload" &&
           doc.type !== "proposal" &&
