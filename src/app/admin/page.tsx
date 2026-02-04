@@ -4,6 +4,7 @@ import { useEffect, useState, Fragment } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Pencil } from "lucide-react";
 
 type AdminUser = {
   id: string;
@@ -26,6 +27,7 @@ type AdminClient = {
 };
 
 const ADMIN_ROLES = new Set(["admin", "super_admin"]);
+const PROFILE_STATUS_OPTIONS = ["active", "paused", "revoked"] as const;
 
 export default function AdminHomePage() {
   const router = useRouter();
@@ -40,6 +42,11 @@ export default function AdminHomePage() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [expandedVaIds, setExpandedVaIds] = useState<string[]>([]);
+  const [editingStatusUserId, setEditingStatusUserId] = useState<string | null>(
+    null,
+  );
+  const [editingStatusValue, setEditingStatusValue] = useState<string>("active");
+  const [savingStatusId, setSavingStatusId] = useState<string | null>(null);
 
   const handleAdminSignOut = async () => {
     await supabase.auth.signOut();
@@ -160,6 +167,38 @@ export default function AdminHomePage() {
     );
 
     setRedirectUrl(payload.actionLink);
+  };
+
+  const startStatusEdit = (user: AdminUser) => {
+    setEditingStatusUserId(user.id);
+    setEditingStatusValue(user.status || "active");
+  };
+
+  const cancelStatusEdit = () => {
+    setEditingStatusUserId(null);
+    setEditingStatusValue("active");
+  };
+
+  const saveStatusEdit = async (userId: string) => {
+    setSavingStatusId(userId);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ status: editingStatusValue })
+      .eq("id", userId);
+
+    if (error) {
+      setError(error.message || "Failed to update status.");
+      setSavingStatusId(null);
+      return;
+    }
+
+    setUsers((prev) =>
+      prev.map((user) =>
+        user.id === userId ? { ...user, status: editingStatusValue } : user,
+      ),
+    );
+    setSavingStatusId(null);
+    setEditingStatusUserId(null);
   };
 
   const searchValue = searchQuery.trim().toLowerCase();
@@ -381,7 +420,49 @@ export default function AdminHomePage() {
                             </span>
                           </td>
                           <td className="px-6 py-4 text-gray-600">
-                            {user.status || "unknown"}
+                            {editingStatusUserId === user.id ? (
+                              <div className="flex items-center gap-2">
+                                <select
+                                  value={editingStatusValue}
+                                  onChange={(event) =>
+                                    setEditingStatusValue(event.target.value)
+                                  }
+                                  className="border border-gray-200 rounded-lg px-2 py-1 text-xs"
+                                >
+                                  {PROFILE_STATUS_OPTIONS.map((status) => (
+                                    <option key={status} value={status}>
+                                      {status}
+                                    </option>
+                                  ))}
+                                </select>
+                                <button
+                                  onClick={() => saveStatusEdit(user.id)}
+                                  disabled={savingStatusId === user.id}
+                                  className="text-xs font-semibold text-[#4a2e6f]"
+                                >
+                                  {savingStatusId === user.id
+                                    ? "Saving..."
+                                    : "Save"}
+                                </button>
+                                <button
+                                  onClick={cancelStatusEdit}
+                                  className="text-xs font-semibold text-gray-400"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span>{user.status || "unknown"}</span>
+                                <button
+                                  onClick={() => startStatusEdit(user)}
+                                  className="text-[#333333] hover:text-[#4a2e6f]"
+                                  aria-label="Edit status"
+                                >
+                                  <Pencil size={14} />
+                                </button>
+                              </div>
+                            )}
                           </td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-2">
