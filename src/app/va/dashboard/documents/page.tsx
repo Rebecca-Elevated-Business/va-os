@@ -114,6 +114,7 @@ export default function DocumentLibraryPage() {
     proposal: "Proposal",
     booking_form: "Booking Form",
     invoice: "Invoice",
+    upload: "Upload",
   };
 
   const handleGenerate = async () => {

@@ -234,6 +234,24 @@ export default function ClientDocumentView({
         doc_id: id,
         new_status: finalStatus,
       });
+    } else if (doc.type === "booking_form" && responseMode === "sign") {
+      if (!bookingContent) return;
+      setSignatureError("");
+      if (!isBookingReadyToSign(bookingContent)) {
+        setSignatureError("Please complete all required boxes.");
+        return;
+      }
+      if (!clientAgreed) {
+        setSignatureError(
+          "Please confirm you agree to the terms before signing.",
+        );
+        return;
+      }
+      const updates = pickBookingClientUpdates(bookingContent);
+      await supabase.rpc("client_sign_booking_form", {
+        doc_id: id,
+        updates,
+      });
     } else {
       await supabase
         .from("client_documents")
@@ -247,7 +265,9 @@ export default function ClientDocumentView({
     const fallbackMessage =
       doc.type === "invoice" && responseMode === "paid"
         ? "Invoice marked as paid."
-        : "Action taken by client.";
+        : doc.type === "booking_form" && responseMode === "sign"
+          ? "Booking form signed."
+          : "Action taken by client.";
 
     await supabase.from("client_requests").insert([
       {
@@ -274,32 +294,35 @@ export default function ClientDocumentView({
     "client_postal_address",
     "client_email",
     "client_phone",
-    "va_business_name",
-    "va_contact_name",
-    "va_job_title",
-    "va_contact_details",
-    "timeline_key_dates",
-    "working_hours",
-    "communication_channels",
-    "fee",
-    "payment_terms",
-    "prepayment_expiration",
-    "additional_hourly_rate",
-    "out_of_hours_rate",
-    "urgent_work_rate",
-    "additional_payment_charges",
-    "late_payment_interest",
+    "personal_data_processing",
     "purchase_order_number",
-    "data_privacy_link",
-    "insurance_cover",
-    "notice_period",
-    "special_terms",
-    "courts_jurisdiction",
-    "accept_by_date",
     "client_signature_name",
     "client_print_name",
     "client_business_name_signature",
   ];
+
+  const bookingClientUpdateFields: (keyof BookingFormContent)[] = [
+    "client_business_name",
+    "client_contact_name",
+    "client_job_title",
+    "client_postal_address",
+    "client_email",
+    "client_phone",
+    "personal_data_processing",
+    "purchase_order_number",
+    "client_signature_style",
+    "client_signature_name",
+    "client_print_name",
+    "client_business_name_signature",
+  ];
+
+  const pickBookingClientUpdates = (
+    content: BookingFormContent,
+  ): Partial<BookingFormContent> =>
+    bookingClientUpdateFields.reduce((acc, key) => {
+      acc[key] = content[key];
+      return acc;
+    }, {} as Partial<BookingFormContent>);
 
   const hasValue = (value: string) => value.trim().length > 0;
 
@@ -327,57 +350,23 @@ export default function ClientDocumentView({
   const handleSignBooking = async () => {
     if (!doc || !bookingContent) return;
     setSignatureError("");
-
     if (!isBookingReadyToSign(bookingContent)) {
-      setSignatureError(
-        "All required fields must be completed before signing."
-      );
-      return;
+      setSignatureError("Please complete all required boxes.");
     }
-
     if (!clientAgreed) {
       setSignatureError("Please confirm you agree to the terms before signing.");
-      return;
     }
-
-    const signedAt = new Date().toISOString();
-    const updatedContent = {
-      ...bookingContent,
-      client_signed_at: signedAt,
-    };
-
-    await supabase
-      .from("client_documents")
-      .update({
-        content: updatedContent,
-        status: "signed",
-        signed_at: signedAt,
-      })
-      .eq("id", doc.id);
-
-    await supabase.from("client_requests").insert([
-      {
-        client_id: doc.client_id,
-        type: "work",
-        status: "new",
-        message: "BOOKING FORM SIGNED: Client completed and signed the form.",
-      },
-    ]);
-
-    await alert({
-      title: "Booking form signed",
-      message: "Booking form signed and sent to your VA.",
-    });
-    router.push("/client/dashboard");
+    setResponseMode("sign");
   };
 
   const handleSendMessage = async () => {
     if (!doc) return;
     if (bookingContent) {
-      await supabase
-        .from("client_documents")
-        .update({ content: bookingContent })
-        .eq("id", doc.id);
+      const updates = pickBookingClientUpdates(bookingContent);
+      await supabase.rpc("client_update_booking_form", {
+        doc_id: doc.id,
+        updates,
+      });
     }
     await supabase.from("client_requests").insert([
       {
@@ -529,14 +518,23 @@ export default function ClientDocumentView({
                             {signatureError}
                           </p>
                         )}
+                        {!signatureError &&
+                          bookingContent &&
+                          !isBookingReadyToSign(bookingContent) && (
+                            <p className="text-xs text-gray-500">
+                              Please complete all required boxes.
+                            </p>
+                          )}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <button
                             onClick={handleSignBooking}
-                            disabled={
+                            className={`border-2 border-[#4a2e6f] bg-[#DED4ED] text-[#4a2e6f] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5 hover:bg-[#B29AD5] ${
+                              !bookingContent ||
                               !isBookingReadyToSign(bookingContent) ||
                               !clientAgreed
-                            }
-                            className="border-2 border-[#4a2e6f] bg-[#DED4ED] text-[#4a2e6f] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5 hover:bg-[#B29AD5] disabled:bg-gray-300"
+                                ? "opacity-60"
+                                : ""
+                            }`}
                           >
                             Sign & Send
                           </button>
@@ -647,6 +645,8 @@ export default function ClientDocumentView({
               <h3 className="text-xl font-black mb-4 tracking-tight">
                 {responseMode === "accept"
                   ? "Accept Proposal"
+                  : responseMode === "sign"
+                  ? "Sign & Send"
                   : responseMode === "paid"
                   ? "Mark as Paid"
                   : responseMode === "message"

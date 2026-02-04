@@ -43,6 +43,7 @@ const FieldRow = ({
   multiline,
   onChange,
   type = "text",
+  required,
 }: {
   label: string;
   value: string;
@@ -50,9 +51,13 @@ const FieldRow = ({
   multiline?: boolean;
   onChange?: (value: string) => void;
   type?: string;
+  required?: boolean;
 }) => (
   <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
-    <div className="text-xs font-bold text-gray-500">{label}</div>
+    <div className="text-xs font-bold text-gray-500">
+      {label}
+      {required && <span className="text-red-500"> *</span>}
+    </div>
     <div>
       {multiline ? (
         <textarea
@@ -108,6 +113,24 @@ export default function BookingFormDocument({
   const readOnlyVaSection = isPreview ? true : isClient ? true : false;
   const readOnlyNonClientSections = isPreview ? true : isClient ? true : false;
   const signatureLocked = isClient && !clientAgreed;
+  const clientRequiredFields = new Set<keyof BookingFormContent>([
+    "client_business_name",
+    "client_contact_name",
+    "client_job_title",
+    "client_postal_address",
+    "client_email",
+    "client_phone",
+    "personal_data_processing",
+    "purchase_order_number",
+    "client_signature_style",
+    "client_signature_name",
+    "client_print_name",
+    "client_business_name_signature",
+  ]);
+  const isClientRequired = (field: keyof BookingFormContent) =>
+    isClient && clientRequiredFields.has(field);
+  const isClientEditableNonClientField = (field: keyof BookingFormContent) =>
+    isClient && ["personal_data_processing", "purchase_order_number"].includes(field);
 
   const updateField = (
     field: keyof BookingFormContent,
@@ -200,6 +223,7 @@ export default function BookingFormDocument({
                 value={content.client_business_name}
                 readOnly={readOnlyAll || readOnlyClientSection}
                 onChange={(value) => updateField("client_business_name", value)}
+                required={isClientRequired("client_business_name")}
               />
             )}
             {!isFieldHidden("section1", "client_contact_name") && (
@@ -208,6 +232,7 @@ export default function BookingFormDocument({
                 value={content.client_contact_name}
                 readOnly={readOnlyAll || readOnlyClientSection}
                 onChange={(value) => updateField("client_contact_name", value)}
+                required={isClientRequired("client_contact_name")}
               />
             )}
             {!isFieldHidden("section1", "client_job_title") && (
@@ -216,6 +241,7 @@ export default function BookingFormDocument({
                 value={content.client_job_title}
                 readOnly={readOnlyAll || readOnlyClientSection}
                 onChange={(value) => updateField("client_job_title", value)}
+                required={isClientRequired("client_job_title")}
               />
             )}
             {!isFieldHidden("section1", "client_postal_address") && (
@@ -227,6 +253,7 @@ export default function BookingFormDocument({
                 onChange={(value) =>
                   updateField("client_postal_address", value)
                 }
+                required={isClientRequired("client_postal_address")}
               />
             )}
             {!isFieldHidden("section1", "client_email") && (
@@ -235,6 +262,7 @@ export default function BookingFormDocument({
                 value={content.client_email}
                 readOnly={readOnlyAll || readOnlyClientSection}
                 onChange={(value) => updateField("client_email", value)}
+                required={isClientRequired("client_email")}
               />
             )}
             {!isFieldHidden("section1", "client_phone") && (
@@ -243,6 +271,7 @@ export default function BookingFormDocument({
                 value={content.client_phone}
                 readOnly={readOnlyAll || readOnlyClientSection}
                 onChange={(value) => updateField("client_phone", value)}
+                required={isClientRequired("client_phone")}
               />
             )}
             {getVisibleExtraFields("section1").map((field) => (
@@ -406,8 +435,13 @@ export default function BookingFormDocument({
             <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
               <div className="text-xs font-bold text-gray-500">
                 Personal data processing required?
+                {isClientRequired("personal_data_processing") && (
+                  <span className="text-red-500"> *</span>
+                )}
               </div>
-              {readOnlyAll || readOnlyNonClientSections ? (
+              {readOnlyAll ||
+              (readOnlyNonClientSections &&
+                !isClientEditableNonClientField("personal_data_processing")) ? (
                 <div className="text-sm text-gray-500 py-3">
                   {content.personal_data_processing === "yes" ? "Yes" : "No"}
                 </div>
@@ -552,10 +586,15 @@ export default function BookingFormDocument({
               <FieldRow
                 label="Purchase order (PO number):"
                 value={content.purchase_order_number}
-                readOnly={readOnlyAll || readOnlyNonClientSections}
+                readOnly={
+                  readOnlyAll ||
+                  (readOnlyNonClientSections &&
+                    !isClientEditableNonClientField("purchase_order_number"))
+                }
                 onChange={(value) =>
                   updateField("purchase_order_number", value)
                 }
+                required={isClientRequired("purchase_order_number")}
               />
             )}
             {getVisibleExtraFields("section4").map((field) => (
@@ -703,11 +742,17 @@ export default function BookingFormDocument({
                     checked={clientAgreed}
                     onChange={(e) => onClientAgreeChange?.(e.target.checked)}
                   />
-                  I have read and agree to the terms & conditions.
+                  <span>
+                    I have read and agree to the terms & conditions
+                    <span className="text-red-500"> *</span>.
+                  </span>
                 </label>
                 <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
                   <div className="text-xs font-bold text-gray-500">
                     Signature style:
+                    {isClientRequired("client_signature_style") && (
+                      <span className="text-red-500"> *</span>
+                    )}
                   </div>
                   <select
                     className={`w-full rounded-2xl border-2 px-4 py-3 text-sm outline-none ${
@@ -735,6 +780,9 @@ export default function BookingFormDocument({
             <div className="grid gap-3 md:grid-cols-[0.45fr_0.55fr] items-start">
               <div className="text-xs font-bold text-gray-500">
                 Your signature:
+                {isClientRequired("client_signature_name") && (
+                  <span className="text-red-500"> *</span>
+                )}
               </div>
               <input
                 className={`w-full rounded-2xl border-2 px-4 py-3 text-2xl outline-none ${
@@ -754,6 +802,7 @@ export default function BookingFormDocument({
               value={content.client_print_name}
               readOnly={readOnlyAll || signatureLocked}
               onChange={(value) => updateField("client_print_name", value)}
+              required={isClientRequired("client_print_name")}
             />
             <FieldRow
               label="Your business name:"
@@ -762,6 +811,7 @@ export default function BookingFormDocument({
               onChange={(value) =>
                 updateField("client_business_name_signature", value)
               }
+              required={isClientRequired("client_business_name_signature")}
             />
             <FieldRow
               label="Date and time:"
