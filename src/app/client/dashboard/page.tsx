@@ -576,27 +576,6 @@ export default function ClientDashboard() {
           </div>
         </div>
 
-        {alertNotifications.length > 0 && (
-          <div className="rounded-3xl border border-purple-100 bg-purple-50/40 px-6 py-4">
-            <div className="text-xs font-semibold text-[#9d4edd]">
-              Latest alerts
-            </div>
-            <div className="mt-3 space-y-2">
-              {alertNotifications.slice(0, 3).map((note) => (
-                <div
-                  key={note.id}
-                  className="flex items-center justify-between gap-4 text-sm text-gray-700"
-                >
-                  <span className="font-medium">{note.message}</span>
-                  <span className="text-[11px] text-gray-400">
-                    {format(new Date(note.created_at), "d MMM, HH:mm")}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         <div className="rounded-3xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
           <div className="flex flex-wrap gap-2 text-sm font-semibold text-gray-500">
             {visibleTabs.map((tab) => (
