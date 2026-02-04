@@ -313,8 +313,8 @@ export default function VAInboxPage() {
                     if (!msg.is_read) toggleStatus(msg.id, "is_read", true);
                   }}
                   className={`group flex items-start gap-4 px-8 py-5 transition-colors cursor-pointer hover:bg-purple-50/40 ${
-                    !msg.is_read ? "bg-purple-50/30" : ""
-                  } ${msg.is_completed ? "text-gray-400" : "text-[#333333]"}`}
+                    msg.is_completed ? "text-gray-400" : "text-[#333333]"
+                  }`}
                 >
                   <button
                     onClick={(e) => {
@@ -332,9 +332,6 @@ export default function VAInboxPage() {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3">
-                      {!msg.is_read && (
-                        <span className="w-2 h-2 rounded-full bg-[#9d4edd] shadow-[0_0_0_2px_rgba(157,78,221,0.15)]" />
-                      )}
                       <h3
                         className={`text-sm font-bold leading-tight ${
                           msg.is_read
@@ -355,7 +352,13 @@ export default function VAInboxPage() {
                     <p className="text-xs text-gray-400 mt-0 leading-tight">
                       {msg.clients.business_name}
                     </p>
-                    <p className="text-sm text-gray-600 mt-2 truncate">
+                    <p
+                      className={`text-sm mt-2 truncate ${
+                        msg.is_read
+                          ? "text-gray-600 font-normal"
+                          : "text-gray-800 font-semibold"
+                      }`}
+                    >
                       {msg.message}
                     </p>
                   </div>
