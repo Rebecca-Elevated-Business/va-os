@@ -91,14 +91,6 @@ export default function ClientDashboard() {
     return status.replace("_", " ");
   };
 
-  const getDocumentStatusTone = (status: string) => {
-    if (status === "completed") return "bg-green-100 text-green-700";
-    if (status === "issued") return "bg-yellow-100 text-yellow-700";
-    if (status === "feedback_received")
-      return "bg-purple-100 text-purple-700";
-    return "bg-yellow-100 text-yellow-700";
-  };
-
   const fetchTasks = useCallback(async (clientIdValue: string) => {
     const { data } = await supabase
       .from("tasks")
@@ -782,7 +774,7 @@ export default function ClientDashboard() {
                           }
                           className="text-xs font-semibold text-[#9d4edd] hover:text-[#4A2E6F] transition-colors"
                         >
-                          {ag.status === "pending_client"
+                          {ag.status === "issued"
                             ? "Review & Sign"
                             : "View"}
                         </button>

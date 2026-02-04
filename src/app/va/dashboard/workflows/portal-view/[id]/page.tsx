@@ -36,6 +36,8 @@ type Agreement = {
   custom_structure: AgreementStructure;
   status: string;
   client_id: string;
+  va_id?: string | null;
+  is_locked?: boolean;
 };
 
 export default function AgreementPortalView({
@@ -45,7 +47,7 @@ export default function AgreementPortalView({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const { confirm, alert, prompt } = usePrompt();
+  const { confirm, alert } = usePrompt();
 
   const [agreement, setAgreement] = useState<Agreement | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,7 +55,22 @@ export default function AgreementPortalView({
   const [isPublishing, setIsPublishing] = useState(false);
   const [isAuthorising, setIsAuthorising] = useState(false);
   const [isRequestingChanges, setIsRequestingChanges] = useState(false);
+  const [isAcknowledging, setIsAcknowledging] = useState(false);
+  const [isTogglingLock, setIsTogglingLock] = useState(false);
   const [isVA, setIsVA] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [clientAuthId, setClientAuthId] = useState<string | null>(null);
+  const [clientDisplayName, setClientDisplayName] = useState<string>("Client");
+  const [vaDisplayName, setVaDisplayName] = useState<string>("VA");
+  const [logsOpen, setLogsOpen] = useState(false);
+  const [agreementLogs, setAgreementLogs] = useState<
+    {
+      id: string;
+      changed_by: string | null;
+      change_summary: string | null;
+      created_at: string | null;
+    }[]
+  >([]);
 
   useEffect(() => {
     async function loadInitialData() {
@@ -61,12 +78,24 @@ export default function AgreementPortalView({
         data: { user },
       } = await supabase.auth.getUser();
       if (user) {
+        setCurrentUserId(user.id);
         const { data: profile } = await supabase
           .from("profiles")
           .select("role")
           .eq("id", user.id)
           .single();
         if (profile?.role === "va") setIsVA(true);
+        if (profile?.role === "va") {
+          const { data: profileName } = await supabase
+            .from("profiles")
+            .select("full_name, first_name, surname")
+            .eq("id", user.id)
+            .single();
+          const vaName =
+            profileName?.full_name ||
+            `${profileName?.first_name || ""} ${profileName?.surname || ""}`.trim();
+          if (vaName) setVaDisplayName(vaName);
+        }
       }
 
       const { data } = await supabase
@@ -75,17 +104,47 @@ export default function AgreementPortalView({
         .eq("id", id)
         .single();
       if (data) setAgreement(data as Agreement);
+      if (data) {
+        const { data: client } = await supabase
+          .from("clients")
+          .select("auth_user_id, first_name, surname, business_name")
+          .eq("id", (data as Agreement).client_id)
+          .single();
+        if (client?.auth_user_id) setClientAuthId(client.auth_user_id);
+        if (client) {
+          const name = `${client.first_name || ""} ${client.surname || ""}`.trim();
+          setClientDisplayName(
+            name || client.business_name || "Client",
+          );
+        }
+      }
       setLoading(false);
     }
     loadInitialData();
   }, [id]);
+
+  useEffect(() => {
+    if (!logsOpen || !agreement) return;
+    const loadLogs = async () => {
+      const { data } = await supabase
+        .from("agreement_logs")
+        .select("id, changed_by, change_summary, created_at")
+        .eq("agreement_id", agreement.id)
+        .order("created_at", { ascending: false });
+      setAgreementLogs(
+        (data as { id: string; changed_by: string | null; change_summary: string | null; created_at: string | null }[]) ||
+          [],
+      );
+    };
+    void loadLogs();
+  }, [logsOpen, agreement]);
 
   const handleUpdateValue = (
     sectionId: string,
     itemId: string,
     newValue: AgreementValue
   ) => {
-    if (!agreement || agreement.status === "active") return;
+    if (!agreement || (!isVA && agreement.is_locked)) return;
     const newStructure = { ...agreement.custom_structure };
     const section = newStructure.sections.find((s) => s.id === sectionId);
     const item = section?.items.find((i) => i.id === itemId);
@@ -109,6 +168,24 @@ export default function AgreementPortalView({
         });
 
     if (!error) {
+      if (isVA) {
+        await supabase.from("agreement_logs").insert([
+          {
+            agreement_id: id,
+            change_summary: "VA updated agreement content",
+            snapshot: agreement.custom_structure,
+          },
+        ]);
+        if (agreement.status === "in_use") {
+          await supabase.from("client_notifications").insert([
+            {
+              client_id: agreement.client_id,
+              type: "agreement_updated",
+              message: `Agreement updated: ${agreement.title}`,
+            },
+          ]);
+        }
+      }
       await alert({
         title: "Progress saved",
         message: "Progress saved successfully.",
@@ -130,7 +207,7 @@ export default function AgreementPortalView({
     const { error } = await supabase
       .from("client_agreements")
       .update({
-        status: "pending_client",
+        status: "issued",
         custom_structure: agreement.custom_structure,
       })
       .eq("id", id);
@@ -187,20 +264,10 @@ export default function AgreementPortalView({
 
   const handleRequestChanges = async () => {
     if (!agreement) return;
-    const message = await prompt({
-      title: "Request changes",
-      message:
-        "Let your VA know what you want updated. Your notes will be sent and the agreement will return for review.",
-      confirmLabel: "Send request",
-      cancelLabel: "Cancel",
-      placeholder: "Describe the updates you need...",
-    });
-    if (!message || !message.trim()) return;
-
     setIsRequestingChanges(true);
     const { error } = await supabase.rpc("client_request_agreement_changes", {
       agreement_id: id,
-      message: message.trim(),
+      message: "",
       new_structure: agreement.custom_structure,
     });
 
@@ -214,12 +281,99 @@ export default function AgreementPortalView({
     setIsRequestingChanges(false);
   };
 
+  const handleAcknowledgeChanges = async () => {
+    if (!agreement) return;
+    const ok = await confirm({
+      title: "Acknowledge changes?",
+      message:
+        "This will acknowledge the client's updates and move the agreement to in use.",
+      confirmLabel: "Acknowledge",
+    });
+    if (!ok) return;
+    setIsAcknowledging(true);
+    const { error } = await supabase
+      .from("client_agreements")
+      .update({ status: "in_use", last_updated_at: new Date().toISOString() })
+      .eq("id", id);
+    if (!error) {
+      await supabase.from("agreement_logs").insert([
+        {
+          agreement_id: id,
+          change_summary: "VA acknowledged client changes",
+          snapshot: agreement.custom_structure,
+        },
+      ]);
+      await supabase.from("client_notifications").insert([
+        {
+          client_id: agreement.client_id,
+          type: "agreement_acknowledged",
+          message: `Changes acknowledged: ${agreement.title}`,
+        },
+      ]);
+      setAgreement({ ...agreement, status: "in_use" });
+      await alert({
+        title: "Changes acknowledged",
+        message: "The agreement is now in use.",
+      });
+    }
+    setIsAcknowledging(false);
+  };
+
+  const handleToggleLock = async () => {
+    if (!agreement || !isVA) return;
+    const nextLocked = !agreement.is_locked;
+    const ok = await confirm({
+      title: nextLocked ? "Lock agreement?" : "Unlock agreement?",
+      message: nextLocked
+        ? "Clients will no longer be able to edit this agreement."
+        : "Clients will be able to edit this agreement again.",
+      confirmLabel: nextLocked ? "Lock agreement" : "Unlock agreement",
+    });
+    if (!ok) return;
+    setIsTogglingLock(true);
+    const { error } = await supabase
+      .from("client_agreements")
+      .update({ is_locked: nextLocked })
+      .eq("id", id);
+    if (!error) {
+      setAgreement({ ...agreement, is_locked: nextLocked });
+      await supabase.from("agreement_logs").insert([
+        {
+          agreement_id: id,
+          change_summary: nextLocked
+            ? "VA locked the agreement"
+            : "VA unlocked the agreement",
+          snapshot: agreement.custom_structure,
+        },
+      ]);
+      await alert({
+        title: nextLocked ? "Agreement locked" : "Agreement unlocked",
+        message: nextLocked
+          ? "Clients can no longer edit this agreement."
+          : "Clients can edit this agreement again.",
+      });
+    }
+    setIsTogglingLock(false);
+  };
+
   if (loading) return <div className="p-10 text-black">Loading Portal...</div>;
   if (!agreement)
     return <div className="p-10 text-black">Agreement not found.</div>;
 
-  const isReadOnly =
-    agreement.status === "active" || agreement.status === "change_requested";
+  const isReadOnly = Boolean(!isVA && agreement.is_locked);
+  const statusLabel = (() => {
+    if (isVA) {
+      if (agreement.status === "draft") return "Draft";
+      if (agreement.status === "issued") return "Issued";
+      if (agreement.status === "change_submitted") return "Client change made";
+      if (agreement.status === "in_use") return "Agreement in use";
+      return agreement.status.replace("_", " ");
+    }
+    if (agreement.status === "issued") return "Agreement received";
+    if (agreement.status === "change_submitted") return "Change submitted";
+    if (agreement.status === "in_use") return "Agreement in use";
+    return agreement.status.replace("_", " ");
+  })();
   const defaultAuthorisationDisclaimer =
     "I understand this workflow agreement describes how work will be delivered and does not amend or replace the booking agreement.";
   const defaultAuthorisationConfirmation =
@@ -230,23 +384,25 @@ export default function AgreementPortalView({
       <div className="bg-[#9d4edd] p-4 sticky top-0 z-50 shadow-lg flex justify-between items-center px-8">
         <div className="text-white">
           <p className="font-bold text-sm uppercase tracking-widest">
-            {agreement.status === "active"
-              ? "Authorised Workflow"
-              : agreement.status === "pending_client"
-              ? "Pending Authorisation"
-              : agreement.status === "change_requested"
-              ? "Changes Requested"
-              : "Internal Prep Mode"}
+            {statusLabel}
           </p>
           <p className="text-xs">
-            {agreement.status === "active"
-              ? "This document is now locked and active."
-              : agreement.status === "change_requested"
-              ? "Changes have been sent to your VA for review."
-              : "Please review details and save progress as needed."}
+            {agreement.status === "draft"
+              ? "Internal prep mode."
+              : agreement.status === "issued"
+              ? "Review details and save progress as needed."
+              : agreement.status === "change_submitted"
+              ? "Changes have been submitted for review."
+              : "Agreement currently in use."}
           </p>
         </div>
         <div className="flex gap-4">
+          <button
+            onClick={() => setLogsOpen(true)}
+            className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded font-bold text-sm"
+          >
+            View change log
+          </button>
           {!isReadOnly && (
             <button
               disabled={isSaving}
@@ -267,15 +423,45 @@ export default function AgreementPortalView({
             </button>
           )}
 
-          {!isVA && agreement.status === "pending_client" && (
+          {isVA && agreement.status === "change_submitted" && (
+            <button
+              disabled={isAcknowledging}
+              onClick={handleAcknowledgeChanges}
+              className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded font-bold text-sm"
+            >
+              {isAcknowledging ? "Acknowledging..." : "ACKNOWLEDGE CHANGES"}
+            </button>
+          )}
+
+          {isVA && (
+            <button
+              disabled={isTogglingLock}
+              onClick={handleToggleLock}
+              className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded font-bold text-sm"
+            >
+              {agreement.is_locked ? "UNLOCK AGREEMENT" : "LOCK AGREEMENT"}
+            </button>
+          )}
+
+          {!isVA &&
+            !agreement.is_locked &&
+            (agreement.status === "issued" ||
+              agreement.status === "change_submitted" ||
+              agreement.status === "in_use") && (
             <>
               <button
                 disabled={isRequestingChanges}
                 onClick={handleRequestChanges}
                 className="bg-yellow-400 hover:bg-yellow-500 text-black px-4 py-2 rounded font-black text-sm shadow-xl"
               >
-                {isRequestingChanges ? "Sending..." : "REQUEST CHANGES"}
+                {isRequestingChanges ? "Submitting..." : "SUBMIT CHANGES"}
               </button>
+            </>
+          )}
+
+          {!isVA &&
+            (agreement.status === "issued" ||
+              agreement.status === "change_submitted") && (
               <button
                 disabled={isAuthorising}
                 onClick={handleAuthorise}
@@ -283,10 +469,59 @@ export default function AgreementPortalView({
               >
                 {isAuthorising ? "Authorising..." : "AUTHORISE WORKFLOW"}
               </button>
-            </>
-          )}
+            )}
         </div>
       </div>
+
+      {logsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl border border-gray-100">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h2 className="text-lg font-bold text-gray-900">Change log</h2>
+              <button
+                onClick={() => setLogsOpen(false)}
+                className="text-sm font-semibold text-gray-400 hover:text-gray-600"
+              >
+                Close
+              </button>
+            </div>
+            <div className="max-h-105 overflow-auto px-6 py-4 space-y-4">
+              {agreementLogs.length === 0 ? (
+                <div className="text-sm text-gray-400">No changes yet.</div>
+              ) : (
+                agreementLogs.map((log) => {
+                  const actor =
+                    log.changed_by && log.changed_by === currentUserId
+                      ? "You"
+                      : log.changed_by && log.changed_by === clientAuthId
+                      ? clientDisplayName
+                      : vaDisplayName || "VA";
+                  return (
+                    <div
+                      key={log.id}
+                      className="border border-gray-100 rounded-xl p-4"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-sm font-semibold text-gray-900">
+                          {actor}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {log.created_at
+                            ? new Date(log.created_at).toLocaleString()
+                            : ""}
+                        </div>
+                      </div>
+                      <div className="mt-2 text-sm text-gray-600">
+                        {log.change_summary || "Update"}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {!isVA && (
         <div className="max-w-4xl mx-auto mt-8 text-sm font-semibold">
@@ -301,7 +536,7 @@ export default function AgreementPortalView({
 
       <div className="max-w-4xl mx-auto mt-6 bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-200">
         <div className="bg-gray-900 p-12 text-white text-center">
-          <h1 className="text-4xl font-black mb-2 tracking-tight uppercase text-white">
+          <h1 className="text-4xl font-black mb-2 tracking-tight uppercase text-white!">
             Service Agreement
           </h1>
           <p className="text-gray-400 uppercase tracking-[0.2em] text-sm">

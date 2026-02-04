@@ -142,9 +142,8 @@ const formatDocStatus = (status: string) => {
   const labels: Record<string, string> = {
     draft: "Draft",
     issued: "Issued",
-    pending_client: "Issued",
-    change_requested: "Changes requested",
-    active: "Active",
+    change_submitted: "Client change made",
+    in_use: "Agreement in use",
     authorised: "Accepted",
     accepted: "Proposal accepted",
     signed: "Booking form signed",

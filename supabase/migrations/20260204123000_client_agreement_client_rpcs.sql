@@ -29,7 +29,8 @@ begin
       last_updated_at = now()
   where id = agreement_id
     and client_id = v_client_id
-    and status = 'pending_client';
+    and is_locked = false
+    and status in ('issued', 'change_submitted', 'in_use');
 
   if not found then
     raise exception 'Agreement not found or not available for update';
@@ -63,12 +64,12 @@ begin
   end if;
 
   update client_agreements
-  set status = 'active',
+  set status = 'in_use',
       custom_structure = new_structure,
       last_updated_at = now()
   where id = agreement_id
     and client_id = v_client_id
-    and status = 'pending_client'
+    and status in ('issued', 'change_submitted')
   returning title into v_title;
 
   if not found then
@@ -83,7 +84,7 @@ begin
   ) values (
     agreement_id,
     auth.uid(),
-    'Client officially AUTHORISED the workflow',
+    'Client authorised the agreement',
     new_structure
   );
 
@@ -115,6 +116,7 @@ as $$
 declare
   v_client_id uuid;
   v_title text;
+  v_message text;
 begin
   select id
     into v_client_id
@@ -130,12 +132,13 @@ begin
   end if;
 
   update client_agreements
-  set status = 'change_requested',
+  set status = 'change_submitted',
       custom_structure = new_structure,
       last_updated_at = now()
   where id = agreement_id
     and client_id = v_client_id
-    and status = 'pending_client'
+    and is_locked = false
+    and status in ('issued', 'change_submitted', 'in_use')
   returning title into v_title;
 
   if not found then
@@ -146,6 +149,20 @@ begin
     raise exception 'Requests portal not enabled';
   end if;
 
+  v_message := nullif(btrim(message), '');
+
+  insert into agreement_logs (
+    agreement_id,
+    changed_by,
+    change_summary,
+    snapshot
+  ) values (
+    agreement_id,
+    auth.uid(),
+    'Client submitted changes',
+    new_structure
+  );
+
   insert into client_requests (
     client_id,
     type,
@@ -153,7 +170,12 @@ begin
   ) values (
     v_client_id,
     'work',
-    'WORKFLOW CHANGE REQUEST (' || coalesce(v_title, 'Agreement') || '): ' || message
+    case
+      when v_message is null then
+        'WORKFLOW CHANGES SUBMITTED (' || coalesce(v_title, 'Agreement') || ')'
+      else
+        'WORKFLOW CHANGES SUBMITTED (' || coalesce(v_title, 'Agreement') || '): ' || v_message
+    end
   );
 end;
 $$;

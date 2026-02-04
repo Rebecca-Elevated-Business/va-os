@@ -171,7 +171,7 @@ export default function EditAgreementPage({
     const { error } = await supabase
       .from("client_agreements")
       .update({
-        status: "pending_client",
+        status: "issued",
         custom_structure: agreement.custom_structure,
       })
       .eq("id", id);
