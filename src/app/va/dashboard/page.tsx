@@ -16,6 +16,7 @@ type InboxMessage = {
   message: string;
   is_read: boolean;
   is_completed: boolean;
+  is_starred: boolean;
   clients: {
     first_name: string;
     surname: string;
@@ -120,7 +121,7 @@ export default function VADashboard() {
       supabase
         .from("client_requests")
         .select(
-          "id, created_at, client_id, type, message, is_read, is_completed, clients(first_name, surname, business_name, va_id)",
+          "id, created_at, client_id, type, message, is_read, is_completed, is_starred, clients(first_name, surname, business_name, va_id)",
         )
         .order("created_at", { ascending: false }),
       supabase
@@ -250,8 +251,8 @@ export default function VADashboard() {
   const unreadCount = messages.filter(
     (msg) => !msg.is_read && !msg.is_completed,
   ).length;
-  const pendingApprovalCount = messages.filter(
-    (msg) => msg.type === "document" && !msg.is_completed,
+  const starredCount = messages.filter(
+    (msg) => msg.is_starred && !msg.is_completed,
   ).length;
   const replyNeededCount = messages.filter(
     (msg) => msg.type === "work" && !msg.is_completed,
@@ -261,7 +262,6 @@ export default function VADashboard() {
     () => clients.filter((client) => client.status === selectedStatus),
     [clients, selectedStatus],
   );
-
   const totalMinutesToday = useMemo(
     () => timeEntries.reduce((sum, entry) => sum + entry.duration_minutes, 0),
     [timeEntries],
@@ -278,12 +278,17 @@ export default function VADashboard() {
     const sessionStart = new Date(activeSession.started_at);
     const effectiveStart =
       sessionStart > startOfToday ? sessionStart : startOfToday;
-    const seconds = Math.floor((now.getTime() - effectiveStart.getTime()) / 1000);
+    const seconds = Math.floor(
+      (now.getTime() - effectiveStart.getTime()) / 1000,
+    );
     return Math.max(0, seconds);
   }, [activeSession, isRunning]);
 
   const totalSecondsToday = useMemo(() => {
-    return Math.max(0, Math.round(totalMinutesToday * 60) + sessionTodaySeconds);
+    return Math.max(
+      0,
+      Math.round(totalMinutesToday * 60) + sessionTodaySeconds,
+    );
   }, [sessionTodaySeconds, totalMinutesToday]);
 
   const todayDuration = useMemo(
@@ -481,28 +486,24 @@ export default function VADashboard() {
               Priority Inbox
             </h3>
             <p className="text-xs text-gray-500">
-              Unread, approvals, and action-needed
+              Unread, starred, and action-needed
             </p>
           </div>
           <div className="p-6 space-y-3">
             <div className="flex items-center justify-between text-sm font-semibold text-gray-800">
               <span>Unread messages</span>
               <span
-                className={
-                  unreadCount > 0 ? "text-red-600" : "text-gray-700"
-                }
+                className={unreadCount > 0 ? "text-red-600" : "text-gray-700"}
               >
                 {unreadCount}
               </span>
             </div>
             <div className="flex items-center justify-between text-sm font-semibold text-gray-800">
-              <span>Pending approvals</span>
+              <span>Starred</span>
               <span
-                className={
-                  pendingApprovalCount > 0 ? "text-red-600" : "text-gray-700"
-                }
+                className={starredCount > 0 ? "text-red-600" : "text-gray-700"}
               >
-                {pendingApprovalCount}
+                {starredCount}
               </span>
             </div>
             <div className="flex items-center justify-between text-sm font-semibold text-gray-800">
