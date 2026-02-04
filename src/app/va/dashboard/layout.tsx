@@ -33,8 +33,30 @@ export default function VADashboardLayout({
   const [authorized, setAuthorized] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [clientIds, setClientIds] = useState<string[]>([]);
 
-  const checkAccessAndUnread = useCallback(async () => {
+  const refreshUnreadCount = useCallback(
+    async (ids?: string[]) => {
+      const idsToUse = ids ?? clientIds;
+      if (idsToUse.length === 0) {
+        setUnreadCount(0);
+        return;
+      }
+
+      const { count } = await supabase
+        .from("client_requests")
+        .select("id", { count: "exact", head: true })
+        .in("client_id", idsToUse)
+        .eq("is_read", false)
+        .eq("is_completed", false);
+
+      setUnreadCount(count || 0);
+    },
+    [clientIds],
+  );
+
+  const checkAccess = useCallback(async () => {
     try {
       const {
         data: { session },
@@ -44,6 +66,7 @@ export default function VADashboardLayout({
         router.push("/va/login");
         return;
       }
+      setUserId(session.user.id);
 
       const { data: profile } = await supabase
         .from("profiles")
@@ -63,45 +86,82 @@ export default function VADashboardLayout({
         .select("id")
         .eq("va_id", session.user.id);
 
-      const clientIds = (clientRows || []).map((row) => row.id);
-
-      if (clientIds.length === 0) {
-        setUnreadCount(0);
-        return;
-      }
-
-      const { count } = await supabase
-        .from("client_requests")
-        .select("id", { count: "exact", head: true })
-        .in("client_id", clientIds)
-        .eq("is_read", false)
-        .eq("is_completed", false);
-
-      setUnreadCount(count || 0);
+      const ids = (clientRows || []).map((row) => row.id);
+      setClientIds(ids);
+      await refreshUnreadCount(ids);
     } catch (error) {
       console.error("Dashboard Access Error:", error);
     }
-  }, [router]);
+  }, [refreshUnreadCount, router]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      checkAccessAndUnread();
+      checkAccess();
     }, 0);
-
-    const sub = supabase
-      .channel("inbox-badge")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "client_requests" },
-        checkAccessAndUnread,
-      )
-      .subscribe();
 
     return () => {
       clearTimeout(timer);
-      supabase.removeChannel(sub);
     };
-  }, [checkAccessAndUnread]);
+  }, [checkAccess]);
+
+  useEffect(() => {
+    if (clientIds.length === 0) return;
+
+    const clientIdSet = new Set(clientIds);
+    const isUnread = (record?: {
+      client_id?: string;
+      is_read?: boolean;
+      is_completed?: boolean;
+    }) =>
+      !!record &&
+      !!record.client_id &&
+      clientIdSet.has(record.client_id) &&
+      record.is_read === false &&
+      record.is_completed === false;
+
+    const channel = supabase
+      .channel(`inbox-badge-${userId ?? "anon"}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "client_requests" },
+        (payload) => {
+          const eventType = payload.eventType;
+          const nextUnread = isUnread(payload.new as typeof payload.new);
+          const prevUnread = isUnread(payload.old as typeof payload.old);
+
+          if (eventType === "INSERT") {
+            if (nextUnread) setUnreadCount((prev) => prev + 1);
+            return;
+          }
+
+          if (eventType === "DELETE") {
+            if (prevUnread) {
+              setUnreadCount((prev) => Math.max(0, prev - 1));
+            }
+            return;
+          }
+
+          if (eventType === "UPDATE") {
+            if (nextUnread === prevUnread) return;
+            setUnreadCount((prev) =>
+              Math.max(0, prev + (nextUnread ? 1 : -1)),
+            );
+            return;
+          }
+
+          refreshUnreadCount();
+        },
+      )
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          refreshUnreadCount();
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [clientIds, refreshUnreadCount, userId]);
 
   const navItems = [
     { name: "Dashboard", href: "/va/dashboard", icon: LayoutDashboard },
