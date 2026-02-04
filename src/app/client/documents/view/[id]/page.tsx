@@ -17,10 +17,7 @@ import {
   mergeBookingContent,
   type BookingFormContent,
 } from "@/lib/bookingFormContent";
-import {
-  mergeInvoiceContent,
-  type InvoiceContent,
-} from "@/lib/invoiceContent";
+import { mergeInvoiceContent, type InvoiceContent } from "@/lib/invoiceContent";
 import { usePrompt } from "@/components/ui/PromptProvider";
 
 type ClientDoc = {
@@ -101,13 +98,22 @@ export default function ClientDocumentView({
   const [comment, setComment] = useState("");
   const [bookingContent, setBookingContent] =
     useState<BookingFormContent | null>(null);
-  const [invoiceContent, setInvoiceContent] =
-    useState<InvoiceContent | null>(null);
-  const [invoiceReport, setInvoiceReport] =
-    useState<InvoiceTimeReport | null>(null);
+  const [invoiceContent, setInvoiceContent] = useState<InvoiceContent | null>(
+    null,
+  );
+  const [invoiceReport, setInvoiceReport] = useState<InvoiceTimeReport | null>(
+    null,
+  );
   const [clientAgreed, setClientAgreed] = useState(false);
   const [signatureError, setSignatureError] = useState("");
   const [signedUploadUrl, setSignedUploadUrl] = useState<string | null>(null);
+  const uploadExtension = (() => {
+    const fileName = doc?.content.file_name || doc?.content.file_path || "";
+    const parts = fileName.split(".");
+    return parts.length > 1 ? parts.pop()!.toLowerCase() : "";
+  })();
+  const isPdfUpload = uploadExtension === "pdf";
+  const isImageUpload = ["png", "jpg", "jpeg"].includes(uploadExtension);
 
   useEffect(() => {
     async function loadDoc() {
@@ -144,7 +150,7 @@ export default function ClientDocumentView({
     const timer = setTimeout(() => {
       if (doc.type === "booking_form") {
         setBookingContent(
-          mergeBookingContent(doc.content as BookingFormContent)
+          mergeBookingContent(doc.content as BookingFormContent),
         );
       } else {
         setBookingContent(null);
@@ -201,9 +207,16 @@ export default function ClientDocumentView({
       setInvoiceReport({
         ...(reportData as InvoiceTimeReport),
         entries:
-          (entryData as (InvoiceTimeReport["entries"][number] & {
-            time_entries?: { session_id: string | null; task_id: string | null } | null;
-          })[] | null)?.map((entry) => ({
+          (
+            entryData as
+              | (InvoiceTimeReport["entries"][number] & {
+                  time_entries?: {
+                    session_id: string | null;
+                    task_id: string | null;
+                  } | null;
+                })[]
+              | null
+          )?.map((entry) => ({
             entry_date: entry.entry_date,
             task_title: entry.task_title,
             duration_seconds: entry.duration_seconds,
@@ -321,10 +334,9 @@ export default function ClientDocumentView({
   ): Partial<BookingFormContent> => {
     const updates = {} as Partial<BookingFormContent>;
     bookingClientUpdateFields.forEach((key) => {
-      (updates as Record<
-        string,
-        BookingFormContent[keyof BookingFormContent]
-      >)[key] = content[key];
+      (updates as Record<string, BookingFormContent[keyof BookingFormContent]>)[
+        key
+      ] = content[key];
     });
     return updates;
   };
@@ -341,12 +353,12 @@ export default function ClientDocumentView({
     ]);
     const missingFields = requiredBookingFields.filter(
       (field) =>
-        !hiddenFields.has(field) && !hasValue(String(content[field] || ""))
+        !hiddenFields.has(field) && !hasValue(String(content[field] || "")),
     );
     const missingServiceFields = hiddenFields.has("services")
       ? false
       : content.services.some(
-          (service) => !hasValue(service.title) || !hasValue(service.details)
+          (service) => !hasValue(service.title) || !hasValue(service.details),
         );
 
     return missingFields.length === 0 && !missingServiceFields;
@@ -359,7 +371,9 @@ export default function ClientDocumentView({
       setSignatureError("Please complete all required boxes.");
     }
     if (!clientAgreed) {
-      setSignatureError("Please confirm you agree to the terms before signing.");
+      setSignatureError(
+        "Please confirm you agree to the terms before signing.",
+      );
     }
     setResponseMode("sign");
   };
@@ -460,251 +474,275 @@ export default function ClientDocumentView({
 
             {(() => {
               switch (doc.type) {
-              case "proposal": {
-                const proposalContent = mergeProposalContent(
-                  doc.content as ProposalContent
-                );
-                return (
-                  <div className="space-y-10">
-                    <div className="flex justify-end print:hidden">
-                      <button
-                        onClick={handlePrint}
-                        className="px-6 py-2 border-2 border-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
-                      >
-                        Download / Print
-                      </button>
+                case "proposal": {
+                  const proposalContent = mergeProposalContent(
+                    doc.content as ProposalContent,
+                  );
+                  return (
+                    <div className="space-y-10">
+                      <div className="flex justify-end print:hidden">
+                        <button
+                          onClick={handlePrint}
+                          className="px-6 py-2 border-2 border-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
+                        >
+                          Download / Print
+                        </button>
+                      </div>
+                      <ProposalDocument content={proposalContent} />
+                      <div className="grid grid-cols-2 gap-4 pt-6 print:hidden">
+                        <button
+                          onClick={() => setResponseMode("accept")}
+                          className="border-2 border-[#4a2e6f] bg-[#DED4ED] text-[#4a2e6f] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5 hover:bg-[#B29AD5]"
+                        >
+                          Accept Proposal
+                        </button>
+                        <button
+                          onClick={() => setResponseMode("edit")}
+                          className="border-2 border-[#333333] text-[#333333] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5"
+                        >
+                          Request Changes
+                        </button>
+                      </div>
                     </div>
-                    <ProposalDocument content={proposalContent} />
-                    <div className="grid grid-cols-2 gap-4 pt-6 print:hidden">
-                      <button
-                        onClick={() => setResponseMode("accept")}
-                        className="border-2 border-[#4a2e6f] bg-[#DED4ED] text-[#4a2e6f] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5 hover:bg-[#B29AD5]"
-                      >
-                        Accept Proposal
-                      </button>
-                      <button
-                        onClick={() => setResponseMode("edit")}
-                        className="border-2 border-[#333333] text-[#333333] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5"
-                      >
-                        Request Changes
-                      </button>
-                    </div>
-                  </div>
-                );
-              }
+                  );
+                }
 
-              case "booking_form":
-                if (!bookingContent) return null;
-                return (
-                  <div className="space-y-10">
-                    <div className="flex justify-end print:hidden">
-                      <button
-                        onClick={handlePrint}
-                        className="px-6 py-2 border-2 border-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
-                      >
-                        Download / Print
-                      </button>
-                    </div>
-                    <BookingFormDocument
-                      content={bookingContent}
-                      mode="client"
-                      clientAgreed={clientAgreed}
-                      onClientAgreeChange={setClientAgreed}
-                      onUpdate={(updates) =>
-                        setBookingContent((prev) =>
-                          prev ? { ...prev, ...updates } : prev
-                        )
-                      }
-                    />
-                    {doc.status !== "signed" ? (
-                      <div className="bg-gray-50 border border-gray-100 rounded-3xl p-6 space-y-4 print:hidden">
-                        {signatureError && (
-                          <p className="text-xs text-red-500 font-semibold">
-                            {signatureError}
-                          </p>
-                        )}
-                        {!signatureError &&
-                          bookingContent &&
-                          !isBookingReadyToSign(bookingContent) && (
-                            <p className="text-xs text-gray-500">
-                              Please complete all required boxes.
+                case "booking_form":
+                  if (!bookingContent) return null;
+                  return (
+                    <div className="space-y-10">
+                      <div className="flex justify-end print:hidden">
+                        <button
+                          onClick={handlePrint}
+                          className="px-6 py-2 border-2 border-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
+                        >
+                          Download / Print
+                        </button>
+                      </div>
+                      <BookingFormDocument
+                        content={bookingContent}
+                        mode="client"
+                        clientAgreed={clientAgreed}
+                        onClientAgreeChange={setClientAgreed}
+                        onUpdate={(updates) =>
+                          setBookingContent((prev) =>
+                            prev ? { ...prev, ...updates } : prev,
+                          )
+                        }
+                      />
+                      {doc.status !== "signed" ? (
+                        <div className="bg-gray-50 border border-gray-100 rounded-3xl p-6 space-y-4 print:hidden">
+                          {signatureError && (
+                            <p className="text-xs text-red-500 font-semibold">
+                              {signatureError}
                             </p>
                           )}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <button
-                            onClick={handleSignBooking}
-                            className={`border-2 border-[#4a2e6f] bg-[#DED4ED] text-[#4a2e6f] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5 hover:bg-[#B29AD5] ${
-                              !bookingContent ||
-                              !isBookingReadyToSign(bookingContent) ||
-                              !clientAgreed
-                                ? "opacity-60"
-                                : ""
-                            }`}
-                          >
-                            Sign & Send
-                          </button>
-                          <button
-                            onClick={() => setResponseMode("message")}
-                            className="border-2 border-[#333333] text-[#333333] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5"
-                          >
-                            Send Message
-                          </button>
+                          {!signatureError &&
+                            bookingContent &&
+                            !isBookingReadyToSign(bookingContent) && (
+                              <p className="text-xs text-gray-500">
+                                Please complete all required boxes.
+                              </p>
+                            )}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <button
+                              onClick={handleSignBooking}
+                              className={`border-2 border-[#4a2e6f] bg-[#DED4ED] text-[#4a2e6f] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5 hover:bg-[#B29AD5] ${
+                                !bookingContent ||
+                                !isBookingReadyToSign(bookingContent) ||
+                                !clientAgreed
+                                  ? "opacity-60"
+                                  : ""
+                              }`}
+                            >
+                              Sign & Send
+                            </button>
+                            <button
+                              onClick={() => setResponseMode("message")}
+                              className="border-2 border-[#333333] text-[#333333] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5"
+                            >
+                              Send Message
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="p-6 bg-green-50 border border-green-100 rounded-2xl text-green-700 font-bold text-center print:hidden">
-                        ✓ This agreement was signed and finalized.
-                      </div>
-                    )}
-                  </div>
-                );
-
-              case "invoice":
-                if (!invoiceContent) return null;
-                return (
-                  <div className="space-y-8">
-                    <div className="flex justify-end print:hidden">
-                      <button
-                        onClick={handlePrint}
-                        className="px-6 py-2 border-2 border-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
-                      >
-                        Download / Print
-                      </button>
+                      ) : (
+                        <div className="p-6 bg-green-50 border border-green-100 rounded-2xl text-green-700 font-bold text-center print:hidden">
+                          ✓ This agreement was signed and finalized.
+                        </div>
+                      )}
                     </div>
-                    <InvoiceDocument
-                      content={invoiceContent}
-                      report={invoiceReport}
-                    />
-                    {doc.status === "paid" ? (
-                      <div className="p-6 bg-green-50 border border-green-100 rounded-2xl text-green-700 font-bold text-center print:hidden">
-                        ✓ This invoice is marked as paid.
+                  );
+
+                case "invoice":
+                  if (!invoiceContent) return null;
+                  return (
+                    <div className="space-y-8">
+                      <div className="flex justify-end print:hidden">
+                        <button
+                          onClick={handlePrint}
+                          className="px-6 py-2 border-2 border-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
+                        >
+                          Download / Print
+                        </button>
                       </div>
-                    ) : (
-                      <div className="space-y-3 print:hidden">
-                        <p className="text-xs text-gray-500">
-                          <span className="font-bold uppercase">
-                            Please note:
-                          </span>{" "}
-                          Marking this invoice as paid does not process payment,
-                          but notifies your VA that payment has been made.
-                          Please ensure payment is still processed.
+                      <InvoiceDocument
+                        content={invoiceContent}
+                        report={invoiceReport}
+                      />
+                      {doc.status === "paid" ? (
+                        <div className="p-6 bg-green-50 border border-green-100 rounded-2xl text-green-700 font-bold text-center print:hidden">
+                          ✓ This invoice is marked as paid.
+                        </div>
+                      ) : (
+                        <div className="space-y-3 print:hidden">
+                          <p className="text-xs text-gray-500">
+                            <span className="font-bold uppercase">
+                              Please note:
+                            </span>{" "}
+                            Marking this invoice as paid does not process
+                            payment, but notifies your VA that payment has been
+                            made. Please ensure payment is still processed.
+                          </p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <button
+                              onClick={handleMarkInvoicePaid}
+                              className="border-2 border-[#4a2e6f] bg-[#DED4ED] text-[#4a2e6f] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5 hover:bg-[#B29AD5]"
+                            >
+                              Mark as Paid
+                            </button>
+                            <button
+                              onClick={() => setResponseMode("message")}
+                              className="border-2 border-[#333333] text-[#333333] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5"
+                            >
+                              Send Message
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+
+                case "upload":
+                  return (
+                    <div className="text-center space-y-8 py-10">
+                      <div className="p-12 border-4 border-dashed border-gray-100 rounded-4xl bg-gray-50">
+                        <div className="text-6xl mb-6">📄</div>
+                        <h2 className="text-xl font-black uppercase mb-2">
+                          {doc.content.file_name}
+                        </h2>
+                        <p className="text-sm text-gray-400 mb-8 italic">
+                          &quot;{doc.content.va_note}&quot;
                         </p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <button
-                            onClick={handleMarkInvoicePaid}
-                            className="border-2 border-[#4a2e6f] bg-[#DED4ED] text-[#4a2e6f] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5 hover:bg-[#B29AD5]"
-                          >
-                            Mark as Paid
-                          </button>
-                          <button
-                            onClick={() => setResponseMode("message")}
-                            className="border-2 border-[#333333] text-[#333333] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5"
-                          >
-                            Send Message
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-
-              case "upload":
-                return (
-                  <div className="text-center space-y-8 py-10">
-                    <div className="p-12 border-4 border-dashed border-gray-100 rounded-4xl bg-gray-50">
-                      <div className="text-6xl mb-6">📄</div>
-                      <h2 className="text-xl font-black uppercase mb-2">
-                        {doc.content.file_name}
-                      </h2>
-                      <p className="text-sm text-gray-400 mb-8 italic">
-                        &quot;{doc.content.va_note}&quot;
-                      </p>
-                      {(() => {
-                        const downloadUrl =
-                          doc.content.file_url || signedUploadUrl;
-                        if (!downloadUrl) {
+                        {(() => {
+                          const downloadUrl =
+                            doc.content.file_url || signedUploadUrl;
+                          if (!downloadUrl) {
+                            return (
+                              <p className="text-sm text-gray-400 italic">
+                                File unavailable.
+                              </p>
+                            );
+                          }
                           return (
-                            <p className="text-sm text-gray-400 italic">
-                              File unavailable.
-                            </p>
+                            <div className="space-y-6">
+                              {(isPdfUpload || isImageUpload) && (
+                                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                                  {isPdfUpload ? (
+                                    <iframe
+                                      src={downloadUrl}
+                                      title="Document preview"
+                                      className="w-full h-130"
+                                    />
+                                  ) : (
+                                    <div className="relative w-full h-130 bg-white">
+                                      <Image
+                                        src={downloadUrl}
+                                        alt={doc.content.file_name || "Upload"}
+                                        fill
+                                        sizes="(max-width: 768px) 100vw, 900px"
+                                        className="object-contain"
+                                        unoptimized
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                              <a
+                                href={downloadUrl}
+                                target="_blank"
+                                className="inline-block bg-[#9d4edd] text-white px-12 py-4 rounded-xl font-black uppercase tracking-widest shadow-lg"
+                              >
+                                View / Download File
+                              </a>
+                            </div>
                           );
-                        }
-                        return (
-                          <a
-                            href={downloadUrl}
-                            target="_blank"
-                            className="inline-block bg-[#9d4edd] text-white px-12 py-4 rounded-xl font-black uppercase tracking-widest shadow-lg"
-                          >
-                            View / Download PDF
-                          </a>
-                        );
-                      })()}
+                        })()}
+                      </div>
                     </div>
-                  </div>
-                );
-            }
-          })()}
+                  );
+              }
+            })()}
 
-          {responseMode && (
-            <div className="mt-8 p-8 bg-white border-2 border-[#4A2E6F] rounded-4xl shadow-2xl animate-in fade-in slide-in-from-top-4 print:hidden">
-              <h3 className="text-xl font-black mb-4 tracking-tight">
-                {responseMode === "accept"
-                  ? "Accept Proposal"
-                  : responseMode === "sign"
-                  ? "Sign & Send"
-                  : responseMode === "paid"
-                  ? "Mark as Paid"
-                  : responseMode === "message"
-                  ? "Send Message"
-                  : "Request Changes"}
-              </h3>
-              <p className="text-sm text-gray-500 mb-4">
-                {"Your message to your Virtual Assistant:"}
-              </p>
-              <textarea
-                className="w-full border-2 border-gray-100 p-5 rounded-2xl bg-gray-50 focus:ring-4 focus:ring-purple-50 outline-none mb-6 transition-all"
-                rows={3}
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder={
-                  "Details here..."
-                }
-              />
-              <div className="flex items-center gap-6">
-                <button
-                  onClick={() => {
-                    if (responseMode === "message") {
-                      handleSendMessage();
-                    } else {
-                      handleSubmitResponse();
-                    }
-                  }}
-                  className="bg-gray-900 text-white px-10 py-3 rounded-xl font-bold hover:bg-[#9d4edd] transition-colors"
-                >
-                  {responseMode === "message" ? "Send Message" : "Send Response"}
-                </button>
-                <button
-                  onClick={() => setResponseMode(null)}
-                  className="text-gray-400 font-bold hover:text-red-500"
-                >
-                  Cancel
-                </button>
+            {responseMode && (
+              <div className="mt-8 p-8 bg-white border-2 border-[#4A2E6F] rounded-4xl shadow-2xl animate-in fade-in slide-in-from-top-4 print:hidden">
+                <h3 className="text-xl font-black mb-4 tracking-tight">
+                  {responseMode === "accept"
+                    ? "Accept Proposal"
+                    : responseMode === "sign"
+                      ? "Sign & Send"
+                      : responseMode === "paid"
+                        ? "Mark as Paid"
+                        : responseMode === "message"
+                          ? "Send Message"
+                          : "Request Changes"}
+                </h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  {"Your message to your Virtual Assistant:"}
+                </p>
+                <textarea
+                  className="w-full border-2 border-gray-100 p-5 rounded-2xl bg-gray-50 focus:ring-4 focus:ring-purple-50 outline-none mb-6 transition-all"
+                  rows={3}
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder={"Details here..."}
+                />
+                <div className="flex items-center gap-6">
+                  <button
+                    onClick={() => {
+                      if (responseMode === "message") {
+                        handleSendMessage();
+                      } else {
+                        handleSubmitResponse();
+                      }
+                    }}
+                    className="bg-gray-900 text-white px-10 py-3 rounded-xl font-bold hover:bg-[#9d4edd] transition-colors"
+                  >
+                    {responseMode === "message"
+                      ? "Send Message"
+                      : "Send Response"}
+                  </button>
+                  <button
+                    onClick={() => setResponseMode(null)}
+                    className="text-gray-400 font-bold hover:text-red-500"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {doc.type !== "proposal" &&
-            doc.type !== "booking_form" &&
-            doc.type !== "invoice" && (
-            <footer className="pt-10 border-t border-gray-100">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
-                Kind Regards,
-              </p>
-              <p className="text-2xl font-black text-[#9d4edd] tracking-tight">
-                {doc.content.va_name}
-              </p>
-            </footer>
-          )}
+            {doc.type !== "proposal" &&
+              doc.type !== "booking_form" &&
+              doc.type !== "invoice" && (
+                <footer className="pt-10 border-t border-gray-100">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
+                    Kind Regards,
+                  </p>
+                  <p className="text-2xl font-black text-[#9d4edd] tracking-tight">
+                    {doc.content.va_name}
+                  </p>
+                </footer>
+              )}
           </div>
         </div>
       </div>

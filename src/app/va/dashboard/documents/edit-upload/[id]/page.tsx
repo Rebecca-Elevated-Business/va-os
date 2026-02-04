@@ -170,16 +170,19 @@ export default function EditUploadPage({
 
   return (
     <div className="p-6 max-w-2xl mx-auto text-black pb-40 font-sans">
-      <div className="flex justify-between items-end mb-10 pb-6 border-b">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight">
-            Upload Document
-          </h1>
-          <p className="text-[10px] font-semibold text-gray-400 tracking-widest mt-2">
-            Send your own PDF/Doc to the client
-          </p>
+        <div className="flex justify-between items-end mb-10 pb-6 border-b">
+          <div>
+            <h1 className="text-3xl font-black tracking-tight">
+              Upload Document
+            </h1>
+            <p className="text-[10px] font-semibold text-gray-400 tracking-widest mt-2">
+              Send your own PDF/Doc to the client
+            </p>
+            <p className="text-[10px] font-semibold text-gray-400 tracking-widest mt-1">
+              Accepted formats: PDF, PNG, JPG
+            </p>
+          </div>
         </div>
-      </div>
 
       <div className="space-y-8">
         <div className="space-y-2">
