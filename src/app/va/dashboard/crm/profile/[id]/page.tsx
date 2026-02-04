@@ -3495,7 +3495,7 @@ export default function ClientProfilePage({
                                 </button>
                                 <button
                                   onClick={() => deleteDocument(doc.id)}
-                                  className="text-[#333333] hover:text-red-500 transition-colors"
+                                  className="text-gray-300 hover:text-red-500 transition-colors"
                                   title="Delete Document"
                                 >
                                   <svg
