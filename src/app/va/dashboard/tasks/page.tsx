@@ -1573,6 +1573,7 @@ export default function TaskCentrePage() {
             setIsAdding(true);
           }}
           filterStatus={filterStatus}
+          variant="framed"
         />
       )}
     </div>

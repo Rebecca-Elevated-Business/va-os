@@ -284,9 +284,7 @@ export default function KanbanView({
                 ))}
 
                 {colTasks.length === 0 && (
-                  <div className="h-20 border-2 border-dashed border-gray-100 rounded-xl flex items-center justify-center text-[10px] font-bold text-[#333333] tracking-widest">
-                    Drop here
-                  </div>
+                  <div className="h-20 border-2 border-dashed border-gray-100 rounded-xl" />
                 )}
               </div>
             </div>
