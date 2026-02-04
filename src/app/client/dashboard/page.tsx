@@ -410,10 +410,9 @@ export default function ClientDashboard() {
   };
 
   const markNotificationRead = async (notificationId: string) => {
-    await supabase
-      .from("client_notifications")
-      .update({ is_read: true })
-      .eq("id", notificationId);
+    await supabase.rpc("mark_notification_read", {
+      notification_id: notificationId,
+    });
     setClientNotifications((prev) =>
       prev.map((n) =>
         n.id === notificationId ? { ...n, is_read: true } : n,
@@ -426,10 +425,13 @@ export default function ClientDashboard() {
       .filter((note) => !note.is_read)
       .map((note) => note.id);
     if (unreadIds.length === 0) return;
-    await supabase
-      .from("client_notifications")
-      .update({ is_read: true })
-      .in("id", unreadIds);
+    await Promise.all(
+      unreadIds.map((notificationId) =>
+        supabase.rpc("mark_notification_read", {
+          notification_id: notificationId,
+        }),
+      ),
+    );
     setClientNotifications((prev) =>
       prev.map((note) =>
         unreadIds.includes(note.id) ? { ...note, is_read: true } : note,
