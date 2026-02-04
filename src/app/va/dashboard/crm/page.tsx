@@ -14,7 +14,6 @@ type Client = {
   phone: string;
   source: string;
   status: string;
-  has_access: boolean;
   portal_access_enabled?: boolean | null;
   portal_invite_link?: string | null;
   created_at: string;
@@ -247,7 +246,7 @@ export default function CRMPage() {
                           client.portal_access_enabled ||
                           client.portal_invite_link?.trim(),
                         );
-                        const accessed = Boolean(client.has_access);
+                        const accessed = Boolean(client.portal_access_enabled);
                         const dotClass = accessed
                           ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]"
                           : issued

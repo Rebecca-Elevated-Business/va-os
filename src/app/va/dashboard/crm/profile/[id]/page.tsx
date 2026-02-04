@@ -41,7 +41,6 @@ type Client = {
   address?: string;
   status: string;
   work_type: string;
-  has_access: boolean;
   portal_invite_link?: string | null;
   portal_access_enabled?: boolean | null;
   portal_access_revoked_at?: string | null;
@@ -1189,7 +1188,6 @@ export default function ClientProfilePage({
       .update({
         portal_access_enabled: false,
         portal_access_revoked_at: new Date().toISOString(),
-        has_access: false,
       })
       .eq("id", id);
 
@@ -1201,7 +1199,7 @@ export default function ClientProfilePage({
     }
 
     if (!error) {
-      setClient({ ...client, portal_access_enabled: false, has_access: false });
+      setClient({ ...client, portal_access_enabled: false });
       setPortalManageOpen(false);
       setRevokeInput("");
     }
@@ -1422,7 +1420,7 @@ export default function ClientProfilePage({
   const hasSubtasks = (taskId: string) =>
     Boolean(subtasksByParent[taskId]?.length);
   const portalInviteLink = client.portal_invite_link?.trim() || "";
-  const portalAccessEnabled = client.portal_access_enabled ?? client.has_access;
+  const portalAccessEnabled = Boolean(client.portal_access_enabled);
   const inDateRange = (value: string) => {
     if (!docStartDate && !docEndDate) return true;
     const dateValue = new Date(value);
