@@ -318,11 +318,16 @@ export default function ClientDocumentView({
 
   const pickBookingClientUpdates = (
     content: BookingFormContent,
-  ): Partial<BookingFormContent> =>
-    bookingClientUpdateFields.reduce((acc, key) => {
-      acc[key] = content[key];
-      return acc;
-    }, {} as Partial<BookingFormContent>);
+  ): Partial<BookingFormContent> => {
+    const updates = {} as Partial<BookingFormContent>;
+    bookingClientUpdateFields.forEach((key) => {
+      (updates as Record<
+        string,
+        BookingFormContent[keyof BookingFormContent]
+      >)[key] = content[key];
+    });
+    return updates;
+  };
 
   const hasValue = (value: string) => value.trim().length > 0;
 
