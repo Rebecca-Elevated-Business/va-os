@@ -77,6 +77,15 @@ export default function EditUploadPage({
   };
 
   const handleSave = async (isIssuing = false) => {
+    const trimmedTitle = (doc?.title || "").trim();
+    if (!trimmedTitle) {
+      await alert({
+        title: "Title required",
+        message: "Please add a document title before saving.",
+        tone: "danger",
+      });
+      return;
+    }
     const hasFile = Boolean(doc?.content.file_path || doc?.content.file_url);
     if (!doc || !hasFile) {
       await alert({
@@ -91,6 +100,7 @@ export default function EditUploadPage({
     const { error } = await supabase
       .from("client_documents")
       .update({
+        title: trimmedTitle,
         content: doc.content,
         status: isIssuing ? "issued" : "draft",
         issued_at: isIssuing ? new Date().toISOString() : null,
@@ -154,16 +164,27 @@ export default function EditUploadPage({
     <div className="p-6 max-w-2xl mx-auto text-black pb-40 font-sans">
       <div className="flex justify-between items-end mb-10 pb-6 border-b">
         <div>
-          <h1 className="text-3xl font-black tracking-tight uppercase">
+          <h1 className="text-3xl font-black tracking-tight">
             Upload Document
           </h1>
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-2">
+          <p className="text-[10px] font-semibold text-gray-400 tracking-widest mt-2">
             Send your own PDF/Doc to the client
           </p>
         </div>
       </div>
 
       <div className="space-y-8">
+        <div className="space-y-2">
+          <label className="text-[10px] font-semibold text-gray-500 tracking-widest block ml-2">
+            Document title
+          </label>
+          <input
+            className="w-full p-4 bg-white border-2 border-gray-50 rounded-2xl outline-none focus:border-purple-100 shadow-sm text-sm"
+            placeholder="e.g. Onboarding Guide"
+            value={doc.title || ""}
+            onChange={(e) => setDoc({ ...doc, title: e.target.value })}
+          />
+        </div>
         <div
           className={`relative border-4 border-dashed rounded-[2.5rem] p-12 text-center transition-all ${
             doc.content.file_path || doc.content.file_url
@@ -216,7 +237,7 @@ export default function EditUploadPage({
         </div>
 
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block ml-2">
+          <label className="text-[10px] font-semibold text-gray-500 tracking-widest block ml-2">
             Personal Note for Client (Optional)
           </label>
           <textarea
@@ -235,14 +256,14 @@ export default function EditUploadPage({
         <div className="grid grid-cols-2 gap-4 pt-4">
           <button
             onClick={() => handleSave(false)}
-            className="py-4 border-2 border-gray-200 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-50 transition-all"
+            className="py-4 border-2 border-gray-200 rounded-2xl font-bold text-[10px] tracking-widest hover:bg-gray-50 transition-all"
           >
             Save as Draft
           </button>
           <button
             disabled={!doc.content.file_path && !doc.content.file_url}
             onClick={() => handleSave(true)}
-            className="py-4 bg-[#9d4edd] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-[#7b2cbf] shadow-xl shadow-purple-100 transition-all disabled:opacity-50 disabled:bg-gray-300"
+            className="py-4 bg-[#9d4edd] text-white rounded-2xl font-bold text-[10px] tracking-widest hover:bg-[#7b2cbf] shadow-xl shadow-purple-100 transition-all disabled:opacity-50 disabled:bg-gray-300"
           >
             Issue to Client
           </button>
@@ -250,7 +271,7 @@ export default function EditUploadPage({
         {doc.status !== "completed" && (
           <button
             onClick={handleMarkCompleted}
-            className="mt-4 w-full py-4 border-2 border-gray-200 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-50 transition-all"
+            className="mt-4 w-full py-4 border-2 border-gray-200 rounded-2xl font-bold text-[10px] tracking-widest hover:bg-gray-50 transition-all"
           >
             Mark as Completed
           </button>
