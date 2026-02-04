@@ -9,7 +9,7 @@ import {
 } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { addMinutes, format } from "date-fns";
+import { format } from "date-fns";
 import { usePrompt } from "@/components/ui/PromptProvider";
 import {
   ChevronDown,
@@ -1277,10 +1277,7 @@ export default function TaskCentrePage() {
                                 {columnVisibility.endDate && (
                                   <div className="text-right text-xs font-medium text-gray-600">
                                     {formatDateCell(
-                                      task.scheduled_end ||
-                                        (task.scheduled_start
-                                          ? null
-                                          : task.due_date),
+                                      task.scheduled_end,
                                     )}
                                   </div>
                                 )}
@@ -1533,12 +1530,11 @@ export default function TaskCentrePage() {
             if (time) {
               const startValue = `${date}T${time}`;
               const startDate = new Date(startValue);
-              const endDate = addMinutes(startDate, 60);
               setModalPrefill({
                 startDate: format(startDate, "yyyy-MM-dd"),
                 startTime: format(startDate, "HH:mm"),
-                endDate: format(endDate, "yyyy-MM-dd"),
-                endTime: format(endDate, "HH:mm"),
+                endDate: "",
+                endTime: "",
               });
             } else {
               setModalPrefill({

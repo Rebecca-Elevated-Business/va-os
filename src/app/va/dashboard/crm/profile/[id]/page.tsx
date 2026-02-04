@@ -681,6 +681,31 @@ export default function ClientProfilePage({
     setEditingNoteContent("");
     refreshData();
   };
+  const deleteNote = async () => {
+    if (!editingNoteId) return;
+    const ok = await confirm({
+      title: "Delete note?",
+      message: "This cannot be undone. Are you sure you want to delete it?",
+      confirmLabel: "Delete",
+      tone: "danger",
+    });
+    if (!ok) return;
+    const { error } = await supabase
+      .from("client_notes")
+      .delete()
+      .eq("id", editingNoteId);
+    if (error) {
+      await alert({
+        title: "Error deleting note",
+        message: error.message,
+        tone: "danger",
+      });
+      return;
+    }
+    setEditingNoteId(null);
+    setEditingNoteContent("");
+    refreshData();
+  };
   const deleteTask = async (taskId: string) => {
     const ok = await confirm({
       title: "Delete task?",
@@ -2364,9 +2389,7 @@ export default function ClientProfilePage({
                                 const dueDate =
                                   task.scheduled_start || task.due_date;
                                 const statusValue = getTaskStatus(task);
-                                const endDate =
-                                  task.scheduled_end ||
-                                  (task.scheduled_start ? null : task.due_date);
+                                const endDate = task.scheduled_end;
 
                                 return (
                                   <Fragment key={task.id}>
@@ -2648,11 +2671,7 @@ export default function ClientProfilePage({
                                             child.due_date;
                                           const childStatusValue =
                                             getTaskStatus(child);
-                                          const childEnd =
-                                            child.scheduled_end ||
-                                            (child.scheduled_start
-                                              ? null
-                                              : child.due_date);
+                                          const childEnd = child.scheduled_end;
                                           return (
                                             <tr
                                               key={child.id}
@@ -3553,6 +3572,13 @@ export default function ClientProfilePage({
                     </span>
                     {editingNoteId === note.id ? (
                       <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={deleteNote}
+                          className="text-[10px] font-semibold text-red-500 hover:text-red-600"
+                        >
+                          Delete
+                        </button>
                         <button
                           type="button"
                           onClick={cancelNoteEdit}

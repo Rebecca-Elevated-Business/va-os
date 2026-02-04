@@ -98,7 +98,7 @@ export default function CalendarView({
         60000;
       return Math.max(15, Math.round(duration));
     }
-    return 60;
+    return null;
   };
 
   const isTaskOnDay = (task: Task, day: Date) => {
@@ -106,9 +106,13 @@ export default function CalendarView({
     const dayEnd = addMinutes(dayStart, 24 * 60 - 1);
     if (task.scheduled_start) {
       const taskStart = new Date(task.scheduled_start);
-      const taskEnd = task.scheduled_end
-        ? new Date(task.scheduled_end)
-        : addMinutes(taskStart, 60);
+      if (!task.scheduled_end) {
+        return (
+          taskStart.getTime() >= dayStart.getTime() &&
+          taskStart.getTime() <= dayEnd.getTime()
+        );
+      }
+      const taskEnd = new Date(task.scheduled_end);
       return (
         taskStart.getTime() <= dayEnd.getTime() &&
         taskEnd.getTime() >= dayStart.getTime()
@@ -151,12 +155,12 @@ export default function CalendarView({
       const minutes = existingStart ? existingStart.getMinutes() : 0;
       const newStart = addMinutes(setHours(startOfDay(day), hour), minutes);
       const durationMinutes = getTaskDurationMinutes(draggedTask);
-      const newEnd = addMinutes(newStart, durationMinutes);
+      const newEnd = durationMinutes ? addMinutes(newStart, durationMinutes) : null;
 
       onUpdateTask(draggedTask.id, {
         due_date: dateString,
         scheduled_start: newStart.toISOString(),
-        scheduled_end: newEnd.toISOString(),
+        scheduled_end: newEnd ? newEnd.toISOString() : null,
       });
     } else {
       onUpdateTask(draggedTask.id, {
@@ -485,7 +489,7 @@ export default function CalendarView({
                       const taskStart = new Date(task.scheduled_start!);
                       const taskEnd = task.scheduled_end
                         ? new Date(task.scheduled_end)
-                        : addMinutes(taskStart, 60);
+                        : addMinutes(taskStart, 30);
                       const dayStart = startOfDay(day);
                       const dayEnd = addMinutes(dayStart, 24 * 60 - 1);
 
