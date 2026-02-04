@@ -18,6 +18,7 @@ interface KanbanViewProps {
   filterStatus: string[]; // Added to handle dynamic column hiding
   onOpenTask: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
+  variant?: "default" | "framed";
 }
 
 const COLUMNS = [
@@ -48,12 +49,14 @@ export default function KanbanView({
   filterStatus,
   onOpenTask,
   onDeleteTask,
+  variant = "default",
 }: KanbanViewProps) {
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [draggedStatus, setDraggedStatus] = useState<string | null>(null);
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
   const [actionMenuId, setActionMenuId] = useState<string | null>(null);
   const isDraggingRef = useRef(false);
+  const isFramed = variant === "framed";
 
   const handleDrop = (e: React.DragEvent, status: string) => {
     e.preventDefault();
@@ -78,7 +81,14 @@ export default function KanbanView({
 
   return (
     <div className="h-[calc(100vh-180px)] overflow-x-auto pb-2 custom-scrollbar">
-      <div className="flex gap-6 h-full min-w-max px-2">
+      <div
+        className={
+          isFramed
+            ? "bg-white rounded-3xl p-6 shadow-[0_1px_10px_rgba(15,23,42,0.06)]"
+            : ""
+        }
+      >
+        <div className={`flex gap-6 h-full min-w-max ${isFramed ? "" : "px-2"}`}>
         {visibleColumns.map((col) => {
           const colTasks = tasks
             .filter((t) => t.status === col.id)
@@ -95,7 +105,11 @@ export default function KanbanView({
           return (
             <div
               key={col.id}
-              className={`flex-1 w-80 flex flex-col bg-gray-50/50 rounded-2xl border-2 ${col.color} h-full transition-all duration-300`}
+              className={`flex-1 w-80 flex flex-col rounded-2xl h-full transition-all duration-300 ${
+                isFramed
+                  ? "bg-gray-100/70"
+                  : `bg-gray-50/50 border-2 ${col.color}`
+              }`}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => handleDrop(e, col.id)}
             >
@@ -278,6 +292,7 @@ export default function KanbanView({
             </div>
           );
         })}
+        </div>
       </div>
     </div>
   );

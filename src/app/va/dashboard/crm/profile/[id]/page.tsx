@@ -2932,6 +2932,7 @@ export default function ClientProfilePage({
                   filterStatus={statusFilter}
                   onOpenTask={(task) => openTaskModal(task)}
                   onDeleteTask={deleteTask}
+                  variant="framed"
                 />
               )}
           </div>
