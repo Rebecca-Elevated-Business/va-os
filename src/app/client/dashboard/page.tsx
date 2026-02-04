@@ -79,6 +79,26 @@ export default function ClientDashboard() {
   const alertMenuRef = useRef<HTMLDivElement | null>(null);
   const statusFilterRef = useRef<HTMLDivElement | null>(null);
 
+  const formatDocumentStatus = (status: string, type: string) => {
+    if (status === "completed") return "Completed";
+    if (status === "issued") return "Waiting review";
+    if (status === "feedback_received") return "Message sent";
+    if (status === "accepted") return "Proposal accepted — awaiting VA";
+    if (status === "signed") return "Booking form completed — awaiting VA";
+    if (status === "paid") return "Invoice marked paid — awaiting VA";
+    if (type === "proposal" && status === "accepted")
+      return "Proposal accepted — awaiting VA";
+    return status.replace("_", " ");
+  };
+
+  const getDocumentStatusTone = (status: string) => {
+    if (status === "completed") return "bg-green-100 text-green-700";
+    if (status === "issued") return "bg-yellow-100 text-yellow-700";
+    if (status === "feedback_received")
+      return "bg-purple-100 text-purple-700";
+    return "bg-yellow-100 text-yellow-700";
+  };
+
   const fetchTasks = useCallback(async (clientIdValue: string) => {
     const { data } = await supabase
       .from("tasks")
@@ -647,12 +667,10 @@ export default function ClientDashboard() {
                       <td className="px-8 py-5">
                         <span
                           className={`px-3 py-1 rounded-full text-[10px] font-bold ${
-                            doc.status === "paid" || doc.status === "signed"
-                              ? "bg-green-100 text-green-700"
-                              : "bg-yellow-100 text-yellow-700"
+                            getDocumentStatusTone(doc.status)
                           }`}
                         >
-                          {doc.status.replace("_", " ")}
+                          {formatDocumentStatus(doc.status, doc.type)}
                         </span>
                       </td>
                       <td className="px-8 py-5 text-right">

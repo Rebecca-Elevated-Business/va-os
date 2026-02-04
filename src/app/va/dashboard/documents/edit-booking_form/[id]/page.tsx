@@ -329,10 +329,11 @@ export default function EditBookingFormPage({
   };
 
   const persistDoc = useCallback(
-    async (options?: { issue?: boolean; silent?: boolean }) => {
+    async (options?: { issue?: boolean; silent?: boolean; status?: string }) => {
       if (!doc) return;
       const shouldIssue = Boolean(options?.issue);
       const silent = Boolean(options?.silent);
+      const status = options?.status || (shouldIssue ? "issued" : doc.status);
       const wasIssued = doc.status === "issued";
 
       if (silent) {
@@ -343,7 +344,7 @@ export default function EditBookingFormPage({
 
       const payload = {
         content: doc.content,
-        status: shouldIssue ? "issued" : doc.status,
+        status,
         issued_at: shouldIssue ? new Date().toISOString() : doc.issued_at,
       };
 
@@ -370,7 +371,7 @@ export default function EditBookingFormPage({
         }
         lastSavedRef.current = JSON.stringify({
           content: doc.content,
-          status: shouldIssue ? "issued" : doc.status,
+          status,
         });
         if (!silent) {
           await alert({
@@ -431,6 +432,18 @@ export default function EditBookingFormPage({
     persistDoc({ issue: true });
   };
 
+  const handleMarkCompleted = async () => {
+    if (!doc || doc.status === "completed") return;
+    const ok = await confirm({
+      title: "Mark as completed?",
+      message:
+        "This will mark the booking form as completed for both you and the client.",
+      confirmLabel: "Mark completed",
+    });
+    if (!ok) return;
+    persistDoc({ status: "completed" });
+  };
+
   return (
     <div className="p-6 max-w-5xl mx-auto text-black pb-40 font-sans">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between mb-10 pb-6 border-b border-gray-100">
@@ -470,6 +483,15 @@ export default function EditBookingFormPage({
           >
             Issue to Client
           </button>
+          {doc.status !== "completed" && (
+            <button
+              onClick={handleMarkCompleted}
+              disabled={saving}
+              className="border border-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:border-gray-300 hover:text-gray-900 transition-all disabled:opacity-60"
+            >
+              Mark as Completed
+            </button>
+          )}
         </div>
       </div>
 

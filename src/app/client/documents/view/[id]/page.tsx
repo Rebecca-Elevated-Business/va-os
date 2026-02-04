@@ -423,43 +423,43 @@ export default function ClientDocumentView({
           </button>
         </div>
         <div className="bg-white shadow-2xl rounded-4xl overflow-hidden border border-gray-100 print:shadow-none print:border-none">
-        {doc.content.header_image &&
-          doc.type !== "upload" &&
-          doc.type !== "proposal" &&
-          doc.type !== "booking_form" &&
-          doc.type !== "invoice" && (
-          <div className="h-64 w-full relative">
-            <Image
-              src={doc.content.header_image}
-              alt="Header"
-              fill
-              className="object-cover"
-              unoptimized={doc.content.header_image.includes("unsplash")}
-            />
-            <div className="absolute inset-0 bg-linear-to-t from-white/90 via-transparent to-transparent"></div>
-          </div>
-        )}
-
-        <div
-          className={`p-8 md:p-16 space-y-10 ${
-            doc.content.header_image ? "-mt-12" : ""
-          } relative bg-white rounded-t-4xl`}
-        >
-          {doc.type !== "proposal" &&
+          {doc.content.header_image &&
+            doc.type !== "upload" &&
+            doc.type !== "proposal" &&
             doc.type !== "booking_form" &&
             doc.type !== "invoice" && (
-            <header>
-              <div className="inline-block px-3 py-1 bg-purple-100 text-[#9d4edd] text-[10px] font-black uppercase tracking-widest rounded-full mb-4">
-                {doc.type.replace("_", " ")}
+              <div className="h-64 w-full relative">
+                <Image
+                  src={doc.content.header_image}
+                  alt="Header"
+                  fill
+                  className="object-cover"
+                  unoptimized={doc.content.header_image.includes("unsplash")}
+                />
+                <div className="absolute inset-0 bg-linear-to-t from-white/90 via-transparent to-transparent"></div>
               </div>
-              <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tighter leading-none">
-                {doc.title}
-              </h1>
-            </header>
-          )}
+            )}
 
-          {(() => {
-            switch (doc.type) {
+          <div
+            className={`p-8 md:p-16 space-y-10 ${
+              doc.content.header_image ? "-mt-12" : ""
+            } relative bg-white rounded-t-4xl`}
+          >
+            {doc.type !== "proposal" &&
+              doc.type !== "booking_form" &&
+              doc.type !== "invoice" && (
+                <header>
+                  <div className="inline-block px-3 py-1 bg-purple-100 text-[#9d4edd] text-[10px] font-black uppercase tracking-widest rounded-full mb-4">
+                    {doc.type.replace("_", " ")}
+                  </div>
+                  <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tighter leading-none">
+                    {doc.title}
+                  </h1>
+                </header>
+              )}
+
+            {(() => {
+              switch (doc.type) {
               case "proposal": {
                 const proposalContent = mergeProposalContent(
                   doc.content as ProposalContent
@@ -705,6 +705,7 @@ export default function ClientDocumentView({
               </p>
             </footer>
           )}
+          </div>
         </div>
       </div>
     </div>

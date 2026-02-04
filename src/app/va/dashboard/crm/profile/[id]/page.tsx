@@ -139,11 +139,20 @@ const formatDateCell = (dateValue: string | null | undefined) => {
 };
 
 const formatDocStatus = (status: string) => {
-  if (status === "draft") return "Draft";
-  if (status === "pending_client") return "Issued";
-  if (status === "authorised") return "Accepted";
-  if (status === "accepted") return "Accepted";
-  return "Issued";
+  const labels: Record<string, string> = {
+    draft: "Draft",
+    issued: "Issued",
+    pending_client: "Issued",
+    change_requested: "Changes requested",
+    active: "Active",
+    authorised: "Accepted",
+    accepted: "Proposal accepted",
+    signed: "Booking form signed",
+    paid: "Invoice marked paid",
+    feedback_received: "Message received",
+    completed: "Completed",
+  };
+  return labels[status] ?? status.replace("_", " ");
 };
 
 export default function ClientProfilePage({

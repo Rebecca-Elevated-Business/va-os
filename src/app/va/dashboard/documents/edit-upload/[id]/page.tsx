@@ -27,7 +27,7 @@ export default function EditUploadPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const { alert } = usePrompt();
+  const { alert, confirm } = usePrompt();
 
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -128,6 +128,28 @@ export default function EditUploadPage({
       </div>
     );
 
+  const handleMarkCompleted = async () => {
+    if (!doc || doc.status === "completed") return;
+    const ok = await confirm({
+      title: "Mark as completed?",
+      message:
+        "This will mark the uploaded document as completed for both you and the client.",
+      confirmLabel: "Mark completed",
+    });
+    if (!ok) return;
+    const { error } = await supabase
+      .from("client_documents")
+      .update({ status: "completed" })
+      .eq("id", id);
+    if (!error) {
+      await alert({
+        title: "Marked as completed",
+        message: "The document is now marked as completed.",
+      });
+      setDoc({ ...doc, status: "completed" });
+    }
+  };
+
   return (
     <div className="p-6 max-w-2xl mx-auto text-black pb-40 font-sans">
       <div className="flex justify-between items-end mb-10 pb-6 border-b">
@@ -225,6 +247,14 @@ export default function EditUploadPage({
             Issue to Client
           </button>
         </div>
+        {doc.status !== "completed" && (
+          <button
+            onClick={handleMarkCompleted}
+            className="mt-4 w-full py-4 border-2 border-gray-200 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-50 transition-all"
+          >
+            Mark as Completed
+          </button>
+        )}
       </div>
     </div>
   );

@@ -29,7 +29,7 @@ export default function EditDocumentPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const { alert } = usePrompt();
+  const { alert, confirm } = usePrompt();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -102,6 +102,28 @@ export default function EditDocumentPage({
     return <div className="p-10 text-gray-400 italic">Loading editor...</div>;
   if (!doc) return <div className="p-10 text-red-500">Document not found.</div>;
 
+  const handleMarkCompleted = async () => {
+    if (!doc || doc.status === "completed") return;
+    const ok = await confirm({
+      title: "Mark as completed?",
+      message:
+        "This will mark the document as completed for both you and the client.",
+      confirmLabel: "Mark completed",
+    });
+    if (!ok) return;
+    const { error } = await supabase
+      .from("client_documents")
+      .update({ status: "completed" })
+      .eq("id", id);
+    if (!error) {
+      await alert({
+        title: "Marked as completed",
+        message: "The document is now marked as completed.",
+      });
+      setDoc({ ...doc, status: "completed" });
+    }
+  };
+
   return (
     <div className="p-6 max-w-5xl mx-auto text-black pb-20">
       <div className="flex justify-between items-end mb-8 border-b pb-6">
@@ -133,6 +155,14 @@ export default function EditDocumentPage({
           >
             Issue to Client
           </button>
+          {doc.status !== "completed" && (
+            <button
+              onClick={handleMarkCompleted}
+              className="px-6 py-2 border-2 border-gray-200 rounded-xl font-bold text-sm hover:bg-gray-50 transition-all"
+            >
+              Mark as Completed
+            </button>
+          )}
         </div>
       </div>
 

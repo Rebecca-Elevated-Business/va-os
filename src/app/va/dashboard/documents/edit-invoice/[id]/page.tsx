@@ -423,6 +423,18 @@ export default function EditInvoicePage({
     persistDoc({ issue: true });
   };
 
+  const handleMarkCompleted = async () => {
+    if (!doc || doc.status === "completed") return;
+    const ok = await confirm({
+      title: "Mark as completed?",
+      message:
+        "This will mark the invoice as completed for both you and the client.",
+      confirmLabel: "Mark completed",
+    });
+    if (!ok) return;
+    persistDoc({ status: "completed" });
+  };
+
   return (
     <div className="p-6 max-w-5xl mx-auto text-black pb-40 font-sans">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between mb-10 pb-6 border-b border-gray-100">
@@ -462,12 +474,21 @@ export default function EditInvoicePage({
           >
             Issue to Client
           </button>
-          {doc.status !== "paid" && (
+          {doc.status !== "paid" && doc.status !== "completed" && (
             <button
               onClick={() => persistDoc({ status: "paid" })}
               className="border border-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:border-gray-300 hover:text-gray-900 transition-all"
             >
               Mark as Paid
+            </button>
+          )}
+          {doc.status !== "completed" && (
+            <button
+              onClick={handleMarkCompleted}
+              disabled={saving}
+              className="border border-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:border-gray-300 hover:text-gray-900 transition-all disabled:opacity-60"
+            >
+              Mark as Completed
             </button>
           )}
         </div>
