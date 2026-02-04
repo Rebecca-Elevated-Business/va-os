@@ -232,13 +232,20 @@ export default function ClientDocumentView({
 
     const finalStatus = doc.type === "booking_form" ? "signed" : statusUpdate;
 
-    await supabase
-      .from("client_documents")
-      .update({
-        status: finalStatus,
-        signed_at: finalStatus === "signed" ? new Date().toISOString() : null,
-      })
-      .eq("id", id);
+    if (doc.type === "proposal") {
+      await supabase.rpc("client_accept_proposal", {
+        doc_id: id,
+        new_status: finalStatus,
+      });
+    } else {
+      await supabase
+        .from("client_documents")
+        .update({
+          status: finalStatus,
+          signed_at: finalStatus === "signed" ? new Date().toISOString() : null,
+        })
+        .eq("id", id);
+    }
 
     await supabase.from("client_requests").insert([
       {
@@ -429,6 +436,14 @@ export default function ClientDocumentView({
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 text-black p-4 md:p-8 font-sans print:bg-white">
+      <div className="mb-4 text-sm font-semibold print:hidden">
+        <button
+          onClick={() => router.push("/client/dashboard")}
+          className="text-[#333333] hover:text-[#4a2e6f] transition-colors"
+        >
+          Back to homepage
+        </button>
+      </div>
       <div className="max-w-4xl mx-auto bg-white shadow-2xl rounded-4xl overflow-hidden border border-gray-100 print:shadow-none print:border-none">
         {doc.content.header_image &&
           doc.type !== "upload" &&
@@ -485,13 +500,13 @@ export default function ClientDocumentView({
                     <div className="grid grid-cols-2 gap-4 pt-6 print:hidden">
                       <button
                         onClick={() => setResponseMode("accept")}
-                        className="bg-[#9d4edd] text-white py-4 rounded-2xl font-black uppercase tracking-widest"
+                        className="border-2 border-[#4a2e6f] bg-[#DED4ED] text-[#4a2e6f] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5 hover:bg-[#B29AD5]"
                       >
                         Accept Proposal
                       </button>
                       <button
                         onClick={() => setResponseMode("edit")}
-                        className="border-2 border-gray-100 text-gray-400 py-4 rounded-2xl font-bold uppercase tracking-widest text-xs"
+                        className="border-2 border-[#333333] text-[#333333] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5"
                       >
                         Request Changes
                       </button>
@@ -537,13 +552,13 @@ export default function ClientDocumentView({
                               !isBookingReadyToSign(bookingContent) ||
                               !clientAgreed
                             }
-                            className="bg-[#9d4edd] text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl disabled:bg-gray-300"
+                            className="border-2 border-[#4a2e6f] bg-[#DED4ED] text-[#4a2e6f] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5 hover:bg-[#B29AD5] disabled:bg-gray-300"
                           >
                             Sign & Send
                           </button>
                           <button
                             onClick={() => setResponseMode("message")}
-                            className="border-2 border-gray-200 text-gray-500 py-4 rounded-2xl font-bold uppercase tracking-widest text-xs"
+                            className="border-2 border-[#333333] text-[#333333] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5"
                           >
                             Send Message
                           </button>
@@ -586,13 +601,13 @@ export default function ClientDocumentView({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <button
                             onClick={handleMarkInvoicePaid}
-                            className="bg-[#9d4edd] text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl"
+                            className="border-2 border-[#4a2e6f] bg-[#DED4ED] text-[#4a2e6f] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5 hover:bg-[#B29AD5]"
                           >
                             Mark as Paid
                           </button>
                           <button
                             onClick={() => setResponseMode("message")}
-                            className="border-2 border-gray-200 text-gray-500 py-4 rounded-2xl font-bold uppercase tracking-widest text-xs"
+                            className="border-2 border-[#333333] text-[#333333] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5"
                           >
                             Send Message
                           </button>
@@ -633,7 +648,7 @@ export default function ClientDocumentView({
           })()}
 
           {responseMode && (
-            <div className="mt-8 p-8 bg-white border-4 border-[#9d4edd] rounded-4xl shadow-2xl animate-in fade-in slide-in-from-top-4 print:hidden">
+            <div className="mt-8 p-8 bg-white border-2 border-[#4A2E6F] rounded-4xl shadow-2xl animate-in fade-in slide-in-from-top-4 print:hidden">
               <h3 className="text-xl font-black mb-4 tracking-tight">
                 {responseMode === "accept"
                   ? "Accept Proposal"
@@ -662,7 +677,7 @@ export default function ClientDocumentView({
                       handleSubmitResponse();
                     }
                   }}
-                  className="bg-gray-900 text-white px-10 py-3 rounded-xl font-black uppercase tracking-widest hover:bg-[#9d4edd] transition-colors"
+                  className="bg-gray-900 text-white px-10 py-3 rounded-xl font-bold hover:bg-[#9d4edd] transition-colors"
                 >
                   {responseMode === "message" ? "Send Message" : "Send Response"}
                 </button>
