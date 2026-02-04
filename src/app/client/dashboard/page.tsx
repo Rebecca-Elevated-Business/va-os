@@ -728,23 +728,16 @@ export default function ClientDashboard() {
                     <div>
                       <h3 className="font-bold text-gray-900">{ag.title}</h3>
                       <p className="text-xs text-gray-500 font-medium mt-1">
-                        Status:{" "}
-                        <span
-                          className={`font-semibold ${
-                            ag.status === "active"
-                              ? "text-green-600"
-                              : "text-[#9d4edd]"
-                          }`}
-                        >
-                          {ag.status.replace("_", " ")}
-                        </span>
+                        Review your workflow details and authorise when ready.
                       </p>
                     </div>
                   </div>
                   <button
                     className="bg-[#9d4edd] text-white px-6 py-3 rounded-xl font-bold text-xs shadow-md hover:bg-[#7b2cbf] transition-all"
                     onClick={() =>
-                      router.push(`/va/dashboard/workflows/portal-view/${ag.id}`)
+                      router.push(
+                        `/client/workflows/portal-view/${ag.id}`,
+                      )
                     }
                   >
                     {ag.status === "pending_client"
