@@ -79,6 +79,7 @@ type ClientDoc = {
     time_report_id?: string;
     show_time_report_to_client?: boolean;
     file_url?: string;
+    file_path?: string;
     file_name?: string;
     va_note?: string;
   };
@@ -106,6 +107,7 @@ export default function ClientDocumentView({
     useState<InvoiceTimeReport | null>(null);
   const [clientAgreed, setClientAgreed] = useState(false);
   const [signatureError, setSignatureError] = useState("");
+  const [uploadDownloadUrl, setUploadDownloadUrl] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadDoc() {
@@ -119,6 +121,30 @@ export default function ClientDocumentView({
     }
     loadDoc();
   }, [id]);
+
+  useEffect(() => {
+    if (!doc || doc.type !== "upload") return;
+    if (doc.content.file_url && !doc.content.file_path) {
+      setUploadDownloadUrl(doc.content.file_url);
+      return;
+    }
+    if (!doc.content.file_path) {
+      setUploadDownloadUrl(null);
+      return;
+    }
+    const loadSignedUrl = async () => {
+      const { data, error } = await supabase.storage
+        .from("documents")
+        .createSignedUrl(doc.content.file_path, 60 * 60);
+      if (error) {
+        console.error("Failed to create signed URL", error);
+        setUploadDownloadUrl(null);
+        return;
+      }
+      setUploadDownloadUrl(data.signedUrl);
+    };
+    loadSignedUrl();
+  }, [doc]);
 
   useEffect(() => {
     if (!doc) return;
@@ -587,13 +613,19 @@ export default function ClientDocumentView({
                       <p className="text-sm text-gray-400 mb-8 italic">
                         &quot;{doc.content.va_note}&quot;
                       </p>
-                      <a
-                        href={doc.content.file_url}
-                        target="_blank"
-                        className="inline-block bg-[#9d4edd] text-white px-12 py-4 rounded-xl font-black uppercase tracking-widest shadow-lg"
-                      >
-                        View / Download PDF
-                      </a>
+                      {uploadDownloadUrl ? (
+                        <a
+                          href={uploadDownloadUrl}
+                          target="_blank"
+                          className="inline-block bg-[#9d4edd] text-white px-12 py-4 rounded-xl font-black uppercase tracking-widest shadow-lg"
+                        >
+                          View / Download PDF
+                        </a>
+                      ) : (
+                        <p className="text-sm text-gray-400 italic">
+                          File unavailable.
+                        </p>
+                      )}
                     </div>
                   </div>
                 );

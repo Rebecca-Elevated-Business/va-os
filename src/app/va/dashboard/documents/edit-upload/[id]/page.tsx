@@ -7,6 +7,7 @@ import { usePrompt } from "@/components/ui/PromptProvider";
 
 type UploadContent = {
   file_url?: string;
+  file_path?: string;
   file_name?: string;
   va_note?: string;
 };
@@ -68,19 +69,16 @@ export default function EditUploadPage({
       return;
     }
 
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from("documents").getPublicUrl(filePath);
-
     setDoc({
       ...doc,
-      content: { ...doc.content, file_url: publicUrl, file_name: file.name },
+      content: { ...doc.content, file_path: filePath, file_name: file.name },
     });
     setUploading(false);
   };
 
   const handleSave = async (isIssuing = false) => {
-    if (!doc || !doc.content.file_url) {
+    const hasFile = Boolean(doc?.content.file_path || doc?.content.file_url);
+    if (!doc || !hasFile) {
       await alert({
         title: "File required",
         message: "Please upload a file first.",
@@ -146,12 +144,12 @@ export default function EditUploadPage({
       <div className="space-y-8">
         <div
           className={`relative border-4 border-dashed rounded-[2.5rem] p-12 text-center transition-all ${
-            doc.content.file_url
+            doc.content.file_path || doc.content.file_url
               ? "border-green-100 bg-green-50"
               : "border-gray-100 bg-gray-50"
           }`}
         >
-          {!doc.content.file_url ? (
+          {!doc.content.file_path && !doc.content.file_url ? (
             <>
               <div className="text-4xl mb-4">📄</div>
               <p className="text-sm font-bold text-gray-500 mb-6">
@@ -180,7 +178,11 @@ export default function EditUploadPage({
                 onClick={() =>
                   setDoc({
                     ...doc,
-                    content: { ...doc.content, file_url: undefined },
+                    content: {
+                      ...doc.content,
+                      file_url: undefined,
+                      file_path: undefined,
+                    },
                   })
                 }
                 className="text-[10px] font-black text-red-400 underline uppercase tracking-widest"
@@ -216,7 +218,7 @@ export default function EditUploadPage({
             Save as Draft
           </button>
           <button
-            disabled={!doc.content.file_url}
+            disabled={!doc.content.file_path && !doc.content.file_url}
             onClick={() => handleSave(true)}
             className="py-4 bg-[#9d4edd] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-[#7b2cbf] shadow-xl shadow-purple-100 transition-all disabled:opacity-50 disabled:bg-gray-300"
           >
