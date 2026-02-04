@@ -679,12 +679,16 @@ export default function ClientDashboard() {
           </div>
 
           <div className="p-0">
-            <table className="w-full text-left">
+            <table className="w-full text-left table-fixed">
               <thead>
                 <tr className="text-[10px] text-[#333333] border-b border-gray-50 bg-gray-50/30">
-                  <th className="px-8 py-4 font-medium">Document Name</th>
-                  <th className="px-8 py-4 font-medium">Status</th>
-                  <th className="px-8 py-4 font-medium text-right">Action</th>
+                  <th className="px-8 py-4 font-medium w-2/3">Document Name</th>
+                  <th className="px-8 py-4 font-medium text-right w-40">
+                    Status
+                  </th>
+                  <th className="px-8 py-4 font-medium text-right w-20">
+                    Action
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -706,7 +710,7 @@ export default function ClientDashboard() {
                       <td className="px-8 py-5 text-sm text-[#333333] font-medium">
                         {doc.title}
                       </td>
-                      <td className="px-8 py-5 text-xs font-normal text-[#333333]">
+                      <td className="px-8 py-5 text-xs font-normal text-[#333333] text-right">
                         {formatDocumentStatus(doc.status, doc.type)}
                       </td>
                       <td className="px-8 py-5 text-right">
@@ -749,11 +753,18 @@ export default function ClientDashboard() {
             </div>
           ) : (
             <div className="p-0">
-              <table className="w-full text-left">
+              <table className="w-full text-left table-fixed">
                 <thead>
                   <tr className="text-[10px] text-[#333333] border-b border-gray-50 bg-gray-50/30">
-                    <th className="px-8 py-4 font-medium">Agreement Name</th>
-                    <th className="px-8 py-4 font-medium text-right">Action</th>
+                    <th className="px-8 py-4 font-medium w-2/3">
+                      Agreement Name
+                    </th>
+                    <th className="px-8 py-4 font-medium text-right w-40">
+                      Status
+                    </th>
+                    <th className="px-8 py-4 font-medium text-right w-20">
+                      Action
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -764,6 +775,14 @@ export default function ClientDashboard() {
                     >
                       <td className="px-8 py-5 text-sm text-[#333333] font-medium">
                         {ag.title}
+                      </td>
+                      <td className="px-8 py-5 text-xs font-normal text-[#333333] text-right">
+                        {(() => {
+                          if (ag.status === "issued") return "Agreement received";
+                          if (ag.status === "change_submitted") return "Change submitted";
+                          if (ag.status === "in_use") return "Agreement in use";
+                          return ag.status.replace("_", " ");
+                        })()}
                       </td>
                       <td className="px-8 py-5 text-right">
                         <button
