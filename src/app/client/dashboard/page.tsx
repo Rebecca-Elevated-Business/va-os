@@ -756,37 +756,41 @@ export default function ClientDashboard() {
               You have no active service agreements at this time.
             </div>
           ) : (
-            <div className="divide-y divide-gray-100">
-              {agreements.map((ag) => (
-                <div
-                  key={ag.id}
-                  className="p-8 flex items-center justify-between hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="bg-purple-100 text-[#9d4edd] w-10 h-10 rounded-full flex items-center justify-center text-xl shadow-inner">
-                      📄
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-gray-900">{ag.title}</h3>
-                      <p className="text-xs text-gray-500 font-medium mt-1">
-                        Review your workflow details and authorise when ready.
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    className="bg-[#9d4edd] text-white px-6 py-3 rounded-xl font-bold text-xs shadow-md hover:bg-[#7b2cbf] transition-all"
-                    onClick={() =>
-                      router.push(
-                        `/client/workflows/portal-view/${ag.id}`,
-                      )
-                    }
-                  >
-                    {ag.status === "pending_client"
-                      ? "Review & Sign"
-                      : "View Agreement"}
-                  </button>
-                </div>
-              ))}
+            <div className="p-0">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="text-[10px] text-[#333333] border-b border-gray-50 bg-gray-50/30">
+                    <th className="px-8 py-4 font-medium">Agreement Name</th>
+                    <th className="px-8 py-4 font-medium text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {agreements.map((ag) => (
+                    <tr
+                      key={ag.id}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="px-8 py-5 text-sm text-[#333333] font-medium">
+                        {ag.title}
+                      </td>
+                      <td className="px-8 py-5 text-right">
+                        <button
+                          onClick={() =>
+                            router.push(
+                              `/client/workflows/portal-view/${ag.id}`,
+                            )
+                          }
+                          className="text-xs font-semibold text-[#9d4edd] hover:text-[#4A2E6F] transition-colors"
+                        >
+                          {ag.status === "pending_client"
+                            ? "Review & Sign"
+                            : "View"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
           </section>
