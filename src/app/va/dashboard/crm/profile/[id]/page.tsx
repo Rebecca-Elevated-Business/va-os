@@ -450,7 +450,17 @@ export default function ClientProfilePage({
                 : "Workflows"
         }`;
 
+  const fetchDocuments = useCallback(async () => {
+    const { data: docData } = await supabase
+      .from("client_documents")
+      .select("id, title, type, status, created_at")
+      .eq("client_id", id)
+      .order("created_at", { ascending: false });
+    if (docData) setClientDocuments(docData as ClientDocument[]);
+  }, [id]);
+
   useEffect(() => {
+    let isActive = true;
     async function fetchAgreements() {
       const { data, error } = await supabase
         .from("client_agreements")
@@ -464,17 +474,42 @@ export default function ClientProfilePage({
         if (data) setClientAgreements(data);
       }
     }
-    fetchAgreements();
-    async function fetchDocuments() {
-      const { data: docData } = await supabase
-        .from("client_documents")
-        .select("id, title, type, status, created_at")
-        .eq("client_id", id)
-        .order("created_at", { ascending: false });
-      if (docData) setClientDocuments(docData as ClientDocument[]);
-    }
-    fetchDocuments();
-  }, [id]);
+    const load = async () => {
+      await fetchAgreements();
+      if (!isActive) return;
+      await fetchDocuments();
+    };
+    const timer = setTimeout(() => {
+      void load();
+    }, 0);
+    return () => {
+      isActive = false;
+      clearTimeout(timer);
+    };
+  }, [id, fetchDocuments]);
+
+  useEffect(() => {
+    if (!id) return;
+    const docsChannel = supabase
+      .channel(`va-client-documents-${id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "client_documents",
+          filter: `client_id=eq.${id}`,
+        },
+        () => {
+          void fetchDocuments();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(docsChannel);
+    };
+  }, [id, fetchDocuments]);
 
 
   useEffect(() => {

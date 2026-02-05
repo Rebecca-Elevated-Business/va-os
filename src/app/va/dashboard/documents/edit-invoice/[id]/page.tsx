@@ -87,6 +87,8 @@ export default function EditInvoicePage({
   );
   const [showReportSelector, setShowReportSelector] = useState(false);
   const lastSavedRef = useRef<string>("");
+  const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+  const actionMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     async function loadDoc() {
@@ -163,6 +165,20 @@ export default function EditInvoicePage({
     }
     loadDoc();
   }, [id]);
+
+  useEffect(() => {
+    if (!isActionMenuOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        actionMenuRef.current &&
+        !actionMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsActionMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isActionMenuOpen]);
 
   useEffect(() => {
     const clientId = doc?.client_id;
@@ -423,18 +439,6 @@ export default function EditInvoicePage({
     persistDoc({ issue: true });
   };
 
-  const handleMarkCompleted = async () => {
-    if (!doc || doc.status === "completed") return;
-    const ok = await confirm({
-      title: "Mark as completed?",
-      message:
-        "This will mark the invoice as completed for both you and the client.",
-      confirmLabel: "Mark completed",
-    });
-    if (!ok) return;
-    persistDoc({ status: "completed" });
-  };
-
   return (
     <div className="p-6 max-w-5xl mx-auto text-black pb-40 font-sans">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between mb-10 pb-6 border-b border-gray-100">
@@ -454,43 +458,57 @@ export default function EditInvoicePage({
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <button
-            onClick={handlePreview}
-            className="border border-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:border-gray-300 hover:text-gray-900 transition-all"
-          >
-            Preview
-          </button>
-          <button
-            onClick={handleSaveDraft}
-            disabled={saving}
-            className="border border-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:border-gray-300 hover:text-gray-900 transition-all disabled:opacity-60"
-          >
-            {saving ? "Saving..." : "Save as Draft"}
-          </button>
-          <button
-            onClick={handleIssue}
-            disabled={saving}
-            className="bg-[#9d4edd] text-white px-6 py-2 rounded-lg font-bold shadow-md hover:bg-[#7b2cbf] transition-all disabled:opacity-60"
-          >
-            Issue to Client
-          </button>
-          {doc.status !== "paid" && doc.status !== "completed" && (
+          <div className="relative" ref={actionMenuRef}>
             <button
-              onClick={() => persistDoc({ status: "paid" })}
+              onClick={() => setIsActionMenuOpen((prev) => !prev)}
               className="border border-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:border-gray-300 hover:text-gray-900 transition-all"
             >
-              Mark as Paid
+              Actions
             </button>
-          )}
-          {doc.status !== "completed" && (
-            <button
-              onClick={handleMarkCompleted}
-              disabled={saving}
-              className="border border-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:border-gray-300 hover:text-gray-900 transition-all disabled:opacity-60"
-            >
-              Mark as Completed
-            </button>
-          )}
+            {isActionMenuOpen && (
+              <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-gray-100 bg-white p-2 shadow-lg z-50">
+                <button
+                  onClick={() => {
+                    setIsActionMenuOpen(false);
+                    handleSaveDraft();
+                  }}
+                  disabled={saving}
+                  className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  {saving ? "Saving..." : "Save as Draft"}
+                </button>
+                <button
+                  onClick={() => {
+                    setIsActionMenuOpen(false);
+                    handlePreview();
+                  }}
+                  className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                >
+                  Preview
+                </button>
+                <button
+                  onClick={() => {
+                    setIsActionMenuOpen(false);
+                    handleIssue();
+                  }}
+                  disabled={saving}
+                  className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Issue to Client
+                </button>
+                <button
+                  onClick={() => {
+                    setIsActionMenuOpen(false);
+                    persistDoc({ status: "paid" });
+                  }}
+                  disabled={saving || doc.status === "paid" || doc.status === "completed"}
+                  className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Mark as Paid
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -958,30 +976,6 @@ export default function EditInvoicePage({
         </section>
       </div>
 
-      <div className="pt-10">
-        <div className="flex flex-wrap items-center justify-center gap-4">
-          <button
-            onClick={handlePreview}
-            className="border border-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:border-gray-300 hover:text-gray-900 transition-all"
-          >
-            Preview
-          </button>
-          <button
-            onClick={handleSaveDraft}
-            disabled={saving}
-            className="border border-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:border-gray-300 hover:text-gray-900 transition-all disabled:opacity-60"
-          >
-            {saving ? "Saving..." : "Save as Draft"}
-          </button>
-          <button
-            onClick={handleIssue}
-            disabled={saving}
-            className="bg-[#9d4edd] text-white px-6 py-2 rounded-lg font-bold shadow-md hover:bg-[#7b2cbf] transition-all disabled:opacity-60"
-          >
-            Issue to Client
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

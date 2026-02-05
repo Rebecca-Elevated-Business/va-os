@@ -323,6 +323,7 @@ export default function ClientDocumentView({
     "client_email",
     "client_phone",
     "personal_data_processing",
+    "client_signature_style",
     "client_signature_name",
     "client_print_name",
     "client_business_name_signature",
@@ -357,7 +358,7 @@ export default function ClientDocumentView({
 
   const hasValue = (value: string) => value.trim().length > 0;
 
-  const isBookingReadyToSign = (content: BookingFormContent) => {
+  const getBookingMissingFields = (content: BookingFormContent) => {
     const hiddenFields = new Set<string>([
       ...(content.section1_hidden_fields || []),
       ...(content.section2_hidden_fields || []),
@@ -365,17 +366,50 @@ export default function ClientDocumentView({
       ...(content.section4_hidden_fields || []),
       ...(content.section5_hidden_fields || []),
     ]);
-    const missingFields = requiredBookingFields.filter(
+    const requiredFieldLabels: Record<keyof BookingFormContent, string> = {
+      client_business_name: "Client business name",
+      client_contact_name: "Client contact name",
+      client_job_title: "Client job title",
+      client_postal_address: "Client postal address",
+      client_email: "Client email address",
+      client_phone: "Client phone number",
+      personal_data_processing: "Personal data processing required",
+      client_signature_style: "Signature style",
+      client_signature_name: "Signature",
+      client_print_name: "Print name",
+      client_business_name_signature: "Business name (signature)",
+    } as Record<keyof BookingFormContent, string>;
+
+    const missingFields = requiredBookingFields
+      .filter(
       (field) =>
         !hiddenFields.has(field) && !hasValue(String(content[field] || "")),
-    );
-    const missingServiceFields = hiddenFields.has("services")
-      ? false
-      : content.services.some(
-          (service) => !hasValue(service.title) || !hasValue(service.details),
+      )
+      .map((field) => requiredFieldLabels[field] || String(field));
+    const visibleServiceItems = hiddenFields.has("services")
+      ? []
+      : content.services.filter(
+          (service) =>
+            hasValue(service.title) || hasValue(service.details),
         );
+    const missingServiceFields =
+      visibleServiceItems.length === 0
+        ? false
+        : visibleServiceItems.some(
+            (service) =>
+              !hasValue(service.title) || !hasValue(service.details),
+          );
 
-    return missingFields.length === 0 && !missingServiceFields;
+    if (missingServiceFields) {
+      missingFields.push("Service item title and details");
+    }
+
+    return missingFields;
+  };
+
+  const isBookingReadyToSign = (content: BookingFormContent) => {
+    const missingFields = getBookingMissingFields(content);
+    return missingFields.length === 0;
   };
 
   const handleSignBooking = async () => {
@@ -383,11 +417,13 @@ export default function ClientDocumentView({
     setSignatureError("");
     if (!isBookingReadyToSign(bookingContent)) {
       setSignatureError("Please complete all required boxes.");
+      return;
     }
     if (!clientAgreed) {
       setSignatureError(
         "Please confirm you agree to the terms before signing.",
       );
+      return;
     }
     setResponseMode("sign");
   };
@@ -573,9 +609,16 @@ export default function ClientDocumentView({
                           {!signatureError &&
                             bookingContent &&
                             !isBookingReadyToSign(bookingContent) && (
-                              <p className="text-xs text-gray-500">
-                                Please complete all required boxes.
-                              </p>
+                              <div className="text-xs text-gray-500 space-y-2">
+                                <p>Please complete all required boxes:</p>
+                                <ul className="list-disc pl-4">
+                                  {getBookingMissingFields(bookingContent).map(
+                                    (field) => (
+                                      <li key={field}>{field}</li>
+                                    ),
+                                  )}
+                                </ul>
+                              </div>
                             )}
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <button

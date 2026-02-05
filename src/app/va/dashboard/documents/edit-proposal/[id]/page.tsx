@@ -61,6 +61,8 @@ export default function EditProposalPage({
   const [autosaving, setAutosaving] = useState(false);
   const [doc, setDoc] = useState<ClientDoc | null>(null);
   const lastSavedRef = useRef<string>("");
+  const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+  const actionMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     async function loadDoc() {
@@ -124,6 +126,20 @@ export default function EditProposalPage({
     loadDoc();
   }, [id]);
 
+  useEffect(() => {
+    if (!isActionMenuOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        actionMenuRef.current &&
+        !actionMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsActionMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isActionMenuOpen]);
+
   const updateContent = (updates: Partial<ProposalContent>) => {
     if (!doc) return;
     setDoc({
@@ -175,7 +191,12 @@ export default function EditProposalPage({
   };
 
   const persistDoc = useCallback(
-    async (options?: { issue?: boolean; silent?: boolean; status?: string }) => {
+    async (options?: {
+      issue?: boolean;
+      silent?: boolean;
+      status?: string;
+      suppressAlert?: boolean;
+    }) => {
       if (!doc) return;
       const shouldIssue = Boolean(options?.issue);
       const silent = Boolean(options?.silent);
@@ -219,7 +240,8 @@ export default function EditProposalPage({
           content: doc.content,
           status,
         });
-        if (!silent) {
+        setDoc((prev) => (prev ? { ...prev, status } : prev));
+        if (!silent && !options?.suppressAlert) {
           await alert({
             title: shouldIssue ? "Proposal issued" : "Draft saved",
             message: shouldIssue
@@ -276,16 +298,16 @@ export default function EditProposalPage({
     persistDoc({ issue: true });
   };
 
-  const handleMarkCompleted = async () => {
+  const handleMarkAccepted = async () => {
     if (!doc || doc.status === "completed") return;
     const ok = await confirm({
-      title: "Mark as completed?",
+      title: "Mark as accepted?",
       message:
-        "This will mark the proposal as completed for both you and the client.",
-      confirmLabel: "Mark completed",
+        "This will mark the proposal as accepted for both you and the client.",
+      confirmLabel: "Mark as Accepted",
     });
     if (!ok) return;
-    persistDoc({ status: "completed" });
+    persistDoc({ status: "completed", suppressAlert: true });
   };
 
   return (
@@ -307,35 +329,57 @@ export default function EditProposalPage({
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <button
-            onClick={handlePreview}
-            className="border border-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:border-gray-300 hover:text-gray-900 transition-all"
-          >
-            Preview
-          </button>
-          <button
-            onClick={handleSaveDraft}
-            disabled={saving}
-            className="border border-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:border-gray-300 hover:text-gray-900 transition-all disabled:opacity-60"
-          >
-            {saving ? "Saving..." : "Save as Draft"}
-          </button>
-          <button
-            onClick={handleIssue}
-            disabled={saving}
-            className="bg-[#9d4edd] text-white px-6 py-2 rounded-lg font-bold shadow-md hover:bg-[#7b2cbf] transition-all disabled:opacity-60"
-          >
-            Issue to Client
-          </button>
-          {doc.status !== "completed" && (
+          <div className="relative" ref={actionMenuRef}>
             <button
-              onClick={handleMarkCompleted}
-              disabled={saving}
-              className="border border-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:border-gray-300 hover:text-gray-900 transition-all disabled:opacity-60"
+              onClick={() => setIsActionMenuOpen((prev) => !prev)}
+              className="border border-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:border-gray-300 hover:text-gray-900 transition-all"
             >
-              Mark as Completed
+              Actions
             </button>
-          )}
+            {isActionMenuOpen && (
+              <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-gray-100 bg-white p-2 shadow-lg z-50">
+                <button
+                  onClick={() => {
+                    setIsActionMenuOpen(false);
+                    handleSaveDraft();
+                  }}
+                  disabled={saving}
+                  className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  {saving ? "Saving..." : "Save as Draft"}
+                </button>
+                <button
+                  onClick={() => {
+                    setIsActionMenuOpen(false);
+                    handlePreview();
+                  }}
+                  className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                >
+                  Preview
+                </button>
+                <button
+                  onClick={() => {
+                    setIsActionMenuOpen(false);
+                    handleIssue();
+                  }}
+                  disabled={saving}
+                  className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Issue to Client
+                </button>
+                <button
+                  onClick={() => {
+                    setIsActionMenuOpen(false);
+                    handleMarkAccepted();
+                  }}
+                  disabled={saving || doc.status === "completed"}
+                  className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Mark as Accepted
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -822,30 +866,6 @@ export default function EditProposalPage({
         </section>
       </div>
 
-      <div className="pt-10">
-        <div className="flex flex-wrap items-center justify-center gap-4">
-          <button
-            onClick={handlePreview}
-            className="border border-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:border-gray-300 hover:text-gray-900 transition-all"
-          >
-            Preview
-          </button>
-          <button
-            onClick={handleSaveDraft}
-            disabled={saving}
-            className="border border-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:border-gray-300 hover:text-gray-900 transition-all disabled:opacity-60"
-          >
-            {saving ? "Saving..." : "Save as Draft"}
-          </button>
-          <button
-            onClick={handleIssue}
-            disabled={saving}
-            className="bg-[#9d4edd] text-white px-6 py-2 rounded-lg font-bold shadow-md hover:bg-[#7b2cbf] transition-all disabled:opacity-60"
-          >
-            Issue to Client
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

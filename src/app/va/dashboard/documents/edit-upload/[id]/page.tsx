@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { usePrompt } from "@/components/ui/PromptProvider";
@@ -33,6 +33,8 @@ export default function EditUploadPage({
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [doc, setDoc] = useState<ClientDoc | null>(null);
+  const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+  const actionMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     async function loadDoc() {
@@ -53,6 +55,20 @@ export default function EditUploadPage({
     }
     loadDoc();
   }, [id]);
+
+  useEffect(() => {
+    if (!isActionMenuOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        actionMenuRef.current &&
+        !actionMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsActionMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isActionMenuOpen]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0 || !doc) return;
@@ -170,19 +186,62 @@ export default function EditUploadPage({
 
   return (
     <div className="p-6 max-w-2xl mx-auto text-black pb-40 font-sans">
-        <div className="flex justify-between items-end mb-10 pb-6 border-b">
-          <div>
-            <h1 className="text-3xl font-black tracking-tight">
-              Upload Document
-            </h1>
-            <p className="text-[10px] font-semibold text-gray-400 tracking-widest mt-2">
-              Send your own PDF/Doc to the client
-            </p>
-            <p className="text-[10px] font-semibold text-gray-400 tracking-widest mt-1">
-              Accepted formats: PDF, PNG, JPG
-            </p>
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between mb-10 pb-6 border-b">
+        <div>
+          <h1 className="text-3xl font-black tracking-tight">
+            Upload Document
+          </h1>
+          <p className="text-[10px] font-semibold text-gray-400 tracking-widest mt-2">
+            Send your own PDF/Doc to the client
+          </p>
+          <p className="text-[10px] font-semibold text-gray-400 tracking-widest mt-1">
+            Accepted formats: PDF, PNG, JPG
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <div className="relative" ref={actionMenuRef}>
+            <button
+              onClick={() => setIsActionMenuOpen((prev) => !prev)}
+              className="border border-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:border-gray-300 hover:text-gray-900 transition-all"
+            >
+              Actions
+            </button>
+            {isActionMenuOpen && (
+              <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-gray-100 bg-white p-2 shadow-lg z-50">
+                <button
+                  onClick={() => {
+                    setIsActionMenuOpen(false);
+                    handleSave(false);
+                  }}
+                  className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                >
+                  Save as Draft
+                </button>
+                <button
+                  onClick={() => {
+                    setIsActionMenuOpen(false);
+                    handleSave(true);
+                  }}
+                  disabled={!doc.content.file_path && !doc.content.file_url}
+                  className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Issue to Client
+                </button>
+                <button
+                  onClick={() => {
+                    setIsActionMenuOpen(false);
+                    handleMarkCompleted();
+                  }}
+                  disabled={doc.status === "completed"}
+                  className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Mark as Completed
+                </button>
+              </div>
+            )}
           </div>
         </div>
+      </div>
 
       <div className="space-y-8">
         <div className="space-y-2">
@@ -264,29 +323,6 @@ export default function EditUploadPage({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4 pt-4">
-          <button
-            onClick={() => handleSave(false)}
-            className="py-4 border-2 border-gray-200 rounded-2xl font-bold text-[10px] tracking-widest hover:bg-gray-50 transition-all"
-          >
-            Save as Draft
-          </button>
-          <button
-            disabled={!doc.content.file_path && !doc.content.file_url}
-            onClick={() => handleSave(true)}
-            className="py-4 bg-[#9d4edd] text-white rounded-2xl font-bold text-[10px] tracking-widest hover:bg-[#7b2cbf] shadow-xl shadow-purple-100 transition-all disabled:opacity-50 disabled:bg-gray-300"
-          >
-            Issue to Client
-          </button>
-        </div>
-        {doc.status !== "completed" && (
-          <button
-            onClick={handleMarkCompleted}
-            className="mt-4 w-full py-4 border-2 border-gray-200 rounded-2xl font-bold text-[10px] tracking-widest hover:bg-gray-50 transition-all"
-          >
-            Mark as Completed
-          </button>
-        )}
       </div>
     </div>
   );
