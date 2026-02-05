@@ -683,7 +683,7 @@ export default function ClientDashboard() {
               <thead>
                 <tr className="text-[10px] text-[#333333] border-b border-gray-50 bg-gray-50/30">
                   <th className="px-8 py-4 font-medium w-2/3">Document Name</th>
-                  <th className="px-8 py-4 font-medium text-right w-40">
+                  <th className="px-8 py-4 font-medium text-left w-56 whitespace-nowrap">
                     Status
                   </th>
                   <th className="px-8 py-4 font-medium text-right w-20">
@@ -710,7 +710,7 @@ export default function ClientDashboard() {
                       <td className="px-8 py-5 text-sm text-[#333333] font-medium">
                         {doc.title}
                       </td>
-                      <td className="px-8 py-5 text-xs font-normal text-[#333333] text-right">
+                      <td className="px-8 py-5 text-xs font-normal text-[#333333] text-left whitespace-nowrap">
                         {formatDocumentStatus(doc.status, doc.type)}
                       </td>
                       <td className="px-8 py-5 text-right">
