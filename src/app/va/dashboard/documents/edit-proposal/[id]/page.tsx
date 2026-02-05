@@ -298,13 +298,13 @@ export default function EditProposalPage({
     persistDoc({ issue: true });
   };
 
-  const handleMarkAccepted = async () => {
+  const handleMarkCompleted = async () => {
     if (!doc || doc.status === "completed") return;
     const ok = await confirm({
-      title: "Mark as accepted?",
+      title: "Mark as completed?",
       message:
-        "This will mark the proposal as accepted for both you and the client.",
-      confirmLabel: "Mark as Accepted",
+        "This will mark the proposal as completed for both you and the client.",
+      confirmLabel: "Mark as Completed",
     });
     if (!ok) return;
     persistDoc({ status: "completed", suppressAlert: true });
@@ -370,12 +370,12 @@ export default function EditProposalPage({
                 <button
                   onClick={() => {
                     setIsActionMenuOpen(false);
-                    handleMarkAccepted();
+                    handleMarkCompleted();
                   }}
                   disabled={saving || doc.status === "completed"}
                   className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                 >
-                  Mark as Accepted
+                  Mark as Completed
                 </button>
               </div>
             )}

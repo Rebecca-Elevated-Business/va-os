@@ -146,7 +146,7 @@ const formatDocStatus = (status: string) => {
     in_use: "Agreement in use",
     authorised: "Accepted",
     accepted: "Proposal accepted",
-    signed: "Booking form signed",
+    signed: "Form accepted",
     paid: "Invoice marked paid",
     feedback_received: "Message received",
     completed: "Completed",

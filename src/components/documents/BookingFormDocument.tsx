@@ -702,7 +702,7 @@ export default function BookingFormDocument({
               type={readOnlyAll || readOnlyNonClientSections ? "text" : "date"}
             />
           )}
-          <div className="text-xs text-gray-500 leading-relaxed whitespace-pre-wrap">
+          <div className="text-xs text-black leading-relaxed whitespace-pre-wrap my-4">
             If this BOOKING means we will be working on personal data about any
             clients, prospects, suppliers, or other people, please provide us
             with a Data Processing Agreement (DPA) or help us complete a Data
