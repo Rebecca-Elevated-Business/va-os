@@ -121,7 +121,6 @@ export default function BookingFormDocument({
     "client_email",
     "client_phone",
     "personal_data_processing",
-    "purchase_order_number",
     "client_signature_style",
     "client_signature_name",
     "client_print_name",

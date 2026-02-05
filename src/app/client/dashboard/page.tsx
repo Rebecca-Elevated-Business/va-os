@@ -759,7 +759,7 @@ export default function ClientDashboard() {
                     <th className="px-8 py-4 font-medium w-2/3">
                       Agreement Name
                     </th>
-                    <th className="px-8 py-4 font-medium text-right w-40">
+                    <th className="px-8 py-4 font-medium text-left w-56 whitespace-nowrap">
                       Status
                     </th>
                     <th className="px-8 py-4 font-medium text-right w-20">
@@ -776,7 +776,7 @@ export default function ClientDashboard() {
                       <td className="px-8 py-5 text-sm text-[#333333] font-medium">
                         {ag.title}
                       </td>
-                      <td className="px-8 py-5 text-xs font-normal text-[#333333] text-right">
+                      <td className="px-8 py-5 text-xs font-normal text-[#333333] text-left whitespace-nowrap">
                         {(() => {
                           if (ag.status === "issued") return "Agreement received";
                           if (ag.status === "change_submitted") return "Change submitted";
@@ -793,9 +793,7 @@ export default function ClientDashboard() {
                           }
                           className="text-xs font-semibold text-[#9d4edd] hover:text-[#4A2E6F] transition-colors"
                         >
-                          {ag.status === "issued"
-                            ? "Review & Sign"
-                            : "View"}
+                          View
                         </button>
                       </td>
                     </tr>
@@ -913,12 +911,12 @@ export default function ClientDashboard() {
           </div>
 
           <div className="p-8">
-            <div className="flex gap-6 mb-6">
+            <div className="flex gap-4 mb-6 justify-start">
               <label
-                className={`flex-1 cursor-pointer border-2 rounded-2xl p-4 text-center transition-all ${
+                className={`cursor-pointer border-2 rounded-full px-6 py-2 text-center transition-all ${
                   requestType === "work"
-                    ? "border-[#9d4edd] bg-purple-50 text-[#9d4edd]"
-                    : "border-gray-100 text-gray-400 hover:border-gray-200"
+                    ? "border-[#333333] bg-purple-50 text-[#4a2e6f]"
+                    : "border-[#333333] text-gray-600 hover:bg-gray-50"
                 }`}
               >
                 <input
@@ -932,10 +930,10 @@ export default function ClientDashboard() {
                 </span>
               </label>
               <label
-                className={`flex-1 cursor-pointer border-2 rounded-2xl p-4 text-center transition-all ${
+                className={`cursor-pointer border-2 rounded-full px-6 py-2 text-center transition-all ${
                   requestType === "meeting"
-                    ? "border-[#9d4edd] bg-purple-50 text-[#9d4edd]"
-                    : "border-gray-100 text-gray-400 hover:border-gray-200"
+                    ? "border-[#333333] bg-purple-50 text-[#4a2e6f]"
+                    : "border-[#333333] text-gray-600 hover:bg-gray-50"
                 }`}
               >
                 <input
@@ -952,7 +950,7 @@ export default function ClientDashboard() {
 
             <form
               onSubmit={handleSendRequest}
-              className="flex gap-4 items-start"
+              className="grid gap-4 md:grid-cols-[1fr_auto] items-end"
             >
               <textarea
                 className="flex-1 border-2 border-gray-100 rounded-2xl p-4 text-sm focus:outline-none focus:ring-4 focus:ring-purple-50 focus:border-[#9d4edd] bg-gray-50 min-h-24 transition-all"
@@ -967,7 +965,7 @@ export default function ClientDashboard() {
               <button
                 type="submit"
                 disabled={!requestMessage || sending}
-                className="bg-[#9d4edd] text-white px-8 py-3 rounded-2xl font-black text-xs shadow-xl shadow-purple-100 hover:bg-[#7b2cbf] h-24 disabled:opacity-50 tracking-widest transition-all"
+                className="bg-[#9d4edd] text-white px-6 py-3 rounded-xl font-bold text-xs shadow-lg shadow-purple-100 hover:bg-[#7b2cbf] disabled:opacity-50 tracking-widest transition-all"
               >
                 {sending ? "Sending..." : "Send Request"}
               </button>

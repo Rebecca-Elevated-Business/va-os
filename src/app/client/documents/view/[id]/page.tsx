@@ -93,7 +93,7 @@ export default function ClientDocumentView({
   const [doc, setDoc] = useState<ClientDoc | null>(null);
   const [loading, setLoading] = useState(true);
   const [responseMode, setResponseMode] = useState<
-    "accept" | "edit" | "sign" | "message" | "paid" | null
+    "accept" | "edit" | "sign" | "message" | "paid" | "viewed" | null
   >(null);
   const [comment, setComment] = useState("");
   const [bookingContent, setBookingContent] =
@@ -245,6 +245,11 @@ export default function ClientDocumentView({
       await supabase.rpc("client_mark_invoice_paid", {
         doc_id: id,
       });
+    } else if (doc.type === "upload" && responseMode === "viewed") {
+      await supabase
+        .from("client_documents")
+        .update({ status: "completed" })
+        .eq("id", id);
     } else if (doc.type === "proposal") {
       await supabase.rpc("client_accept_proposal", {
         doc_id: id,
@@ -283,14 +288,21 @@ export default function ClientDocumentView({
         ? "Invoice marked as paid."
         : doc.type === "booking_form" && responseMode === "sign"
           ? "Booking form signed."
-          : "Action taken by client.";
+          : doc.type === "upload" && responseMode === "viewed"
+            ? "Document marked as viewed."
+            : "Action taken by client.";
+
+    const responseLabel =
+      doc.type === "booking_form"
+        ? "Booking Form"
+        : doc.type.charAt(0).toUpperCase() + doc.type.slice(1);
 
     await supabase.from("client_requests").insert([
       {
         client_id: doc.client_id,
-        type: "work",
+        type: "message",
         status: "new",
-        message: `${doc.type.toUpperCase()} RESPONSE: ${
+        message: `${responseLabel} Message: ${
           comment || fallbackMessage
         }`,
       },
@@ -311,7 +323,6 @@ export default function ClientDocumentView({
     "client_email",
     "client_phone",
     "personal_data_processing",
-    "purchase_order_number",
     "client_signature_name",
     "client_print_name",
     "client_business_name_signature",
@@ -394,7 +405,7 @@ export default function ClientDocumentView({
       doc.type === "booking_form"
         ? "Booking Form"
         : doc.type.charAt(0).toUpperCase() + doc.type.slice(1);
-    await supabase.from("client_requests").insert([
+    const { error } = await supabase.from("client_requests").insert([
       {
         client_id: doc.client_id,
         type: "message",
@@ -404,6 +415,14 @@ export default function ClientDocumentView({
         }`,
       },
     ]);
+    if (error) {
+      await alert({
+        title: "Message failed",
+        message: error.message || "Unable to send message.",
+        tone: "danger",
+      });
+      return;
+    }
     await alert({
       title: "Message sent",
       message: "Message sent to your VA.",
@@ -414,6 +433,11 @@ export default function ClientDocumentView({
   const handleMarkInvoicePaid = async () => {
     if (!doc || doc.type !== "invoice") return;
     setResponseMode("paid");
+  };
+
+  const handleMarkUploadViewed = async () => {
+    if (!doc || doc.type !== "upload") return;
+    setResponseMode("viewed");
   };
 
   const handlePrint = () => {
@@ -604,7 +628,7 @@ export default function ClientDocumentView({
                         </div>
                       ) : (
                         <div className="space-y-3 print:hidden">
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-black">
                             <span className="font-bold uppercase">
                               Please note:
                             </span>{" "}
@@ -698,6 +722,12 @@ export default function ClientDocumentView({
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:hidden">
                         <button
+                          onClick={handleMarkUploadViewed}
+                          className="border-2 border-[#4a2e6f] bg-[#DED4ED] text-[#4a2e6f] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5 hover:bg-[#B29AD5]"
+                        >
+                          Mark as Viewed
+                        </button>
+                        <button
                           onClick={() => setResponseMode("message")}
                           className="border-2 border-[#333333] text-[#333333] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5"
                         >
@@ -720,6 +750,8 @@ export default function ClientDocumentView({
                         ? "Mark as Paid"
                         : responseMode === "message"
                           ? "Send Message"
+                          : responseMode === "viewed"
+                            ? "Send Message"
                           : responseMode === "edit"
                             ? "Send Message"
                             : "Request Changes"}
@@ -745,7 +777,7 @@ export default function ClientDocumentView({
                     }}
                     className="bg-gray-900 text-white px-10 py-3 rounded-xl font-bold hover:bg-[#9d4edd] transition-colors"
                   >
-                    {responseMode === "message"
+                    {responseMode === "message" || responseMode === "viewed"
                       ? "Send Message"
                       : "Send Response"}
                   </button>
