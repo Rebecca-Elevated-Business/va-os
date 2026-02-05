@@ -153,10 +153,17 @@ export default function VAInboxPage() {
       .from("client_requests")
       .delete()
       .eq("id", msg.id);
-    if (!error) {
-      setMessages((prev) => prev.filter((m) => m.id !== msg.id));
-      setSelectedMsg(null);
+    if (error) {
+      await alert({
+        title: "Delete failed",
+        message: error.message || "Unable to delete the message.",
+        tone: "danger",
+      });
+      fetchMessages();
+      return;
     }
+    setMessages((prev) => prev.filter((m) => m.id !== msg.id));
+    setSelectedMsg(null);
   };
 
   const deleteAllCompleted = async () => {
@@ -171,11 +178,18 @@ export default function VAInboxPage() {
       .from("client_requests")
       .delete()
       .in("id", completedIds);
-    if (!error) {
-      setMessages((prev) => prev.filter((m) => !m.is_completed));
-      setSelectedMsg(null);
-      setDeleteAllStep(null);
+    if (error) {
+      await alert({
+        title: "Delete failed",
+        message: error.message || "Unable to delete completed messages.",
+        tone: "danger",
+      });
+      fetchMessages();
+      return;
     }
+    setMessages((prev) => prev.filter((m) => !m.is_completed));
+    setSelectedMsg(null);
+    setDeleteAllStep(null);
   };
 
   const filteredMessages = messages.filter((m) => {

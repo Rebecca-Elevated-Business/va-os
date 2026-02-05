@@ -114,6 +114,10 @@ export default function ClientDocumentView({
   })();
   const isPdfUpload = uploadExtension === "pdf";
   const isImageUpload = ["png", "jpg", "jpeg"].includes(uploadExtension);
+  const uploadDownloadUrl =
+    doc?.type === "upload"
+      ? doc.content.file_url || signedUploadUrl
+      : null;
 
   useEffect(() => {
     async function loadDoc() {
@@ -463,9 +467,11 @@ export default function ClientDocumentView({
               doc.type !== "booking_form" &&
               doc.type !== "invoice" && (
                 <header>
+                  {doc.type !== "upload" && (
                   <div className="inline-block px-3 py-1 bg-purple-100 text-[#9d4edd] text-[10px] font-black uppercase tracking-widest rounded-full mb-4">
-                    {doc.type.replace("_", " ")}
+                    {String(doc.type).replace("_", " ")}
                   </div>
+                )}
                   <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tighter leading-none">
                     {doc.title}
                   </h1>
@@ -500,7 +506,7 @@ export default function ClientDocumentView({
                           onClick={() => setResponseMode("edit")}
                           className="border-2 border-[#333333] text-[#333333] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5"
                         >
-                          Request Changes
+                          Send Message
                         </button>
                       </div>
                     </div>
@@ -624,19 +630,35 @@ export default function ClientDocumentView({
 
                 case "upload":
                   return (
-                    <div className="text-center space-y-8 py-10">
+                    <div className="space-y-8 py-10">
+                      <div className="flex justify-end print:hidden">
+                        <button
+                          onClick={() => {
+                            if (uploadDownloadUrl) {
+                              window.open(
+                                uploadDownloadUrl,
+                                "_blank",
+                                "noopener,noreferrer",
+                              );
+                            }
+                          }}
+                          className="px-6 py-2 border-2 border-gray-200 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all"
+                        >
+                          Download / Print
+                        </button>
+                      </div>
                       <div className="p-12 border-4 border-dashed border-gray-100 rounded-4xl bg-gray-50">
-                        <div className="text-6xl mb-6">📄</div>
-                        <h2 className="text-xl font-black uppercase mb-2">
-                          {doc.content.file_name}
-                        </h2>
-                        <p className="text-sm text-gray-400 mb-8 italic">
-                          &quot;{doc.content.va_note}&quot;
-                        </p>
+                        <div className="text-center">
+                          <div className="text-6xl mb-6">📄</div>
+                          <h2 className="text-xl font-black uppercase mb-2">
+                            {doc.content.file_name}
+                          </h2>
+                          <p className="text-sm text-[#333333] mb-8 italic">
+                            &quot;{doc.content.va_note}&quot;
+                          </p>
+                        </div>
                         {(() => {
-                          const downloadUrl =
-                            doc.content.file_url || signedUploadUrl;
-                          if (!downloadUrl) {
+                          if (!uploadDownloadUrl) {
                             return (
                               <p className="text-sm text-gray-400 italic">
                                 File unavailable.
@@ -649,14 +671,14 @@ export default function ClientDocumentView({
                                 <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
                                   {isPdfUpload ? (
                                     <iframe
-                                      src={downloadUrl}
+                                      src={uploadDownloadUrl}
                                       title="Document preview"
                                       className="w-full h-130"
                                     />
                                   ) : (
                                     <div className="relative w-full h-130 bg-white">
                                       <Image
-                                        src={downloadUrl}
+                                        src={uploadDownloadUrl}
                                         alt={doc.content.file_name || "Upload"}
                                         fill
                                         sizes="(max-width: 768px) 100vw, 900px"
@@ -667,16 +689,17 @@ export default function ClientDocumentView({
                                   )}
                                 </div>
                               )}
-                              <a
-                                href={downloadUrl}
-                                target="_blank"
-                                className="inline-block bg-[#9d4edd] text-white px-12 py-4 rounded-xl font-black uppercase tracking-widest shadow-lg"
-                              >
-                                View / Download File
-                              </a>
                             </div>
                           );
                         })()}
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:hidden">
+                        <button
+                          onClick={() => setResponseMode("message")}
+                          className="border-2 border-[#333333] text-[#333333] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5"
+                        >
+                          Send Message
+                        </button>
                       </div>
                     </div>
                   );
@@ -733,7 +756,8 @@ export default function ClientDocumentView({
 
             {doc.type !== "proposal" &&
               doc.type !== "booking_form" &&
-              doc.type !== "invoice" && (
+              doc.type !== "invoice" &&
+              doc.type !== "upload" && (
                 <footer className="pt-10 border-t border-gray-100">
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">
                     Kind Regards,
