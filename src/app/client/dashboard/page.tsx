@@ -925,7 +925,7 @@ export default function ClientDashboard() {
                   checked={requestType === "work"}
                   onChange={() => setRequestType("work")}
                 />
-                <span className="font-black text-xs tracking-widest">
+                <span className="font-black text-xs tracking-widest font-sans">
                   Request Work
                 </span>
               </label>
@@ -942,7 +942,7 @@ export default function ClientDashboard() {
                   checked={requestType === "meeting"}
                   onChange={() => setRequestType("meeting")}
                 />
-                <span className="font-black text-xs tracking-widest">
+                <span className="font-black text-xs tracking-widest font-sans">
                   Request Meeting
                 </span>
               </label>
