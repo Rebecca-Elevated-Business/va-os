@@ -161,6 +161,7 @@ export default function EditUploadPage({
         Document not found.
       </div>
     );
+  const isLocked = doc.status === "viewed" || doc.status === "completed";
 
   const handleMarkCompleted = async () => {
     if (!doc || doc.status === "completed") return;
@@ -208,42 +209,63 @@ export default function EditUploadPage({
             </button>
             {isActionMenuOpen && (
               <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-gray-100 bg-white p-2 shadow-lg z-50">
-                <button
-                  onClick={() => {
-                    setIsActionMenuOpen(false);
-                    handleSave(false);
-                  }}
-                  className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50"
-                >
-                  Save as Draft
-                </button>
-                <button
-                  onClick={() => {
-                    setIsActionMenuOpen(false);
-                    handleSave(true);
-                  }}
-                  disabled={!doc.content.file_path && !doc.content.file_url}
-                  className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Issue to Client
-                </button>
-                <button
-                  onClick={() => {
-                    setIsActionMenuOpen(false);
-                    handleMarkCompleted();
-                  }}
-                  disabled={doc.status === "completed"}
-                  className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Mark as Completed
-                </button>
+                {isLocked ? (
+                  <button
+                    onClick={() => {
+                      setIsActionMenuOpen(false);
+                      handleMarkCompleted();
+                    }}
+                    disabled={doc.status === "completed"}
+                    className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Mark as Completed
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => {
+                        setIsActionMenuOpen(false);
+                        handleSave(false);
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                    >
+                      Save as Draft
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsActionMenuOpen(false);
+                        handleSave(true);
+                      }}
+                      disabled={!doc.content.file_path && !doc.content.file_url}
+                      className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      Issue to Client
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsActionMenuOpen(false);
+                        handleMarkCompleted();
+                      }}
+                      disabled={doc.status === "completed"}
+                      className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      Mark as Completed
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>
         </div>
       </div>
 
-      <div className="space-y-8">
+      {isLocked && (
+        <div className="mb-6 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm font-semibold text-gray-600">
+          This upload is locked. You can only mark it as completed.
+        </div>
+      )}
+
+      <div className={`space-y-8 ${isLocked ? "pointer-events-none opacity-70" : ""}`}>
         <div className="space-y-2">
           <label className="text-[10px] font-semibold text-gray-500 tracking-widest block ml-2">
             Document title

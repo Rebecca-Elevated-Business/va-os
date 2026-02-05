@@ -149,6 +149,7 @@ const formatDocStatus = (status: string) => {
     signed: "Form accepted",
     paid: "Invoice marked paid",
     feedback_received: "Message received",
+    viewed: "Viewed",
     completed: "Completed",
   };
   return labels[status] ?? status.replace("_", " ");

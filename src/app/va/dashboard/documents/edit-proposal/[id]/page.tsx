@@ -279,6 +279,7 @@ export default function EditProposalPage({
       </div>
     );
   if (!doc) return <div className="p-10 text-red-500">Proposal not found.</div>;
+  const isLocked = doc.status === "accepted" || doc.status === "completed";
 
   const handlePreview = () => {
     window.open(`/va/dashboard/documents/preview/${id}`, "_blank");
@@ -338,52 +339,63 @@ export default function EditProposalPage({
             </button>
             {isActionMenuOpen && (
               <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-gray-100 bg-white p-2 shadow-lg z-50">
-                <button
-                  onClick={() => {
-                    setIsActionMenuOpen(false);
-                    handleSaveDraft();
-                  }}
-                  disabled={saving}
-                  className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                >
-                  {saving ? "Saving..." : "Save as Draft"}
-                </button>
-                <button
-                  onClick={() => {
-                    setIsActionMenuOpen(false);
-                    handlePreview();
-                  }}
-                  className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50"
-                >
-                  Preview
-                </button>
-                <button
-                  onClick={() => {
-                    setIsActionMenuOpen(false);
-                    handleIssue();
-                  }}
-                  disabled={saving}
-                  className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Issue to Client
-                </button>
-                <button
-                  onClick={() => {
-                    setIsActionMenuOpen(false);
-                    handleMarkCompleted();
-                  }}
-                  disabled={saving || doc.status === "completed"}
-                  className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Mark as Completed
-                </button>
+                {isLocked ? (
+                  <button
+                    onClick={() => {
+                      setIsActionMenuOpen(false);
+                      handleMarkCompleted();
+                    }}
+                    disabled={saving || doc.status === "completed"}
+                    className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Mark as Completed
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => {
+                        setIsActionMenuOpen(false);
+                        handleSaveDraft();
+                      }}
+                      disabled={saving}
+                      className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      {saving ? "Saving..." : "Save as Draft"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsActionMenuOpen(false);
+                        handlePreview();
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                    >
+                      Preview
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsActionMenuOpen(false);
+                        handleIssue();
+                      }}
+                      disabled={saving}
+                      className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      Issue to Client
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>
         </div>
       </div>
 
-      <div className="space-y-10">
+      {isLocked && (
+        <div className="mb-6 rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm font-semibold text-gray-600">
+          This proposal is locked. You can only mark it as completed.
+        </div>
+      )}
+
+      <div className={`space-y-10 ${isLocked ? "pointer-events-none opacity-70" : ""}`}>
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">

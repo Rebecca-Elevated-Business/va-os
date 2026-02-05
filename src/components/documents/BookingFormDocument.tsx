@@ -93,6 +93,7 @@ type BookingFormDocumentProps = {
   onUpdate?: (updates: Partial<BookingFormContent>) => void;
   clientAgreed?: boolean;
   onClientAgreeChange?: (checked: boolean) => void;
+  locked?: boolean;
 };
 
 export default function BookingFormDocument({
@@ -101,6 +102,7 @@ export default function BookingFormDocument({
   onUpdate,
   clientAgreed = false,
   onClientAgreeChange,
+  locked = false,
 }: BookingFormDocumentProps) {
   const heroUrl = content.hero_image_url
     ? normalizeImageUrl(content.hero_image_url)
@@ -108,11 +110,12 @@ export default function BookingFormDocument({
   const isClient = mode === "client";
   const isPreview = mode === "preview";
   const isVa = mode === "va";
-  const readOnlyAll = isPreview;
-  const readOnlyClientSection = isPreview;
-  const readOnlyVaSection = isPreview ? true : isClient ? true : false;
-  const readOnlyNonClientSections = isPreview ? true : isClient ? true : false;
-  const signatureLocked = isClient && !clientAgreed;
+  const isLocked = locked;
+  const readOnlyAll = isPreview || isLocked;
+  const readOnlyClientSection = isPreview || isLocked;
+  const readOnlyVaSection = isPreview ? true : isClient ? true : isLocked;
+  const readOnlyNonClientSections = isPreview ? true : isClient ? true : isLocked;
+  const signatureLocked = (isClient && !clientAgreed) || isLocked;
   const clientRequiredFields = new Set<keyof BookingFormContent>([
     "client_business_name",
     "client_contact_name",
@@ -135,10 +138,12 @@ export default function BookingFormDocument({
     field: keyof BookingFormContent,
     value: BookingFormContent[keyof BookingFormContent],
   ) => {
+    if (isLocked) return;
     onUpdate?.({ [field]: value } as Partial<BookingFormContent>);
   };
 
   const updateServices = (services: BookingServiceItem[]) => {
+    if (isLocked) return;
     onUpdate?.({ services });
   };
 

@@ -84,6 +84,7 @@ export default function ClientDashboard() {
     if (status === "issued") return "Waiting review";
     if (status === "feedback_received") return "Waiting review";
     if (status === "accepted") return "Proposal accepted — awaiting VA";
+    if (status === "viewed") return "Viewed — awaiting VA";
     if (status === "signed") return "Signed — awaiting VA";
     if (status === "paid") return "Invoice marked paid — awaiting VA";
     if (type === "proposal" && status === "accepted")

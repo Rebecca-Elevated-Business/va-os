@@ -248,7 +248,7 @@ export default function ClientDocumentView({
     } else if (doc.type === "upload" && responseMode === "viewed") {
       await supabase
         .from("client_documents")
-        .update({ status: "completed" })
+        .update({ status: "viewed" })
         .eq("id", id);
     } else if (doc.type === "proposal") {
       await supabase.rpc("client_accept_proposal", {
@@ -481,6 +481,24 @@ export default function ClientDocumentView({
     window.open(`/documents/print/${doc.id}`, "_blank", "noopener,noreferrer");
   };
 
+  const isLockedForClient =
+    (doc?.type === "proposal" &&
+      (doc.status === "accepted" || doc.status === "completed")) ||
+    (doc?.type === "booking_form" &&
+      (doc.status === "signed" || doc.status === "completed")) ||
+    (doc?.type === "invoice" &&
+      (doc.status === "paid" || doc.status === "completed")) ||
+    (doc?.type === "upload" &&
+      (doc.status === "viewed" || doc.status === "completed"));
+
+  useEffect(() => {
+    if (!isLockedForClient) return;
+    const timer = setTimeout(() => {
+      setResponseMode(null);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [isLockedForClient]);
+
   if (loading)
     return (
       <div className="p-10 text-gray-500 italic">
@@ -558,20 +576,26 @@ export default function ClientDocumentView({
                         </button>
                       </div>
                       <ProposalDocument content={proposalContent} />
-                      <div className="grid grid-cols-2 gap-4 pt-6 print:hidden">
-                        <button
-                          onClick={() => setResponseMode("accept")}
-                          className="border-2 border-[#4a2e6f] bg-[#DED4ED] text-[#4a2e6f] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5 hover:bg-[#B29AD5]"
-                        >
-                          Accept Proposal
-                        </button>
-                        <button
-                          onClick={() => setResponseMode("edit")}
-                          className="border-2 border-[#333333] text-[#333333] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5"
-                        >
-                          Send Message
-                        </button>
-                      </div>
+                      {!isLockedForClient ? (
+                        <div className="grid grid-cols-2 gap-4 pt-6 print:hidden">
+                          <button
+                            onClick={() => setResponseMode("accept")}
+                            className="border-2 border-[#4a2e6f] bg-[#DED4ED] text-[#4a2e6f] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5 hover:bg-[#B29AD5]"
+                          >
+                            Accept Proposal
+                          </button>
+                          <button
+                            onClick={() => setResponseMode("edit")}
+                            className="border-2 border-[#333333] text-[#333333] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5"
+                          >
+                            Send Message
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="p-6 bg-gray-50 border border-gray-100 rounded-2xl text-gray-600 font-semibold text-center print:hidden">
+                          ✓ This proposal is locked.
+                        </div>
+                      )}
                     </div>
                   );
                 }
@@ -591,15 +615,21 @@ export default function ClientDocumentView({
                       <BookingFormDocument
                         content={bookingContent}
                         mode="client"
+                        locked={isLockedForClient}
                         clientAgreed={clientAgreed}
-                        onClientAgreeChange={setClientAgreed}
-                        onUpdate={(updates) =>
-                          setBookingContent((prev) =>
-                            prev ? { ...prev, ...updates } : prev,
-                          )
+                        onClientAgreeChange={
+                          isLockedForClient ? undefined : setClientAgreed
+                        }
+                        onUpdate={
+                          isLockedForClient
+                            ? undefined
+                            : (updates) =>
+                                setBookingContent((prev) =>
+                                  prev ? { ...prev, ...updates } : prev,
+                                )
                         }
                       />
-                      {doc.status !== "signed" ? (
+                      {!isLockedForClient && doc.status !== "signed" ? (
                         <div className="bg-gray-50 border border-gray-100 rounded-3xl p-6 space-y-4 print:hidden">
                           {signatureError && (
                             <p className="text-xs text-red-500 font-semibold">
@@ -665,7 +695,7 @@ export default function ClientDocumentView({
                         content={invoiceContent}
                         report={invoiceReport}
                       />
-                      {doc.status === "paid" ? (
+                      {doc.status === "paid" || doc.status === "completed" ? (
                         <div className="p-6 bg-green-50 border border-green-100 rounded-2xl text-green-700 font-bold text-center print:hidden">
                           ✓ This invoice is marked as paid.
                         </div>
@@ -679,20 +709,22 @@ export default function ClientDocumentView({
                             payment, but notifies your VA that payment has been
                             made. Please ensure payment is still processed.
                           </p>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <button
-                              onClick={handleMarkInvoicePaid}
-                              className="border-2 border-[#4a2e6f] bg-[#DED4ED] text-[#4a2e6f] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5 hover:bg-[#B29AD5]"
-                            >
-                              Mark as Paid
-                            </button>
-                            <button
-                              onClick={() => setResponseMode("message")}
-                              className="border-2 border-[#333333] text-[#333333] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5"
-                            >
-                              Send Message
-                            </button>
-                          </div>
+                          {!isLockedForClient && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <button
+                                onClick={handleMarkInvoicePaid}
+                                className="border-2 border-[#4a2e6f] bg-[#DED4ED] text-[#4a2e6f] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5 hover:bg-[#B29AD5]"
+                              >
+                                Mark as Paid
+                              </button>
+                              <button
+                                onClick={() => setResponseMode("message")}
+                                className="border-2 border-[#333333] text-[#333333] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5"
+                              >
+                                Send Message
+                              </button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -763,20 +795,26 @@ export default function ClientDocumentView({
                           );
                         })()}
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:hidden">
-                        <button
-                          onClick={handleMarkUploadViewed}
-                          className="border-2 border-[#4a2e6f] bg-[#DED4ED] text-[#4a2e6f] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5 hover:bg-[#B29AD5]"
-                        >
-                          Mark as Viewed
-                        </button>
-                        <button
-                          onClick={() => setResponseMode("message")}
-                          className="border-2 border-[#333333] text-[#333333] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5"
-                        >
-                          Send Message
-                        </button>
-                      </div>
+                      {!isLockedForClient ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:hidden">
+                          <button
+                            onClick={handleMarkUploadViewed}
+                            className="border-2 border-[#4a2e6f] bg-[#DED4ED] text-[#4a2e6f] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5 hover:bg-[#B29AD5]"
+                          >
+                            Mark as Viewed
+                          </button>
+                          <button
+                            onClick={() => setResponseMode("message")}
+                            className="border-2 border-[#333333] text-[#333333] py-4 rounded-2xl font-semibold transition-all hover:-translate-y-0.5"
+                          >
+                            Send Message
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="p-6 bg-gray-50 border border-gray-100 rounded-2xl text-gray-600 font-semibold text-center print:hidden">
+                          ✓ This document is locked.
+                        </div>
+                      )}
                     </div>
                   );
               }
