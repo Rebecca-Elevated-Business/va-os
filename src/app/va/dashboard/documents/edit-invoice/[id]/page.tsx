@@ -305,32 +305,7 @@ export default function EditInvoicePage({
       const wasIssued = doc.status === "issued";
 
       if (shouldIssue) {
-        const requiredFields = [
-          doc.content.invoice_number,
-          doc.content.issue_date,
-          doc.content.due_date,
-          doc.content.client_business_name,
-          doc.content.client_contact_name,
-          doc.content.client_address,
-          doc.content.client_email,
-        ];
-        if (requiredFields.some((value) => !String(value || "").trim())) {
-          await alert({
-            title: "Missing details",
-            message:
-              "Please complete all client and invoice details before issuing.",
-            tone: "danger",
-          });
-          return;
-        }
-        if (doc.content.show_po && !(doc.content.po_number || "").trim()) {
-          await alert({
-            title: "PO number required",
-            message: "Enter a PO number or disable the PO field.",
-            tone: "danger",
-          });
-          return;
-        }
+        // All fields optional prior to issuing.
       }
 
       if (silent) {
@@ -372,7 +347,12 @@ export default function EditInvoicePage({
         });
         setDoc((prev) => (prev ? { ...prev, status } : prev));
         if (!silent) {
-          if (options?.status === "paid") {
+          if (options?.status === "completed") {
+            await alert({
+              title: "Invoice completed",
+              message: "The invoice is now marked as completed.",
+            });
+          } else if (options?.status === "paid") {
             await alert({
               title: "Invoice marked as paid",
               message: "Invoice marked as paid.",
@@ -499,12 +479,16 @@ export default function EditInvoicePage({
                 <button
                   onClick={() => {
                     setIsActionMenuOpen(false);
+                    if (doc.status === "paid") {
+                      persistDoc({ status: "completed" });
+                      return;
+                    }
                     persistDoc({ status: "paid" });
                   }}
-                  disabled={saving || doc.status === "paid" || doc.status === "completed"}
+                  disabled={saving || doc.status === "completed"}
                   className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                 >
-                  Mark as Paid
+                  {doc.status === "paid" ? "Mark as Completed" : "Mark as Paid"}
                 </button>
               </div>
             )}
