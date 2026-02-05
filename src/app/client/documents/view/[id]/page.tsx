@@ -237,8 +237,7 @@ export default function ClientDocumentView({
   const handleSubmitResponse = async () => {
     if (!doc) return;
 
-    const statusUpdate =
-      responseMode === "accept" ? "accepted" : "feedback_received";
+    const statusUpdate = responseMode === "accept" ? "accepted" : doc.status;
 
     const finalStatus = doc.type === "booking_form" ? "signed" : statusUpdate;
 
@@ -391,12 +390,16 @@ export default function ClientDocumentView({
         updates,
       });
     }
+    const docLabel =
+      doc.type === "booking_form"
+        ? "Booking Form"
+        : doc.type.charAt(0).toUpperCase() + doc.type.slice(1);
     await supabase.from("client_requests").insert([
       {
         client_id: doc.client_id,
-        type: "work",
+        type: "message",
         status: "new",
-        message: `${doc.type.toUpperCase()} MESSAGE: ${
+        message: `${docLabel} Message: ${
           comment || "Client message sent."
         }`,
       },
@@ -717,7 +720,9 @@ export default function ClientDocumentView({
                         ? "Mark as Paid"
                         : responseMode === "message"
                           ? "Send Message"
-                          : "Request Changes"}
+                          : responseMode === "edit"
+                            ? "Send Message"
+                            : "Request Changes"}
                 </h3>
                 <p className="text-sm text-gray-500 mb-4">
                   {"Your message to your Virtual Assistant:"}

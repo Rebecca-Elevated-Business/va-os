@@ -82,7 +82,7 @@ export default function ClientDashboard() {
   const formatDocumentStatus = (status: string, type: string) => {
     if (status === "completed") return "Completed";
     if (status === "issued") return "Waiting review";
-    if (status === "feedback_received") return "Message sent";
+    if (status === "feedback_received") return "Waiting review";
     if (status === "accepted") return "Proposal accepted — awaiting VA";
     if (status === "signed") return "Booking form completed — awaiting VA";
     if (status === "paid") return "Invoice marked paid — awaiting VA";
