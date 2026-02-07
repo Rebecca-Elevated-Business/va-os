@@ -299,6 +299,12 @@ export default function AdminHomePage() {
             >
               Add VA
             </Link>
+            <Link
+              href="/chat"
+              className="inline-flex items-center justify-center rounded-full border border-gray-200 px-5 py-2 text-xs font-semibold text-gray-600 shadow-sm transition-colors hover:border-[#9d4edd] hover:text-[#4a2e6f]"
+            >
+              Coffee Lounge
+            </Link>
             <button
               type="button"
               onClick={handleAdminSignOut}

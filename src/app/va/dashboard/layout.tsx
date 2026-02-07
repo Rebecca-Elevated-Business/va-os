@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Timer,
   BookOpen,
+  Coffee,
 } from "lucide-react";
 
 export default function VADashboardLayout({
@@ -168,6 +169,7 @@ export default function VADashboardLayout({
     { name: "Task Centre", href: "/va/dashboard/tasks", icon: ClipboardList },
     { name: "Time Tracking", href: "/va/dashboard/time-tracking", icon: Timer },
     { name: "Inbox", href: "/va/dashboard/inbox", icon: Mail },
+    { name: "Coffee Lounge", href: "/chat", icon: Coffee },
     { name: "CRM", href: "/va/dashboard/crm", icon: Users },
     { name: "Documents", href: "/va/dashboard/documents", icon: FileText },
     {
